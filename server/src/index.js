@@ -1,0 +1,11 @@
+import {loadConfig} from './config/env.js';
+import {createPool} from './db/pool.js';
+import {createMemoryRepository} from './db/memory.js';
+import {createPostgresRepository} from './modules/character/repository.js';
+import {createApp} from './app.js';
+const config=loadConfig();
+const pool=config.mode==='supabase'?createPool(config):null;
+const repository=pool?createPostgresRepository(pool):createMemoryRepository(config.userId);
+await repository.check();
+const server=createApp(config,repository).listen(config.port,config.host,()=>console.log('Sangjonbap API ready on port',config.port,'mode:',config.mode));
+for(const signal of ['SIGINT','SIGTERM'])process.on(signal,()=>{server.close(async()=>{if(pool)await pool.end();process.exit(0);});});

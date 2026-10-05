@@ -1,0 +1,23 @@
+{
+  "name": "sangjonbap",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "server"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "concurrently \"npm run dev:server\" \"npm run dev:frontend\"",
+    "dev:server": "npm run dev --workspace server",
+    "dev:frontend": "npm start --workspace frontend",
+    "test": "npm test --workspace server",
+    "build": "npm run build --workspace frontend",
+    "db:check": "npm run db:check --workspace server"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
