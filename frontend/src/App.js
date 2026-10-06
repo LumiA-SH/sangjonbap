@@ -1,116 +1,102 @@
-import {useState} from 'react';
-import {api,setToken} from './api/client';
+import {useRef, useState} from 'react';
+import {api, setToken} from './api/client';
+import CharacterPanel from './dev/CharacterPanel';
+import InventoryPanel from './dev/InventoryPanel';
+import InvestigationPanel from './dev/InvestigationPanel';
 
-export default function App(){
-  const [key,setKey]=useState(''),[character,setCharacter]=useState(null),[name,setName]=useState(''),[message,setMessage]=useState(''),[busy,setBusy]=useState(false),[loggedIn,setLoggedIn]=useState(false);
+export default function App() {
+  const [key, setKey] = useState('');
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [character, setCharacter] = useState(null);
+  const [inventory, setInventory] = useState([]);
+  const [storage, setStorage] = useState([]);
+  const [areas, setAreas] = useState([]);
+  const [errors, setErrors] = useState({});
+  const [message, setMessage] = useState('');
+  const [busy, setBusy] = useState(false);
+  const running = useRef(false);
 
-  async function run(task){
+  async function run(task) {
+    if (running.current) return;
+    running.current = true;
     setBusy(true);
     setMessage('');
-    try{
-      await task();
-    }catch(e){
-      setMessage(e.message);
-    }finally{
-      setBusy(false);
-    }
+    try { await task(); }
+    catch (error) { setMessage(error.message); }
+    finally { running.current = false; setBusy(false); }
   }
 
-  async function refresh(){
-    const data=await api('/characters/me');
-    setCharacter(data.character);
-    setName(data.character.name);
-  }
-
-  async function testAp(){
-    const data=await api('/characters/me/resources',{
-      method:'PATCH',
-      body:{
-        ap:-1,
-        reason:'DEV_RESOURCE_TEST'
-      }
+  async function refreshAll() {
+    const requests = [
+      ['character', '/characters/me', data => setCharacter(data.character)],
+      ['inventory', '/inventory/me', data => setInventory(data.items)],
+      ['storage', '/inventory/storage', data => setStorage(data.items)],
+      ['areas', '/investigation/areas', data => setAreas(data.areas)]
+    ];
+    const results = await Promise.allSettled(requests.map(([, path]) => api(path)));
+    const nextErrors = {};
+    results.forEach((result, index) => {
+      const [name, , apply] = requests[index];
+      if (result.status === 'fulfilled') apply(result.value);
+      else nextErrors[name] = result.reason.message;
     });
-    setCharacter(data.character);
-    setMessage('AP -1 처리 완료');
+    setErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
+  }
+
+  async function login(event) {
+    event.preventDefault();
+    await run(async () => {
+      const data = await api('/auth/dev/login', {method: 'POST', body: {key}});
+      setToken(data.token);
+      setKey('');
+      setLoggedIn(true);
+      await refreshAll();
+    });
+  }
+
+  async function logout() {
+    try { await api('/auth/logout', {method: 'POST'}); }
+    finally {
+      setToken(null);
+      setLoggedIn(false);
+      setCharacter(null);
+      setInventory([]);
+      setStorage([]);
+      setAreas([]);
+      setErrors({});
+      setMessage('');
+    }
   }
 
   return <main>
     <header>
-      <span className="badge">SANGJONBAP / DEV</span>
+      <span className="badge">SANGJONBAP / DEV CONSOLE</span>
       <h1>생존밥 개발실</h1>
-      <p>로그인부터 캐릭터 코어까지, 첫 번째 연결.</p>
+      <p>백엔드 기능 검증용 화면입니다. 조작은 연결된 DB에 실제로 반영됩니다.</p>
     </header>
-
-    <section>
-      <h2>개발 로그인</h2>
-      <p>서버의 DEV_LOGIN_KEY를 입력하세요. 메모리 모드는 재시작 시 초기화됩니다.</p>
-
-      <form onSubmit={e=>{
-        e.preventDefault();
-        run(async()=>{
-          const data=await api('/auth/dev/login',{method:'POST',body:{key}});
-          setToken(data.token);
-          setLoggedIn(true);
-          setKey('');
-          await refresh();
-        });
-      }}>
+    <section aria-labelledby="login-title">
+      <h2 id="login-title">개발 로그인</h2>
+      <p>서버의 DEV_LOGIN_KEY를 입력하세요. 토큰은 메모리에만 보관되며 새로고침하면 다시 로그인해야 합니다.</p>
+      {!loggedIn ? <form onSubmit={login}>
         <label htmlFor="key">개발 로그인 키</label>
-        <input id="key" type="password" value={key} onChange={e=>setKey(e.target.value)} required autoComplete="off"/>
+        <input id="key" type="password" value={key} onChange={event => setKey(event.target.value)} required autoComplete="off" disabled={busy}/>
         <button disabled={busy}>로그인</button>
-      </form>
-
-      {loggedIn&&<div className="actions">
-        <button disabled={busy} onClick={()=>run(refresh)}>캐릭터 새로고침</button>
-        <button disabled={busy} onClick={()=>run(async()=>{
-          try{
-            await api('/auth/logout',{method:'POST'});
-          }finally{
-            setToken(null);
-            setLoggedIn(false);
-            setCharacter(null);
-          }
-        })}>로그아웃</button>
+      </form> : <div className="actions">
+        <span>로그인됨</span>
+        <button disabled={busy} onClick={() => run(refreshAll)}>전체 상태 새로고침</button>
+        <button disabled={busy} onClick={() => run(logout)}>로그아웃</button>
       </div>}
     </section>
-
-    {character&&<section>
-      <span className="badge">CHARACTER CORE</span>
-      <h2>{character.name}</h2>
-
-      <div className="stats">
-        {[
-          ['HP',character.hp+'/'+character.max_hp],
-          ['AP',character.ap+'/'+character.max_ap],
-          ['혈액',character.blood+'/'+character.max_blood],
-          ['재화',character.currency]
-        ].map(([label,value])=><div key={label}>
-          <small>{label}</small>
-          <strong>{value}</strong>
-        </div>)}
-      </div>
-
-      <p>등급 {character.hunter_grade} · 상태 {character.status}</p>
-
-      <div className="actions">
-        <button disabled={busy||character.ap<=0} onClick={()=>run(testAp)}>AP -1 테스트</button>
-      </div>
-
-      <form onSubmit={e=>{
-        e.preventDefault();
-        run(async()=>{
-          const data=await api('/characters/me/profile',{method:'PATCH',body:{name}});
-          setCharacter(data.character);
-          setMessage('이름을 저장했습니다.');
-        });
-      }}>
-        <label htmlFor="name">캐릭터 이름</label>
-        <input id="name" value={name} maxLength={40} required onChange={e=>setName(e.target.value)}/>
-        <button disabled={busy}>이름 저장</button>
-      </form>
-    </section>}
-
-    <p role="status" aria-live="polite">{busy?'처리 중…':message}</p>
-    <footer>CRA → JavaScript API → Supabase PostgreSQL</footer>
+    <p className="dev-message" role="status" aria-live="polite">{busy ? '처리 중…' : message}</p>
+    {loggedIn && <>
+      <CharacterPanel character={character} error={errors.character} busy={busy} run={run}
+        onCharacter={setCharacter} refresh={refreshAll} notify={setMessage}/>
+      <InventoryPanel inventory={inventory} storage={storage} errors={errors} busy={busy} run={run}
+        refresh={refreshAll} notify={setMessage}/>
+      <InvestigationPanel areas={areas} character={character} error={errors.areas} characterError={errors.character}
+        busy={busy} run={run} refresh={refreshAll} notify={setMessage}/>
+    </>}
+    <footer>CRA → JavaScript API → Supabase PostgreSQL · DEV 전용, 최종 서비스 화면 아님</footer>
   </main>;
 }

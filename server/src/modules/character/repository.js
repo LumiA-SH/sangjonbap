@@ -1,3 +1,5 @@
+import {lockCharacterByUser, changeCharacterResources, writeActionLog} from '../../shared/game.js';
+
 // All values are bound parameters. Ownership comes from the authenticated user.
 export function createPostgresRepository(pool) {
   return {
@@ -26,23 +28,16 @@ export function createPostgresRepository(pool) {
       try {
         await client.query('begin');
 
-        const own = await client.query(
-            `select c.id
-             from public.game_character c
-                    join public.auth_user u on u.character_id=c.id
-             where u.id=$1 and u.is_active and c.is_active
-               for update of u,c`,
-            [id]
-        );
+        const own = await lockCharacterByUser(client, id);
 
-        if (!own.rowCount) {
+        if (!own) {
           await client.query('rollback');
           return null;
         }
 
         const r = await client.query(
             'update public.game_character set name=$1 where id=$2 returning *',
-            [patch.name, own.rows[0].id]
+            [patch.name, own.id]
         );
 
         await client.query('commit');
@@ -61,83 +56,47 @@ export function createPostgresRepository(pool) {
       try {
         await client.query('begin');
 
-        const own = await client.query(
-            `select c.*
-             from public.game_character c
-                    join public.auth_user u on u.character_id=c.id
-             where u.id=$1 and u.is_active and c.is_active
-               for update of u,c`,
-            [userId]
-        );
+        const own = await lockCharacterByUser(client, userId);
 
-        if (!own.rowCount) {
+        if (!own) {
           await client.query('rollback');
           return null;
         }
 
-        const before = own.rows[0];
+        const before = own;
+        const character = await changeCharacterResources(client, before, changes);
 
-        const hp = Math.max(0, Math.min(Number(before.max_hp), Number(before.hp) + changes.hp));
-        const blood = Math.max(0, Math.min(Number(before.max_blood), Number(before.blood) + changes.blood));
-        const ap = Math.max(0, Math.min(Number(before.max_ap), Number(before.ap) + changes.ap));
-        const currency = Math.max(0, Number(before.currency) + changes.currency);
-
-        let status = before.status;
-        let deathCount = Number(before.death_count);
-
-        if (hp === 0 && before.status !== 'DEAD') {
-          status = 'DEAD';
-          deathCount += 1;
-        } else if (status !== 'DEAD' && blood === 0) {
-          status = 'NEAR_DEATH';
-        }
-
-        const r = await client.query(
-            `update public.game_character
-           set hp=$1, blood=$2, ap=$3, currency=$4, status=$5, death_count=$6
-           where id=$7
-           returning *`,
-            [hp, blood, ap, currency, status, deathCount, before.id]
-        );
-
-        const character = r.rows[0];
-
-        await client.query(
-            `insert into public.action_log
-               (character_id, category, action_type, description, detail)
-             values ($1,$2,$3,$4,$5::jsonb)`,
-            [
-              before.id,
-              'CHARACTER',
-              'RESOURCE_CHANGE',
-              reason,
-              JSON.stringify({
-                reason,
-                requested: {
-                  hp: changes.hp,
-                  blood: changes.blood,
-                  ap: changes.ap,
-                  currency: changes.currency
-                },
-                before: {
-                  hp: Number(before.hp),
-                  blood: Number(before.blood),
-                  ap: Number(before.ap),
-                  currency: Number(before.currency),
-                  status: before.status,
-                  death_count: Number(before.death_count)
-                },
-                after: {
-                  hp: Number(character.hp),
-                  blood: Number(character.blood),
-                  ap: Number(character.ap),
-                  currency: Number(character.currency),
-                  status: character.status,
-                  death_count: Number(character.death_count)
-                }
-              })
-            ]
-        );
+        await writeActionLog(client, {
+          characterId: before.id,
+          category: 'CHARACTER',
+          actionType: 'RESOURCE_CHANGE',
+          description: reason,
+          detail: {
+            reason,
+            requested: {
+              hp: changes.hp,
+              blood: changes.blood,
+              ap: changes.ap,
+              currency: changes.currency
+            },
+            before: {
+              hp: Number(before.hp),
+              blood: Number(before.blood),
+              ap: Number(before.ap),
+              currency: Number(before.currency),
+              status: before.status,
+              death_count: Number(before.death_count)
+            },
+            after: {
+              hp: Number(character.hp),
+              blood: Number(character.blood),
+              ap: Number(character.ap),
+              currency: Number(character.currency),
+              status: character.status,
+              death_count: Number(character.death_count)
+            }
+          }
+        });
 
         await client.query('commit');
         return character;

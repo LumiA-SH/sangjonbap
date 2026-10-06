@@ -5,6 +5,9 @@ import {createDevProvider} from './modules/auth/providers/dev.js';
 import {createSessions} from './modules/auth/session.js';
 import {authRoutes} from './modules/auth/routes.js';
 import {characterRoutes} from './modules/character/routes.js';
+import {inventoryRoutes} from './modules/inventory/routes.js';
+import {investigationRoutes} from './modules/investigation/routes.js';
+
 
 export function createApp(config, repository) {
 
@@ -52,6 +55,13 @@ export function createApp(config, repository) {
       '/api/characters',
       characterRoutes(repository, sessions)
   );
+
+  app.use(
+      '/api/inventory',
+      inventoryRoutes(repository, sessions)
+  );
+
+  app.use('/api/investigation', investigationRoutes(repository, sessions));
 
   app.use((req, res, next) =>
       next(
