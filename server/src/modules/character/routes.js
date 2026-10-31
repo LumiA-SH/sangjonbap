@@ -1,12 +1,29 @@
 import {Router} from 'express';
 import {ok, AppError} from '../../shared/http.js';
 import {createCharacterService} from './service.js';
+import {createCharacterCareService} from './care-service.js';
 
-export function characterRoutes(repository, sessions) {
+export function characterRoutes(repository, sessions,config={}) {
   const router = Router();
   const service = createCharacterService(repository);
+  const care = createCharacterCareService(repository);
 
   router.use(sessions.require);
+  router.post('/',async(req,res)=>{
+    // Approved characters are registered by ADMIN and linked to verified OAuth identities.
+    if(req.auth.user.character_id)throw new AppError(409,'CHARACTER_ALREADY_LINKED','이미 연결된 캐릭터가 있습니다.');
+    throw new AppError(403,'CHARACTER_ADMIN_REGISTRATION_REQUIRED','캐릭터는 운영진 심사 후 관리자가 등록합니다.');
+  });
+
+  router.get('/search', async (req, res) => {
+    const q = req.query.q;
+    if (Object.keys(req.query).some(key => key !== 'q') || typeof q !== 'string' ||
+        !q.trim() || q.trim().length > 40) {
+      throw new AppError(400, 'INVALID_CHARACTER_SEARCH', '검색어는 1~40자로 입력하세요.');
+    }
+    const characters = await repository.searchCharacters(q.trim());
+    ok(res, {characters});
+  });
 
   const found = c => {
     if (!c) throw new AppError(404, 'CHARACTER_NOT_FOUND', '연결된 활성 캐릭터가 없습니다.');
@@ -32,8 +49,17 @@ export function characterRoutes(repository, sessions) {
 
   // 개발 검증용. 실제 게임 기능은 각 service에서 공통 자원 로직을 호출한다.
   router.patch('/me/resources', async (req, res) => {
+    if(config.provider==='mastodon'||config.nodeEnv==='production')throw new AppError(403,'DEV_ACTION_DISABLED','개발용 자원 변경은 사용할 수 없습니다.');
     const character = await service.changeResources(req.auth.user.id, req.body);
     ok(res, {character});
+  });
+
+  router.post('/:characterId/heal', async (req, res) => {
+    ok(res, await care.heal(req.auth.user.id, req.params.characterId, req.body));
+  });
+
+  router.post('/:characterId/revive', async (req, res) => {
+    ok(res, await care.revive(req.auth.user.id, req.params.characterId, req.body));
   });
 
   return router;

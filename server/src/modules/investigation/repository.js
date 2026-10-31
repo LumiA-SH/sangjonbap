@@ -1,5 +1,6 @@
 import {AppError} from '../../shared/http.js';
 import {lockCharacterByUser, changeCharacterResources, changeInventoryQuantity, writeActionLog} from '../../shared/game.js';
+import {readNumberSettings, resourceNumber} from '../../shared/settings.js';
 import {chooseResult, winsReward, randomUnit} from './random.js';
 
 function duplicateRequest() {
@@ -8,6 +9,7 @@ function duplicateRequest() {
 
 function requireCharacter(character) {
   if (!character) throw new AppError(404, 'CHARACTER_NOT_FOUND', '연결된 활성 캐릭터가 없습니다.');
+  if(character.status==='NEAR_DEATH')throw new AppError(409,'CHARACTER_NEAR_DEATH','빈사 상태에서는 조사할 수 없습니다.');
   if (character.status === 'DEAD') throw new AppError(409, 'CHARACTER_DEAD', '사망한 캐릭터는 조사할 수 없습니다.');
 }
 
@@ -23,8 +25,13 @@ async function rejectDuplicate(client, requestKey) {
   if (existing.rowCount) throw duplicateRequest();
 }
 
-export function createInvestigationRepository(pool, {random = randomUnit} = {}) {
+export function createInvestigationRepository(pool, {random = randomUnit, battleRepository = null} = {}) {
   return {
+    async getInvestigationApCost() {
+      const settings = await readNumberSettings(pool, {investigation_ap_cost: resourceNumber});
+      return settings.investigation_ap_cost;
+    },
+
     async getInvestigationAreas(userId) {
       // A single statement gives character eligibility and areas one snapshot.
       const r = await pool.query(
@@ -63,7 +70,9 @@ export function createInvestigationRepository(pool, {random = randomUnit} = {}) 
         // A concurrent retry may have committed while we waited for row locks.
         await rejectDuplicate(client, requestKey);
         requireCharacter(before);
-        if (Number(before.ap) < 1) throw new AppError(409, 'NOT_ENOUGH_AP', '조사에 필요한 AP가 부족합니다.');
+        if (battleRepository) await battleRepository.ensureNoActiveBattle(client,before);
+        const {investigation_ap_cost: cost} = await readNumberSettings(client, {investigation_ap_cost: resourceNumber});
+        if (Number(before.ap) < cost) throw new AppError(409, 'NOT_ENOUGH_AP', '조사에 필요한 AP가 부족합니다.');
 
         const candidates = await client.query(
           `select * from public.investigation_result
@@ -71,7 +80,9 @@ export function createInvestigationRepository(pool, {random = randomUnit} = {}) 
         );
         const selected = chooseResult(candidates.rows, random);
         if (!selected) throw new AppError(409, 'NO_INVESTIGATION_RESULT', '등록된 조사 결과가 없습니다.');
-        const character = await changeCharacterResources(client, before, {ap: -1});
+        const character = await changeCharacterResources(client, before, {ap: -cost});
+        // Snapshot before item locks; creation and investigation commit together.
+        const battle = battleRepository ? await battleRepository.encounter(client,area,character) : null;
 
         let firstDiscovery = false;
         const rateBefore = Number(area.investigation_rate);
@@ -119,6 +130,7 @@ export function createInvestigationRepository(pool, {random = randomUnit} = {}) 
             is_unique: selected.is_unique, investigation_rate_value: Number(selected.investigation_rate_value)},
           rewards, clue, firstDiscovery, area: areaView(area), ap: Number(character.ap)
         };
+        if (battleRepository) result.battle = battle;
         await writeActionLog(client, {
           characterId: before.id, category: 'INVESTIGATION', actionType: 'INVESTIGATE',
           targetType: 'AREA', targetId: areaId, description: selected.result_text,

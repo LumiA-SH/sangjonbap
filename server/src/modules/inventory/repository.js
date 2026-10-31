@@ -1,7 +1,15 @@
+import {AppError} from '../../shared/http.js';
 import {lockCharacterByUser, changeInventoryQuantity, writeActionLog} from '../../shared/game.js';
 
 function isDuplicateRequest(err) {
     return err?.code === '23505' && err?.constraint === 'action_log_request_key_key';
+}
+
+function requireLivingCharacter(character) {
+    if(character.status==='NEAR_DEATH')throw new AppError(409,'CHARACTER_NEAR_DEATH','빈사 상태에서는 창고를 이용할 수 없습니다.');
+    if (character.status === 'DEAD') {
+        throw new AppError(409, 'CHARACTER_DEAD', '사망한 캐릭터는 창고 입출고를 할 수 없습니다.');
+    }
 }
 
 async function lockItem(client, itemId) {
@@ -90,6 +98,7 @@ export function createInventoryRepository(pool) {
                     return {type:'CHARACTER_NOT_FOUND'};
                 }
 
+                requireLivingCharacter(character);
                 const item = await lockItem(client, itemId);
                 if (!item) {
                     await client.query('rollback');
@@ -158,6 +167,7 @@ export function createInventoryRepository(pool) {
                     return {type:'CHARACTER_NOT_FOUND'};
                 }
 
+                requireLivingCharacter(character);
                 const item = await lockItem(client, itemId);
                 if (!item) {
                     await client.query('rollback');

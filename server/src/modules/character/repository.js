@@ -3,6 +3,16 @@ import {lockCharacterByUser, changeCharacterResources, writeActionLog} from '../
 // All values are bound parameters. Ownership comes from the authenticated user.
 export function createPostgresRepository(pool) {
   return {
+    async searchCharacters(query) {
+      // Literal substring, not user-supplied SQL wildcard syntax. Return public identifiers only.
+      const result = await pool.query(
+        `select c.id,c.name from public.game_character c
+         where c.is_active and strpos(lower(c.name),lower($1))>0
+           and exists(select 1 from public.auth_user u where u.character_id=c.id and u.is_active)
+         order by c.name,c.id limit 30`, [query]
+      );
+      return result.rows;
+    },
     async getUser(id) {
       const r = await pool.query(
           'select id, character_id, role, is_active from public.auth_user where id=$1',

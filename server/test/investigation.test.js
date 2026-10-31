@@ -32,6 +32,7 @@ function fixture(overrides = {}, {random = () => 0, failAt, duplicateAtLog = fal
       if (sql === 'begin') { snapshot = clone(state); return rows([]); }
       if (sql === 'rollback') { state = snapshot; return rows([]); }
       if (sql === 'commit') return rows([]);
+      if (sql.startsWith('select config_key,config_value')) return rows([{config_key: 'investigation_ap_cost', config_value: state.apCost ?? 1}]);
       if (sql.startsWith('select id from public.action_log')) return rows(state.logs.filter(log => log.requestKey === params[0]));
       if (sql.startsWith('select * from public.area')) {
         assert.match(sql, /for update$/); return rows(state.area ? [clone(state.area)] : []);
@@ -227,6 +228,7 @@ test('HTTP routes require auth, preserve envelope and accept only server-owned u
   const repository = createMemoryRepository();
   const calls = [];
   repository.getInvestigationAreas = async userId => { calls.push(userId); return [{id: '1'}]; };
+  repository.getInvestigationApCost = async () => 3;
   repository.investigate = async (...args) => { calls.push(args); return {result: {id: '2'}, rewards: [], clue: null, firstDiscovery: false, area: {id: '1', investigation_rate: 0}, ap: 9}; };
   const server = createApp({origin: 'http://localhost:3000', loginKey: 'test-only-passphrase', userId: '1'}, repository).listen(0, '127.0.0.1');
   await new Promise(resolve => server.once('listening', resolve));
@@ -238,7 +240,7 @@ test('HTTP routes require auth, preserve envelope and accept only server-owned u
   const token = (await login.json()).data.token;
   const headers = {Authorization: `Bearer ${token}`, 'Content-Type': 'application/json'};
   const list = await fetch(base + '/investigation/areas', {headers});
-  assert.deepEqual((await list.json()).data, {areas: [{id: '1'}]});
+  assert.deepEqual((await list.json()).data, {areas: [{id: '1'}], investigationApCost: 3});
   const response = await fetch(base + '/investigation/1', {method: 'POST', headers, body: JSON.stringify({requestKey: key})});
   const result = await response.json();
   assert.equal(response.status, 200); assert.equal(result.ok, true); assert.ok(result.requestId); assert.equal(result.data.ap, 9);

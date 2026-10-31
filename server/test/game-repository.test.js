@@ -58,7 +58,7 @@ for (const scenario of [
   {name: 'zero blood causes near death', changes: [0, -30, 0, 0], expected: [50, 0, 5, 20, 'NEAR_DEATH', 2]},
   {name: 'dead stays dead without increment', before: {hp: 0, status: 'DEAD'}, changes: [0, 0, 0, 0], expected: [0, 30, 5, 20, 'DEAD', 2]},
   {name: 'healing does not revive dead', before: {hp: 0, status: 'DEAD'}, changes: [20, 0, 0, 0], expected: [20, 30, 5, 20, 'DEAD', 2]},
-  {name: 'blood recovery keeps near death', before: {blood: 0, status: 'NEAR_DEATH'}, changes: [0, 20, 0, 0], expected: [50, 20, 5, 20, 'NEAR_DEATH', 2]}
+  {name: 'blood recovery clears near death', before: {blood: 0, status: 'NEAR_DEATH'}, changes: [0, 20, 0, 0], expected: [50, 20, 5, 20, 'ALIVE', 2]}
 ]) {
   test(`resources: ${scenario.name}; exact action detail and transaction`, async () => {
     const before = {...character, ...scenario.before};
@@ -67,6 +67,14 @@ for (const scenario of [
     const f = fixture([
       begin(), own(before),
       {sql: /^update public.game_character .*where id=\$7 returning \*$/, params: [...scenario.expected, character.id], result: rows([after])},
+      ...(before.status !== 'DEAD' && after.status === 'DEAD' ? [{
+        sql: /^insert into public.action_log /, check(params) {
+          const log = logRecord(params);
+          assert.equal(log.actionType, 'DEATH');
+          assert.equal(log.detail.before.death_count, before.death_count);
+          assert.equal(log.detail.after.death_count, after.death_count);
+        }
+      }] : []),
       {sql: /^insert into public.action_log /, check(params) {
         assert.deepEqual(logRecord(params), {
           characterId: character.id, adminUserId: null, category: 'CHARACTER', actionType: 'RESOURCE_CHANGE',

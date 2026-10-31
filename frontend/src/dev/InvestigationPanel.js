@@ -1,9 +1,11 @@
 import {useState} from 'react';
 import {api} from '../api/client';
 
-export default function InvestigationPanel({areas, character, error, characterError, busy, run, refresh, notify}) {
+export default function InvestigationPanel({areas, investigationApCost, character, error, characterError, busy, run, refresh, notify}) {
   const [latest, setLatest] = useState(null);
-  const blocked = !character || character.status === 'DEAD' || Number(character.ap) < 1 || !!error || !!characterError;
+  const costReady = Number.isSafeInteger(investigationApCost) && investigationApCost >= 0;
+  const insufficientAp = costReady && character && Number(character.ap) < investigationApCost;
+  const blocked = !costReady || !character || character.status === 'DEAD' || insufficientAp || !!error || !!characterError;
 
   async function investigate(area) {
     setLatest(null);
@@ -17,11 +19,11 @@ export default function InvestigationPanel({areas, character, error, characterEr
   return <section aria-labelledby="investigation-title">
     <span className="badge">INVESTIGATION</span>
     <h2 id="investigation-title">조사 DEV</h2>
-    <p>조사 1회당 AP 1을 소비합니다. 최초 발견은 모든 캐릭터가 공유합니다.</p>
+    <p>{costReady ? `조사 1회당 AP ${investigationApCost}을 소비합니다.` : '조사 비용을 불러오지 못했습니다.'} 최초 발견은 모든 캐릭터가 공유합니다.</p>
     <button disabled={busy} onClick={() => run(refresh)}>조사 지역 새로고침</button>
     {error && <p role="alert">지역 조회 실패: {error} · 이전 표시값일 수 있습니다.</p>}
     {character?.status === 'DEAD' && <p>DEAD 캐릭터는 조사할 수 없습니다.</p>}
-    {character && Number(character.ap) < 1 && <p>AP가 부족합니다. 캐릭터 DEV에서 AP +1 테스트 후 다시 시도하세요.</p>}
+    {insufficientAp && <p>AP가 부족합니다. 캐릭터 DEV에서 AP +1 테스트 후 다시 시도하세요.</p>}
     {!error && areas.length === 0 && <p>접근 가능한 조사 지역이 없습니다.</p>}
     <ul className="dev-list">
       {areas.map(area => <li className="dev-row" key={area.id}>

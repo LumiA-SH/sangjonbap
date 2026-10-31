@@ -1,4 +1,5 @@
 import {Router} from 'express';
+import {mountBloodPackRoutes} from './blood-pack-routes.js';
 import {ok} from '../../shared/http.js';
 import {createInventoryService} from './service.js';
 
@@ -7,6 +8,7 @@ export function inventoryRoutes(repository, sessions) {
     const service = createInventoryService(repository);
 
     router.use(sessions.require);
+    mountBloodPackRoutes(router,repository);
 
     router.get('/me', async (req,res) => {
         const items = await service.getInventory(req.auth.user.id);

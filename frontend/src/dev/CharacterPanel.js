@@ -1,7 +1,7 @@
 import {useEffect, useState} from 'react';
 import {api} from '../api/client';
 
-export default function CharacterPanel({character, error, busy, run, onCharacter, refresh, notify}) {
+export default function CharacterPanel({character, error, busy, run, onCharacter, refresh, notify,dev=true}) {
   const [name, setName] = useState('');
   useEffect(() => { setName(character?.name || ''); }, [character?.name]);
 
@@ -28,10 +28,18 @@ export default function CharacterPanel({character, error, busy, run, onCharacter
         ].map(([label, value]) => <div key={label}><small>{label}</small><strong>{value}</strong></div>)}
       </div>
       <p>ID {character.id} · 등급 {character.hunter_grade} · 상태 {character.status}</p>
-      <div className="actions">
+      <p>이능관리등급: {character.ability_grade ?? '없음'}</p>
+      <dl>
+        {[['나이', character.age], ['직업', character.job], ['포지션', character.position],
+          ['외부 프로필 URL', character.profile_url]].map(([label, value]) => <div key={label}>
+          <dt>{label}</dt><dd>{value ?? '미등록'}</dd>
+        </div>)}
+      </dl>
+      <p>신규 프로필 입력·수정은 고객 정책 확정 대기 중입니다.</p>
+      {dev&&<div className="actions">
         <button disabled={busy || !!error || character.ap <= 0} onClick={() => run(() => changeAp(-1))}>AP -1 테스트</button>
         <button disabled={busy || !!error || character.ap >= character.max_ap} onClick={() => run(() => changeAp(1))}>AP +1 테스트</button>
-      </div>
+      </div>}
       <form onSubmit={event => {
         event.preventDefault();
         run(async () => {

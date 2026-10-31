@@ -21,6 +21,28 @@ export async function lockCharacter(client, characterId) {
     return r.rows[0] || null;
 }
 
+// Ownership is locked first; character rows are always locked in bigint ID order.
+export async function lockCharacterPairByUser(client, userId, targetId) {
+    const user = await client.query(
+        'select character_id from public.auth_user where id=$1 and is_active for update', [userId]
+    );
+    const providerId = user.rows[0]?.character_id;
+    if (!providerId) return {provider: null, target: null};
+    const ids = [...new Set([String(providerId), String(targetId)])]
+        .sort((a, b) => BigInt(a) < BigInt(b) ? -1 : BigInt(a) > BigInt(b) ? 1 : 0);
+    const characters = new Map();
+    for (const id of ids) characters.set(id, await lockCharacter(client, id));
+    return {provider: characters.get(String(providerId)), target: characters.get(String(targetId))};
+}
+
+export function characterState(character) {
+    return {
+        id: String(character.id), hp: Number(character.hp), blood: Number(character.blood),
+        status: character.status, death_count: Number(character.death_count),
+        revive_count: Number(character.revive_count || 0)
+    };
+}
+
 export async function changeCharacterResources(client, character, changes={}) {
     const hpChange = changes.hp || 0;
     const bloodChange = changes.blood || 0;
@@ -40,6 +62,8 @@ export async function changeCharacterResources(client, character, changes={}) {
         deathCount += 1;
     } else if (status !== 'DEAD' && blood === 0) {
         status = 'NEAR_DEATH';
+    } else if (status === 'NEAR_DEATH' && blood >= 1) {
+        status = 'ALIVE';
     }
 
     const r = await client.query(
@@ -50,7 +74,15 @@ export async function changeCharacterResources(client, character, changes={}) {
         [hp,blood,ap,currency,status,deathCount,character.id]
     );
 
-    return r.rows[0];
+    const updated = r.rows[0];
+    if (character.status !== 'DEAD' && status === 'DEAD') {
+        await writeActionLog(client, {
+            characterId: character.id, category: 'CHARACTER', actionType: 'DEATH',
+            targetType: 'CHARACTER', targetId: character.id, description: '캐릭터가 사망했습니다.',
+            detail: {before: characterState(character), after: characterState(updated)}
+        });
+    }
+    return updated;
 }
 
 export async function changeInventoryQuantity(client, characterId, itemId, delta) {

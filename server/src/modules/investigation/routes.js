@@ -8,8 +8,7 @@ export function investigationRoutes(repository, sessions) {
   router.use(sessions.require);
 
   router.get('/areas', async (req, res) => {
-    const areas = await service.getAreas(req.auth.user.id);
-    ok(res, {areas});
+    ok(res, await service.getAreas(req.auth.user.id));
   });
 
   router.post('/:areaId', async (req, res) => {

@@ -13,3 +13,25 @@ section form { margin-top: 16px; }
 pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; }
 button:disabled { cursor: not-allowed; }
 @media (max-width: 520px) { .dev-row input[type="number"] { flex: none; width: 100%; } }
+
+.dev-fold { margin-bottom: 20px; }
+.dev-fold > summary { cursor: pointer; padding: 12px; font-weight: 700; }
+.care-states { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.log-scroll { max-height: 520px; overflow: auto; }
+@media (max-width: 520px) { .care-states { grid-template-columns: 1fr; } }
+.admin-form {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
+.admin-form h3,.admin-form p {grid-column:1/-1}
+.admin-form label {display:flex;flex-direction:column;gap:8px;min-width:0}
+.admin-form input,.admin-form select,.admin-form textarea {width:100%;min-width:0;padding:10px;font:inherit}
+.admin-form input[type=checkbox] {width:auto;align-self:start}
+.admin-panel li {padding:8px 0;overflow-wrap:anywhere}
+@media(max-width:600px){.admin-form{grid-template-columns:1fr}.admin-panel{padding:16px}}
+
+.admin-wide { grid-column: 1 / -1; min-width: 0; }
+.admin-child-row { display: flex; flex-wrap: wrap; align-items: end; gap: 0.75rem; margin-bottom: 1rem; }
+.admin-child-row label { flex: 1 1 140px; min-width: 0; }
+.admin-panel input, .admin-panel textarea, .admin-panel select { max-width: 100%; box-sizing: border-box; }
+.admin-item-picker { min-width: 0; border: 1px solid #8885; padding: .6rem; border-radius: .3rem; }
+.admin-item-picker ul { padding-left: 1.2rem; overflow-wrap: anywhere; }
+.admin-item-picker label { display: grid; gap: .3rem; }
+.admin-item-picker input { width: 100%; min-width: 0; box-sizing: border-box; }
