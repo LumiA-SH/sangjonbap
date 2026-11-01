@@ -1,3 +1,4 @@
+import {requireNoActiveBattle} from '../../shared/actions.js';
 import {AppError} from '../../shared/http.js';
 import {lockCharacterByUser, changeInventoryQuantity, writeActionLog} from '../../shared/game.js';
 
@@ -6,7 +7,7 @@ function isDuplicateRequest(err) {
 }
 
 function requireLivingCharacter(character) {
-    if(character.status==='NEAR_DEATH')throw new AppError(409,'CHARACTER_NEAR_DEATH','빈사 상태에서는 창고를 이용할 수 없습니다.');
+
     if (character.status === 'DEAD') {
         throw new AppError(409, 'CHARACTER_DEAD', '사망한 캐릭터는 창고 입출고를 할 수 없습니다.');
     }
@@ -99,6 +100,7 @@ export function createInventoryRepository(pool) {
                 }
 
                 requireLivingCharacter(character);
+                await requireNoActiveBattle(client,character);
                 const item = await lockItem(client, itemId);
                 if (!item) {
                     await client.query('rollback');
@@ -168,6 +170,7 @@ export function createInventoryRepository(pool) {
                 }
 
                 requireLivingCharacter(character);
+                await requireNoActiveBattle(client,character);
                 const item = await lockItem(client, itemId);
                 if (!item) {
                     await client.query('rollback');

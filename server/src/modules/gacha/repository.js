@@ -1,3 +1,4 @@
+import {requireNoActiveBattle} from '../../shared/actions.js';
 import {AppError} from '../../shared/http.js';
 import {lockCharacterByUser, changeCharacterResources, changeInventoryQuantity, writeActionLog} from '../../shared/game.js';
 import {validateRewards, selectReward, requirePeriod} from './rules.js';
@@ -12,12 +13,9 @@ export function createGachaRepository(pool,{random}={}) {
             const found = await pool.query(`select c.id from public.game_character c join public.auth_user u on u.character_id=c.id
                 where u.id=$1 and u.is_active and c.is_active`,[userId]);
             if (!found.rowCount) fail('CHARACTER_NOT_FOUND','연결된 활성 캐릭터가 없습니다.',404);
-            const result = await pool.query(`select g.*,
+            const result = await pool.query(`select g.id,g.name,g.price,g.start_at,g.end_at,
                 coalesce(statement_timestamp()=start_at or statement_timestamp()=end_at,false) boundary,
-                coalesce(statement_timestamp()<start_at,false) or coalesce(statement_timestamp()>end_at,false) outside,
-                coalesce((select jsonb_agg(jsonb_build_object('id',r.id::text,'itemId',r.item_id::text,'name',i.name,
-                    'quantity',r.quantity,'weight',r.weight,'isActive',i.is_active) order by r.id)
-                    from public.gacha_reward r join public.item i on i.id=r.item_id where r.gacha_id=g.id),'[]'::jsonb) rewards
+                coalesce(statement_timestamp()<start_at,false) or coalesce(statement_timestamp()>end_at,false) outside
                 from public.gacha g where g.is_active order by g.id`);
             return {gachas:result.rows};
         },
@@ -32,10 +30,11 @@ export function createGachaRepository(pool,{random}={}) {
                 if (!before) fail('CHARACTER_NOT_FOUND','연결된 활성 캐릭터가 없습니다.',404);
                 if (before.status==='DEAD') fail('CHARACTER_DEAD','사망한 캐릭터는 가챠를 사용할 수 없습니다.');
                 if (before.status==='NEAR_DEATH') fail('CHARACTER_NEAR_DEATH','빈사 상태의 가챠 행동은 불가합니다.');
+                await requireNoActiveBattle(client,before);
                 const gacha = (await client.query('select * from public.gacha where id=$1 for share',[gachaId])).rows[0];
                 if (!gacha?.is_active) fail('GACHA_NOT_FOUND','활성 가챠가 없습니다.',404);
                 const rewards = (await client.query('select * from public.gacha_reward where gacha_id=$1 order by id for share',[gachaId])).rows;
-                const totalWeight = validateRewards(rewards);
+                validateRewards(rewards);
                 const items = new Map();
                 const ids = [...new Set(rewards.map(row=>String(row.item_id)))].sort((a,b)=>BigInt(a)<BigInt(b)?-1:BigInt(a)>BigInt(b)?1:0);
                 for (const id of ids) {
@@ -55,8 +54,7 @@ export function createGachaRepository(pool,{random}={}) {
                 const character = await changeCharacterResources(client,before,{currency:-gacha.price});
                 const inventory = await changeInventoryQuantity(client,before.id,selected.item_id,selected.quantity);
                 const result = {gachaId,price:gacha.price,currencyBefore:before.currency,currency:character.currency,
-                    reward:{id:selected.id,itemId:selected.item_id,name:items.get(String(selected.item_id)).name,quantity:selected.quantity,
-                        weight:selected.weight,totalWeight},inventoryBefore:inventory.before,inventoryQuantity:inventory.after};
+                    reward:{id:selected.id,itemId:selected.item_id,name:items.get(String(selected.item_id)).name,quantity:selected.quantity},inventoryBefore:inventory.before,inventoryQuantity:inventory.after};
                 await writeActionLog(client,{characterId:before.id,category:'GACHA',actionType:'GACHA_DRAW',targetType:'GACHA',targetId:gachaId,
                     description:`${gacha.name} 1회 추첨`,detail:result,requestKey});
                 await client.query('commit');

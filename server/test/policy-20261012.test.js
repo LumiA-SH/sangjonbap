@@ -7,8 +7,8 @@ import {randomUUID} from 'node:crypto';
 import {kstDate} from '../src/modules/daily/date.js';
 
 test('doubled initial stats validate B/A/S sums and integer limits without rewriting characters',()=>{
-    for(const [grade,stats] of [['B',{atk:12,def:12,agi:12}],['A',{atk:10,def:10,agi:20}],['S',{atk:16,def:15,agi:15}]])assert.deepEqual(validateInitialStats(grade,stats),stats);
-    for(const stats of [{atk:9,def:13,agi:14},{atk:12.5,def:11.5,agi:12},{atk:10,def:10,agi:10}])assert.throws(()=>validateInitialStats('B',stats));
+    for(const [grade,stats] of [['B',{atk:12,def:12,agi:12}],['A',{atk:10,def:10,agi:20}],['S',{atk:15,def:15,agi:15}]])assert.deepEqual(validateInitialStats(grade,stats),stats);
+    for(const stats of [{atk:7,def:14,agi:15},{atk:12.5,def:11.5,agi:12},{atk:10,def:10,agi:10}])assert.throws(()=>validateInitialStats('B',stats));
 });
 test('blood pack uses explicit effect, daily limit separate from lifetime and KST midnight',()=>{
     assert.equal(isBloodPack({name:'혈액팩',effect_type:null}),false);

@@ -18,8 +18,8 @@ beforeEach(async()=>{
   container=document.createElement('div');document.body.appendChild(container);root=createRoot(container);await render();
 });
 afterEach(async()=>{await act(async()=>root.unmount());container.remove();});
-test('catalog weight and period/status/error controls',async()=>{
-  expect(container.textContent).toContain('가중치 7');expect(container.textContent).toContain('가격 10');
+test('catalog hides rewards and preserves period/status/error controls',async()=>{
+  expect(container.textContent).not.toContain('가중치');expect(container.textContent).not.toContain('보상');expect(container.textContent).toContain('가격 10');
   for(const state of [{outside:true},{boundary:true}]) {await render({gachas:[{...gacha,...state}]});expect(draw().disabled).toBe(true);}
   for(const status of ['DEAD','NEAR_DEATH']) {await render({character:{status}});expect(draw().disabled).toBe(true);}
   await render({error:'offline'});expect(draw().disabled).toBe(true);

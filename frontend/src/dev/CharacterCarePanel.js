@@ -13,7 +13,7 @@ export default function CharacterCarePanel({character, busy, run, refresh, notif
   const [result, setResult] = useState(null);
   const [failure, setFailure] = useState(null);
   const sending = useRef(false);
-  const disabled = busy || pending || !character;
+  const disabled = busy || pending || !character || character.in_active_battle || character.status !== 'ALIVE';
 
   async function perform(action, id) {
     if (sending.current || disabled || !validCharacterId(id)) return;

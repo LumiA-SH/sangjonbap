@@ -89,7 +89,7 @@ export default function BattleAdminPanel({onDenied}) {
         <label>캐릭터 이름<input required maxLength={40} value={profile.name} disabled={busy} onChange={e=>setProfile({...profile,name:e.target.value})}/></label>
         <label>운영진 확정 등급<select required disabled={busy} value={profile.hunter_grade} onChange={e=>setProfile({...profile,hunter_grade:e.target.value})}><option value="">선택</option>{['B','A','S'].map(g=><option key={g}>{g}</option>)}</select></label>
         {['atk','def','agi'].map(k=><div key={k}>{number(k,profile[k],v=>setProfile({...profile,[k]:v}))}</div>)}
-        <p>개별 10~20 · 합계 {Number(profile.atk)+Number(profile.def)+Number(profile.agi)} / B36·A40·S46</p>
+        <p>개별 8~40 · 합계 {Number(profile.atk)+Number(profile.def)+Number(profile.agi)} / B36·A40·S45</p>
         <label>이능관리등급<select disabled={busy} value={profile.ability_grade||''} onChange={e=>setProfile({...profile,has_ability:!!e.target.value,ability_grade:e.target.value||null})}><option value="">이능 없음</option>{['E','D','C','B','A','S'].map(g=><option key={g}>{g}</option>)}</select></label>
         <button disabled={busy||!account.oauth_verified_at||!!account.character_id}>승인 캐릭터 등록</button>
       </form>}

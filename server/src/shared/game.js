@@ -1,3 +1,5 @@
+import {bloodLimit} from './balance.js';
+
 export async function lockCharacterByUser(client, userId) {
     const r = await client.query(
         `select c.*
@@ -50,7 +52,8 @@ export async function changeCharacterResources(client, character, changes={}) {
     const currencyChange = changes.currency || 0;
 
     const hp = Math.max(0, Math.min(Number(character.max_hp), Number(character.hp) + hpChange));
-    const blood = Math.max(0, Math.min(Number(character.max_blood), Number(character.blood) + bloodChange));
+    const blood = bloodChange === 0 ? Number(character.blood)
+        : Math.max(0, Math.min(bloodLimit(character), Number(character.blood) + bloodChange));
     const ap = Math.max(0, Math.min(Number(character.max_ap), Number(character.ap) + apChange));
     const currency = Math.max(0, Number(character.currency) + currencyChange);
 

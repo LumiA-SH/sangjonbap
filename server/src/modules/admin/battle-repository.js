@@ -116,7 +116,7 @@ export function createAdminBattleRepository(pool) {
                     fail('VERIFIED_ACCOUNT_REQUIRED','실제 OAuth로 검증된 계정 식별자가 일치해야 합니다.');
                 if(user.character_id)fail('CHARACTER_ALREADY_LINKED','이미 캐릭터가 연결되어 있습니다.');
                 const character=(await c.query(`insert into public.game_character(name,hunter_grade,atk,def,agi,has_ability,ability_grade,
-                    hp,max_hp,blood,max_blood,ap,max_ap) values($1,$2,$3,$4,$5,$6,$7,100,100,200,200,10,10) returning *`,
+                    hp,max_hp,blood,max_blood,ap,max_ap) values($1,$2,$3,$4,$5,$6,$7,100,100,100,100,10,10) returning *`,
                     [body.name.trim(),body.hunter_grade,body.atk,body.def,body.agi,body.has_ability,body.ability_grade])).rows[0];
                 await c.query('update public.auth_user set character_id=$1 where id=$2',[character.id,target]);
                 await writeActionLog(c,{adminUserId:actor,characterId:character.id,category:'ADMIN',actionType:'CHARACTER_REGISTER',targetType:'AUTH_USER',targetId:target,

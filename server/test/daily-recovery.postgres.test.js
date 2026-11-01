@@ -14,7 +14,7 @@ test('coalesced daily recovery isolated PostgreSQL', {skip:process.env.RUN_DAILY
     };}};
     try {
         await raw.query(`create schema ${schema}`);
-        for(const table of ['daily_reset_state','daily_reset_run','system_config','game_character','action_log'])
+        for(const table of ['daily_reset_state','daily_reset_run','system_config','game_character','action_log','battle','battle_log'])
             await raw.query(`create table ${schema}.${table} (like public.${table} including all)`);
         await pool.query('insert into public.daily_reset_state(singleton) values(true)');
         await pool.query("insert into public.system_config(config_key,config_value) values('daily_blood_decay','10')");

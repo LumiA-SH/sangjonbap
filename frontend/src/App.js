@@ -138,7 +138,7 @@ export default function App() {
       <CharacterCarePanel character={character} busy={busy} run={run} refresh={refreshAll} notify={setMessage}/>
       <TrainingBloodPanel character={character} inventory={inventory} busy={busy} run={run} refresh={refreshAll}/>
       <details className="dev-fold"><summary>인벤토리·공용 창고</summary>
-      <InventoryPanel inventory={inventory} storage={storage} errors={errors} busy={busy} run={run}
+      <InventoryPanel character={character} inventory={inventory} storage={storage} errors={errors} busy={busy} run={run}
         refresh={refreshAll} notify={setMessage}/>
       </details>
       <details className="dev-fold" open><summary>조사</summary>

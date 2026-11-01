@@ -21,10 +21,12 @@ test('training request, UUID, success refresh and server errors',async()=>{
   api.mockRejectedValueOnce(Object.assign(new Error('완료'),{code:'TRAINING_ALREADY_DONE'}));await act(async()=>button('일일훈련').click());
   expect(container.textContent).toContain('TRAINING_ALREADY_DONE');expect(refresh).toHaveBeenCalledTimes(1);
 });
-test('near death blocks training/send but allows explicit-effect pack use; dead cannot use',async()=>{
+test('near death blocks training but allows pack use and sending; dead cannot use',async()=>{
   await render('NEAR_DEATH');await act(async()=>Simulate.change(container.querySelector('select'),{target:{value:'7'}}));
   expect(button('일일훈련').disabled).toBe(true);expect(button('혈액팩 1개 양도').disabled).toBe(true);expect(button('혈액팩 사용').disabled).toBe(false);
-  api.mockResolvedValueOnce({blood:30,status:'ALIVE'});await act(async()=>button('혈액팩 사용').click());
+  await act(async()=>Simulate.change(container.querySelector('input'),{target:{value:'2'}}));
+  expect(button('혈액팩 1개 양도').disabled).toBe(false);
+  api.mockResolvedValueOnce({blood:10,status:'ALIVE'});await act(async()=>button('혈액팩 사용').click());
   expect(api).toHaveBeenCalledWith('/inventory/blood-packs/7/use',expect.objectContaining({method:'POST'}));
   await render('DEAD');expect(button('혈액팩 사용').disabled).toBe(true);
 });

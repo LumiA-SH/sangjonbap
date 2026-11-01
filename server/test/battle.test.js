@@ -8,7 +8,7 @@ import {createApp} from '../src/app.js';
 import {createMemoryRepository} from '../src/db/memory.js';
 import {startBattleExpiry} from '../src/modules/battle/scheduler.js';
 
-const pc={hp:100,max_hp:100,blood:200,max_blood:200,ap:10,atk:20,def:10,agi:10,status:'ALIVE',has_ability:true,ability_grade:'B'};
+const pc={hp:100,max_hp:100,blood:100,max_blood:100,ap:10,atk:20,def:10,agi:10,status:'ALIVE',has_ability:true,ability_grade:'B'};
 const monster={hp:100,atk:20,def:10,agi:10};
 const declaration={action_type:'ATTACK',multiplier:1};
 const turn=(options={},random=()=>0)=>resolveTurn({character:pc,monster,declaration,action:'ATTACK',...options},random);
@@ -16,15 +16,15 @@ const reject=(fn,code)=>assert.throws(fn,e=>e.code===code);
 
 test('normal/ability damage floors, costs and independent rolls',()=>{
     assert.equal(attackDamage(20,10,1),21);assert.equal(monsterDamage(20,10,1),11);
-    const r=turn();assert.equal(r.pcDamage,21);assert.equal(r.enemyDamage,11);assert.equal(r.blood,195);assert.equal(r.ap,10);
+    const r=turn();assert.equal(r.pcDamage,21);assert.equal(r.enemyDamage,11);assert.equal(r.blood,100);assert.equal(r.ap,10);
     const a=turn({action:'ABILITY',ability:{multiplier:1.8,ap_cost:2}});
-    assert.equal(a.pcDamage,37);assert.equal(a.ap,8);assert.equal(a.blood,195);
+    assert.equal(a.pcDamage,37);assert.equal(a.ap,8);assert.equal(a.blood,100);
     reject(()=>turn({action:'ABILITY',character:{...pc,has_ability:false}}),'ABILITY_UNAVAILABLE');
     reject(()=>turn({action:'ABILITY',character:{...pc,ap:1},ability:{multiplier:1.8,ap_cost:2}}),'NOT_ENOUGH_AP');
 });
 test('defense can be guaranteed and counters without blood cost; failure takes damage',()=>{
     const r=turn({action:'DEFEND',character:{...pc,def:30}});
-    assert.equal(r.defended,true);assert.equal(r.enemyDamage,0);assert.equal(r.pcDamage,8);assert.equal(r.blood,200);
+    assert.equal(r.defended,true);assert.equal(r.enemyDamage,0);assert.equal(r.pcDamage,8);assert.equal(r.blood,100);
     assert.equal(turn({action:'DEFEND'}).enemyDamage,11);
     const rolls=[0,0.999,0];
     assert.equal(turn({action:'DEFEND',character:{...pc,def:29}},()=>rolls.shift()).defended,true);
@@ -37,16 +37,16 @@ test('kill still receives declared damage; simultaneous death is victory',()=>{
     const r=turn({character:{...pc,hp:1},monster:{...monster,hp:1}});
     assert.equal(r.status,'VICTORY');assert.equal(r.hp,0);assert.equal(r.monsterHp,0);assert.equal(r.enemyDamage,11);
 });
-test('blood 5 resolves full turn then defeat/near-death, victory has priority',()=>{
-    const r=turn({character:{...pc,blood:5}});assert.equal(r.status,'DEFEAT');assert.equal(r.blood,0);assert.equal(r.hp,89);
+test('positive blood permits free attacks; zero blood remains blocked',()=>{
+    const r=turn({character:{...pc,blood:5}});assert.equal(r.status,'ACTIVE');assert.equal(r.blood,5);assert.equal(r.hp,89);
     assert.equal(turn({character:{...pc,blood:5},monster:{...monster,hp:1}}).status,'VICTORY');
-    for(const blood of [1,2,3,4])reject(()=>turn({character:{...pc,blood}}),'NOT_ENOUGH_BLOOD');
+    for(const blood of [1,2,3,4])assert.equal(turn({character:{...pc,blood}}).blood,blood);
     reject(()=>turn({character:{...pc,blood:0}}),'BATTLE_CHARACTER_UNAVAILABLE');
 });
 test('blood pack applies before attack, uses configured amount and cap',()=>{
     const item={is_active:true,usable:true,battle_usable:true,use_target:'SELF',effect_type:'BLOOD_PACK',effect_value:40};
     const r=turn({action:'ITEM',character:{...pc,blood:5},item});assert.equal(r.blood,45);assert.equal(r.hp,89);
-    assert.equal(turn({action:'ITEM',item}).blood,200);
+    assert.equal(turn({action:'ITEM',item}).blood,100);
     reject(()=>turn({action:'ITEM',item:{...item,battle_usable:false}}),'BATTLE_ITEM_UNAVAILABLE');
 });
 test('flee chance clamps, success avoids damage, failure takes declared attack',()=>{

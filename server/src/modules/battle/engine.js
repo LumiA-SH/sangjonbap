@@ -1,5 +1,6 @@
 import {AppError} from '../../shared/http.js';
 import {randomUnit} from '../investigation/random.js';
+import {bloodLimit} from '../../shared/balance.js';
 
 const fail=(code,message)=>{throw new AppError(409,code,message);};
 export const attackDamage=(atk,def,r)=>Math.max(1,Math.floor(atk*1.25+r-def*0.5));
@@ -27,7 +28,6 @@ export function resolveTurn({character,monster,declaration,action,ability,item},
     let pcDamage=0,enemyDamage=0,defended=false,fledActor=null;
     const enemyAttacks=declaration.action_type!=='FLEE';
     if(action==='ATTACK'||action==='ABILITY') {
-        if(blood<5)fail('NOT_ENOUGH_BLOOD','공격에 혈량 5가 필요합니다.');
         if(action==='ABILITY') {
             if(!character.has_ability||!character.ability_grade)fail('ABILITY_UNAVAILABLE','이능을 보유하지 않았습니다.');
             if(!ability||!Number.isFinite(ability.multiplier)||ability.multiplier<=0||!Number.isInteger(ability.ap_cost)||ability.ap_cost<0)
@@ -35,7 +35,6 @@ export function resolveTurn({character,monster,declaration,action,ability,item},
             if(ap<ability.ap_cost)fail('NOT_ENOUGH_AP','이능공격에 필요한 AP가 부족합니다.');
             ap-=ability.ap_cost;
         }
-        blood-=5;
         const base=attackDamage(character.atk,monster.def,die('pc_attack'));
         pcDamage=action==='ABILITY'?Math.max(1,Math.floor(base*ability.multiplier)):base;
     } else if(action==='DEFEND') {
@@ -44,7 +43,7 @@ export function resolveTurn({character,monster,declaration,action,ability,item},
     } else if(action==='ITEM') {
         if(!item?.is_active||!item.usable||!item.battle_usable||item.use_target!=='SELF'||
             !Number.isInteger(item.effect_value)||item.effect_value<=0)fail('BATTLE_ITEM_UNAVAILABLE','전투에서 사용할 수 없는 아이템입니다.');
-        if(item.effect_type==='BLOOD_PACK')blood=Math.min(200,Number(character.max_blood),blood+item.effect_value);
+        if(item.effect_type==='BLOOD_PACK')blood=Math.min(bloodLimit(character),blood+item.effect_value);
         else fail('BATTLE_ITEM_EFFECT_HOLD','정의되지 않은 전투 아이템 효과입니다.');
     } else if(action==='FLEE') {
         // On a monster flee declaration both sides leave without a random check.

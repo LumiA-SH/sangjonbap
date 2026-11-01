@@ -135,14 +135,15 @@ test('PostgreSQL character care, rollback and concurrency', {
         });
         await scenario('DEAD remains DEAD when blood falls to zero', async () => {
             await dead(1);
-            const target = await core.changeResources(users[1], {blood: -100}, 'dead blood test');
+            await assert.rejects(core.changeResources(users[1], {blood: -100}, 'dead blood test'),{code:'CHARACTER_DEAD'});
+            const target = await get(1);
             assert.equal(target.status, 'DEAD');
             assert.equal(target.death_count, 1);
             assert.equal((await logs('DEATH')).length, 0);
         });
         await scenario('HP zero dies once, logs once and preserves inventory', async () => {
             await core.changeResources(users[1], {hp: -50}, 'death test');
-            await core.changeResources(users[1], {hp: -10}, 'repeated death test');
+            await assert.rejects(core.changeResources(users[1], {hp: -10}, 'repeated death test'),{code:'CHARACTER_DEAD'});
             const target = await get(1);
             assert.equal(target.status, 'DEAD');
             assert.equal(target.death_count, 1);

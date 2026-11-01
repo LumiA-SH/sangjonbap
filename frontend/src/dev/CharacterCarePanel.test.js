@@ -16,7 +16,7 @@ beforeEach(async () => {
   container = document.createElement('div');
   document.body.appendChild(container);
   root = createRoot(container);
-  await act(async () => root.render(<CharacterCarePanel character={{id: '1'}} busy={false}
+  await act(async () => root.render(<CharacterCarePanel character={{id: '1',status:'ALIVE'}} busy={false}
     run={task => task()} refresh={refresh} notify={notify}/>));
 });
 afterEach(async () => { await act(async () => root.unmount()); container.remove(); });

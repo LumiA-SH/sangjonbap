@@ -29,8 +29,8 @@ function ItemTransfer({item, direction, disabled, run, refresh, notify}) {
   </li>;
 }
 
-export default function InventoryPanel({inventory, storage, errors, busy, run, refresh, notify}) {
-  const disabled = busy || !!errors.inventory || !!errors.storage;
+export default function InventoryPanel({inventory, storage, character, errors, busy, run, refresh, notify}) {
+  const disabled = busy || character?.in_active_battle || character?.status==='DEAD' || !!errors.inventory || !!errors.storage;
   return <section aria-labelledby="inventory-title">
     <span className="badge">INVENTORY / STORAGE</span>
     <h2 id="inventory-title">인벤토리·공용창고 DEV</h2>

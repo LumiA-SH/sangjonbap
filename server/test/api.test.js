@@ -72,9 +72,9 @@ test('database errors do not expose SQL or credentials',async t=>{
 test('repository binds ownership, commits success and rolls back write failure',async()=>{
   for(const failure of [false,true]){
     const calls=[];let released=false;
-    const client={async query(sql,params){calls.push({sql,params});if(sql.startsWith('select'))return {rowCount:1,rows:[{id:'9007199254740993'}]};if(sql.startsWith('update')){if(failure)throw new Error('write failed');return {rows:[{id:'9007199254740993',name:'ok'}]};}return {};},release(){released=true;}};
+    const client={async query(sql,params){calls.push({sql,params});if(sql.includes('from public.battle'))return {rowCount:0,rows:[]};if(sql.startsWith('select'))return {rowCount:1,rows:[{id:'9007199254740993'}]};if(sql.startsWith('update')){if(failure)throw new Error('write failed');return {rows:[{id:'9007199254740993',name:'ok'}]};}return {};},release(){released=true;}};
     const repo=createPostgresRepository({connect:async()=>client});
     if(failure)await assert.rejects(repo.updateProfile('7',{name:'ok'}));else assert.equal((await repo.updateProfile('7',{name:'ok'})).id,'9007199254740993');
-    assert.deepEqual(calls[1].params,['7']);assert.deepEqual(calls[2].params,['ok','9007199254740993']);assert.equal(calls.at(-1).sql,failure?'rollback':'commit');assert.equal(released,true);
+    assert.deepEqual(calls[1].params,['7']);assert.deepEqual(calls[3].params,['ok','9007199254740993']);assert.equal(calls.at(-1).sql,failure?'rollback':'commit');assert.equal(released,true);
   }
 });

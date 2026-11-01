@@ -1,5 +1,11 @@
 import {AppError} from './http.js';
 
+// Call only after locking the character. Battle writers use character -> battle too.
+export async function requireNoActiveBattle(client, character) {
+    const result = await client.query("select id from public.battle where character_id=$1 and battle_status='ACTIVE' for share", [character.id]);
+    if (result.rowCount) throw new AppError(409, 'BATTLE_ACTIVE', '전투 중에는 전투 행동과 조회만 가능합니다.');
+}
+
 export function requireActionCharacter(character,{allowNearDeath=false}={}) {
     if (!character) throw new AppError(404,'CHARACTER_NOT_FOUND','활성 캐릭터가 없습니다.');
     if (character.status==='DEAD'||Number(character.hp)<=0) throw new AppError(409,'CHARACTER_DEAD','사망 상태에서는 행동할 수 없습니다.');

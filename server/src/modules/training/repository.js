@@ -1,7 +1,7 @@
 import {AppError} from '../../shared/http.js';
 import {lockCharacterByUser,changeCharacterResources,writeActionLog} from '../../shared/game.js';
 import {readNumberSettings,resourceNumber} from '../../shared/settings.js';
-import {actionTransaction,requireActionCharacter,currentKstDay,rejectActionDuplicate} from '../../shared/actions.js';
+import {requireNoActiveBattle,actionTransaction,requireActionCharacter,currentKstDay,rejectActionDuplicate} from '../../shared/actions.js';
 import {loadTrainingGrowthContext,calculateTrainingGrowth} from './growth.js';
 import {randomUnit,winsReward} from '../investigation/random.js';
 
@@ -10,7 +10,7 @@ export function createTrainingRepository(pool,{random=randomUnit}={}) {
         trainCharacter(userId,key) {
             return actionTransaction(pool,async c=>{
                 const before=await lockCharacterByUser(c,userId);
-                await rejectActionDuplicate(c,key);requireActionCharacter(before);
+                await rejectActionDuplicate(c,key);requireActionCharacter(before);await requireNoActiveBattle(c,before);
                 const day=await currentKstDay(c);
                 const previous=(await c.query('select last_training_date::text as day from public.game_character where id=$1',[before.id])).rows[0].day;
                 if (previous && previous>=day) throw new AppError(409,'TRAINING_ALREADY_DONE','오늘 훈련을 완료했습니다.');

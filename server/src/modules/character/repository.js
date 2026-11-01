@@ -1,4 +1,5 @@
 import {lockCharacterByUser, changeCharacterResources, writeActionLog} from '../../shared/game.js';
+import {requireActionCharacter, requireNoActiveBattle} from '../../shared/actions.js';
 
 // All values are bound parameters. Ownership comes from the authenticated user.
 export function createPostgresRepository(pool) {
@@ -23,7 +24,8 @@ export function createPostgresRepository(pool) {
 
     async getCharacter(id) {
       const r = await pool.query(
-          `select c.*
+          `select c.*,exists(select 1 from public.battle b where b.character_id=c.id and b.battle_status='ACTIVE') as in_active_battle,
+                  least(c.max_blood,100) as effective_max_blood
            from public.game_character c
                   join public.auth_user u on u.character_id=c.id
            where u.id=$1 and u.is_active and c.is_active`,
@@ -45,6 +47,8 @@ export function createPostgresRepository(pool) {
           return null;
         }
 
+        requireActionCharacter(own,{allowNearDeath:true});
+        await requireNoActiveBattle(client,own);
         const r = await client.query(
             'update public.game_character set name=$1 where id=$2 returning *',
             [patch.name, own.id]
@@ -73,6 +77,8 @@ export function createPostgresRepository(pool) {
           return null;
         }
 
+        requireActionCharacter(own);
+        await requireNoActiveBattle(client,own);
         const before = own;
         const character = await changeCharacterResources(client, before, changes);
 

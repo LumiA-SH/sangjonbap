@@ -26,7 +26,7 @@ test('shows independent limits and validates quantity, stock, DEAD and HOLD',asy
   await act(async()=>Simulate.change(container.querySelector('input'),{target:{value:'1'}}));
   expect(buy().disabled).toBe(false);
   await render({character:{status:'DEAD'}});expect(buy().disabled).toBe(true);
-  await render({character:{status:'NEAR_DEATH'}});expect(container.textContent).toContain('혈액팩만');expect(buy().disabled).toBe(true);
+  await render({character:{status:'NEAR_DEATH'}});expect(container.textContent).toContain('상점을 이용');expect(buy().disabled).toBe(false);
   await render({character:{status:'NEAR_DEATH'},products:[{...product,effect_type:'BLOOD_PACK',price:0,dailyRemaining:1}]});expect(buy().disabled).toBe(false);
   await render({character:{status:'NEAR_DEATH'},products:[{...product,effect_type:'BLOOD_PACK',price:0,dailyRemaining:0}]});expect(buy().disabled).toBe(true);
 });
@@ -42,4 +42,10 @@ test('real API contract with UUID, one submission per in-flight action, refresh 
 test('refresh failure cannot turn committed purchase into a failed purchase',async()=>{
   api.mockResolvedValueOnce({currency:90});refresh.mockRejectedValueOnce(new Error('offline'));
   await act(async()=>buy().click());expect(container.textContent).toContain('구매 성공');expect(notify).toHaveBeenCalledWith(expect.stringContaining('일부 조회 실패'));
+});
+
+test('active battle blocks purchase even while otherwise ALIVE',async()=>{
+  await render({character:{status:'ALIVE',in_active_battle:true}});
+  expect(buy().disabled).toBe(true);
+  await act(async()=>buy().click());expect(api).not.toHaveBeenCalled();
 });

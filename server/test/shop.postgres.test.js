@@ -102,7 +102,7 @@ test('PostgreSQL shop isolated purchases and concurrency', {skip: process.env.RU
             await pool.query("update public.game_character set status='DEAD' where id=$1",[ids[0]]);
             await rejects(buy(),'CHARACTER_DEAD');
             await pool.query("update public.game_character set status='NEAR_DEATH' where id=$1",[ids[0]]);
-            await rejects(buy(),'CHARACTER_NEAR_DEATH');
+            await rejects(buy(),'NOT_ENOUGH_CURRENCY');
             assert.equal((await snapshot()).purchases.length,0);
         });
         await scenario('log failure rolls back currency inventory and purchase history', async () => {

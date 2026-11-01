@@ -1,6 +1,6 @@
 import {AppError} from '../../shared/http.js';
 import {lockCharacterByUser,lockCharacterPairByUser,changeCharacterResources,changeInventoryQuantity,writeActionLog} from '../../shared/game.js';
-import {actionTransaction,requireActionCharacter,rejectActionDuplicate} from '../../shared/actions.js';
+import {actionTransaction,requireActionCharacter,rejectActionDuplicate,requireNoActiveBattle} from '../../shared/actions.js';
 
 export const isBloodPack=item=>item?.effect_type==='BLOOD_PACK';
 export function validateBloodPack(item) {
@@ -28,7 +28,9 @@ export function createBloodPackRepository(pool) {
         transferBloodPack(userId,targetId,itemId,quantity,key) {
             return actionTransaction(pool,async c=>{
                 const {provider,target}=await lockCharacterPairByUser(c,userId,targetId);await rejectActionDuplicate(c,key);
-                requireActionCharacter(provider);requireActionCharacter(target,{allowNearDeath:true});
+                requireActionCharacter(provider,{allowNearDeath:true});requireActionCharacter(target,{allowNearDeath:true});
+                await requireNoActiveBattle(c,provider);
+                await requireNoActiveBattle(c,target);
                 if(provider.id===target.id)throw new AppError(409,'SELF_TRANSFER','본인에게 양도할 수 없습니다.');
                 const item=(await c.query('select * from public.item where id=$1 for update',[itemId])).rows[0];validateBloodPack(item);
                 const owned=await changeInventoryQuantity(c,provider.id,itemId,-quantity);

@@ -14,6 +14,7 @@ export default function CharacterPanel({character, error, busy, run, onCharacter
     notify(`AP ${delta > 0 ? '+' : ''}${delta} 처리 완료`);
   }
 
+  const blocked = busy || character?.in_active_battle || character?.status==='DEAD';
   return <section aria-labelledby="character-title">
     <span className="badge">CHARACTER</span>
     <h2 id="character-title">캐릭터 DEV</h2>
@@ -24,10 +25,11 @@ export default function CharacterPanel({character, error, busy, run, onCharacter
       <div className="stats">
         {[
           ['HP', `${character.hp}/${character.max_hp}`], ['AP', `${character.ap}/${character.max_ap}`],
-          ['혈액', `${character.blood}/${character.max_blood}`], ['재화', character.currency]
+          ['혈액', `${character.blood}/${character.effective_max_blood ?? Math.min(100,character.max_blood)}`], ['재화', character.currency]
         ].map(([label, value]) => <div key={label}><small>{label}</small><strong>{value}</strong></div>)}
       </div>
       <p>ID {character.id} · 등급 {character.hunter_grade} · 상태 {character.status}</p>
+      {character.in_active_battle && <p>진행 중 전투: 전투 행동과 조회만 가능합니다.</p>}
       <p>이능관리등급: {character.ability_grade ?? '없음'}</p>
       <dl>
         {[['나이', character.age], ['직업', character.job], ['포지션', character.position],
@@ -37,8 +39,8 @@ export default function CharacterPanel({character, error, busy, run, onCharacter
       </dl>
       <p>신규 프로필 입력·수정은 고객 정책 확정 대기 중입니다.</p>
       {dev&&<div className="actions">
-        <button disabled={busy || !!error || character.ap <= 0} onClick={() => run(() => changeAp(-1))}>AP -1 테스트</button>
-        <button disabled={busy || !!error || character.ap >= character.max_ap} onClick={() => run(() => changeAp(1))}>AP +1 테스트</button>
+        <button disabled={blocked || !!error || character.ap <= 0} onClick={() => run(() => changeAp(-1))}>AP -1 테스트</button>
+        <button disabled={blocked || !!error || character.ap >= character.max_ap} onClick={() => run(() => changeAp(1))}>AP +1 테스트</button>
       </div>}
       <form onSubmit={event => {
         event.preventDefault();
@@ -49,8 +51,8 @@ export default function CharacterPanel({character, error, busy, run, onCharacter
         });
       }}>
         <label htmlFor="name">캐릭터 이름</label>
-        <input id="name" value={name} onChange={event => setName(event.target.value)} maxLength={40} required disabled={busy}/>
-        <button disabled={busy || !!error}>이름 저장</button>
+        <input id="name" value={name} onChange={event => setName(event.target.value)} maxLength={40} required disabled={blocked}/>
+        <button disabled={blocked || !!error}>이름 저장</button>
       </form>
     </>}
   </section>;

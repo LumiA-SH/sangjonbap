@@ -18,7 +18,7 @@ async function search(){
   await act(async()=>Simulate.submit(container.querySelector('form')));
 }
 test('same names distinguish IDs; selecting uses existing heal/revive numeric ID path',async()=>{
-  await act(async()=>root.render(<CharacterCarePanel character={{id:'1'}} run={fn=>fn()} refresh={async()=>true} notify={()=>{}}/>));
+  await act(async()=>root.render(<CharacterCarePanel character={{id:'1',status:'ALIVE'}} run={fn=>fn()} refresh={async()=>true} notify={()=>{}}/>));
   api.mockResolvedValueOnce({characters:[{id:'2',name:'동명'},{id:'3',name:'동명'}]});await search();
   await act(async()=>button('ID 3 선택').click());expect(container.querySelector('#care-target').value).toBe('3');
   for(const [label,path] of [['대상 치료','/characters/3/heal'],['대상 부활','/characters/3/revive'],['자기 치료','/characters/1/heal']]){
@@ -28,7 +28,7 @@ test('same names distinguish IDs; selecting uses existing heal/revive numeric ID
   await act(async()=>Simulate.change(container.querySelector('#care-target'),{target:{value:'9'}}));expect(container.querySelector('#care-target').value).toBe('9');
 });
 test('failed search clears previous results and shows server error, empty search results distinct',async()=>{
-  await act(async()=>root.render(<CharacterCarePanel character={{id:'1'}} run={fn=>fn()}/>));
+  await act(async()=>root.render(<CharacterCarePanel character={{id:'1',status:'ALIVE'}} run={fn=>fn()}/>));
   api.mockResolvedValueOnce({characters:[{id:'2',name:'동명'}]});await search();expect(button('ID 2 선택')).toBeDefined();
   api.mockRejectedValueOnce(Object.assign(new Error('조회 실패'),{code:'SERVER_ERROR'}));await search();expect(button('ID 2 선택')).toBeUndefined();expect(container.textContent).toContain('SERVER_ERROR');
   api.mockResolvedValueOnce({characters:[]});await search();expect(container.textContent).toContain('검색 결과가 없습니다');

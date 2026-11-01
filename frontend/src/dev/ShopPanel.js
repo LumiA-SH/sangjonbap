@@ -6,12 +6,12 @@ export default function ShopPanel({products, character, error, busy, run, refres
   const [result, setResult] = useState(null);
   const [failure, setFailure] = useState('');
   const sending = useRef(false);
-  const blocked = busy || !character || !!error || character.status === 'DEAD';
-  const nearBlocked = product => character?.status==='NEAR_DEATH' && product.effect_type!=='BLOOD_PACK';
+  const blocked = busy || character?.in_active_battle || !character || !!error || character.status === 'DEAD';
+
   const count = id => quantities[id] ?? '1';
   const valid = value => /^[1-9][0-9]*$/.test(value) && Number(value) <= 2147483647;
   async function buy(product) {
-    if (sending.current || blocked || nearBlocked(product) || !valid(count(product.id))) return;
+    if (sending.current || blocked || !valid(count(product.id))) return;
     sending.current = true;
     try {
       await run(async () => {
@@ -31,7 +31,7 @@ export default function ShopPanel({products, character, error, busy, run, refres
   return <section aria-labelledby="shop-title">
     <span className="badge">SHOP</span><h2 id="shop-title">상점 DEV</h2>
     <p>개인 한도는 캐릭터별 전체 운영 기간 누적 수량입니다. 전체 재고는 모든 캐릭터가 공유합니다.</p>
-    {character?.status === 'NEAR_DEATH' && <p>빈사 상태에서는 혈액팩만 구매할 수 있습니다.</p>}
+    {character?.status === 'NEAR_DEATH' && <p>빈사 상태에서도 상점을 이용할 수 있습니다.</p>}
     {character?.status === 'DEAD' && <p>DEAD 캐릭터는 구매할 수 없습니다.</p>}
     <button disabled={busy} onClick={() => run(refresh)}>상품 새로고침</button>
     {error && <p role="alert">상품 조회 실패: {error} · 이전 표시값일 수 있습니다.</p>}
@@ -42,7 +42,7 @@ export default function ShopPanel({products, character, error, busy, run, refres
       <label htmlFor={`shop-${product.id}`}>구매 수량</label>
       <input id={`shop-${product.id}`} inputMode="numeric" value={count(product.id)} disabled={busy}
         onChange={event => setQuantities({...quantities, [product.id]: event.target.value})}/>
-      <button disabled={blocked || nearBlocked(product) || (product.dailyRemaining != null && Number(count(product.id)) > product.dailyRemaining) || !valid(count(product.id)) ||
+      <button disabled={blocked || (product.dailyRemaining != null && Number(count(product.id)) > product.dailyRemaining) || !valid(count(product.id)) ||
         (product.personalRemaining !== null && Number(count(product.id)) > product.personalRemaining) ||
         (product.globalRemaining !== null && Number(count(product.id)) > product.globalRemaining)} onClick={() => buy(product)}>구매</button>
     </li>)}</ul>

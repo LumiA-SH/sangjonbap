@@ -1,5 +1,5 @@
 import {isBloodPack,validateBloodPack} from '../inventory/blood-pack.js';
-import {currentKstDay} from '../../shared/actions.js';
+import {currentKstDay, requireNoActiveBattle, requireActionCharacter} from '../../shared/actions.js';
 import {AppError} from '../../shared/http.js';
 import {lockCharacterByUser, changeCharacterResources, changeInventoryQuantity, writeActionLog} from '../../shared/game.js';
 
@@ -51,11 +51,12 @@ when s.daily_limit is null then null else greatest(0,s.daily_limit-coalesce(t.da
                 const before = await lockCharacterByUser(client, userId);
                 await rejectDuplicate(client, requestKey);
                 requireCharacter(before);
-                if (before.status === 'DEAD') throw new AppError(409, 'CHARACTER_DEAD', '사망한 캐릭터는 구매할 수 없습니다.');
+                requireActionCharacter(before,{allowNearDeath:true});
+                await requireNoActiveBattle(client,before);
                 const item = (await client.query('select * from public.item where id=$1 for update', [product.item_id])).rows[0];
                 if (!item?.is_active) throw new AppError(409, 'ITEM_UNAVAILABLE', '판매할 수 없는 아이템입니다.');
                 const pack=isBloodPack(item);
-                if(before.status==='NEAR_DEATH'&&!pack)throw new AppError(409,'CHARACTER_NEAR_DEATH','빈사 상태에서는 혈액팩만 구매할 수 있습니다.');
+
                 const day=await currentKstDay(client);
                 if(pack) {
                     validateBloodPack(item);

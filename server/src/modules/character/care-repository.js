@@ -37,7 +37,7 @@ export function createCharacterCareRepository(pool) {
                         throw new AppError(409, 'TARGET_IN_ACTIVE_BATTLE', '전투 중인 대상에게 외부 개입할 수 없습니다.');
                     }
                 }
-                if(action==='HEAL'&&!sameCharacter) {
+                if(!sameCharacter) {
                     const active=await client.query("select id from public.battle where character_id=$1 and battle_status='ACTIVE' for share",[provider.id]);
                     if(active.rowCount)throw new AppError(409,'PROVIDER_IN_ACTIVE_BATTLE','전투 중에는 일반 치료를 제공할 수 없습니다.');
                 }

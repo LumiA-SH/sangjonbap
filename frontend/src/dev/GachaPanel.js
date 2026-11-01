@@ -5,7 +5,7 @@ export default function GachaPanel({gachas, character, error, busy, run, refresh
   const [result,setResult] = useState(null);
   const [failure,setFailure] = useState('');
   const sending = useRef(false);
-  const blocked = busy || !!error || !character || character.status==='DEAD' || character.status==='NEAR_DEATH';
+  const blocked = busy || character?.in_active_battle || !!error || !character || character.status==='DEAD' || character.status==='NEAR_DEATH';
   async function draw(gacha) {
     if (sending.current || blocked || gacha.outside || gacha.boundary) return;
     sending.current=true;
@@ -32,7 +32,6 @@ export default function GachaPanel({gachas, character, error, busy, run, refresh
       <p>기간: {gacha.start_at || '시작 제한 없음'} ~ {gacha.end_at || '종료 제한 없음'}</p>
       {gacha.outside && <p>현재 운영 기간 외 · 시작 후 새로고침하세요.</p>}
       {gacha.boundary && <p>HOLD: 기간 경계 포함 정책 확정 대기</p>}
-      <ul>{gacha.rewards.map(reward=><li key={reward.id}>{reward.name} × {reward.quantity} · 가중치 {reward.weight}{!reward.isActive && ' · 비활성 아이템'}</li>)}</ul>
       <button disabled={blocked || gacha.outside || gacha.boundary} onClick={()=>draw(gacha)}>1회 뽑기</button>
     </li>)}</ul>
     {failure && <p role="alert">{failure}</p>}

@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {changeCharacterResources} from '../src/shared/game.js';
 import {createPostgresRepository} from '../src/modules/character/repository.js';
 import {createInventoryRepository} from '../src/modules/inventory/repository.js';
 
@@ -16,6 +17,7 @@ function fixture(steps) {
   let released = false;
   const client = {
     async query(sql, params) {
+      if(sql.includes('from public.battle'))return rows([]);
       const step = steps.shift();
       assert.ok(step, `Unexpected query: ${sql}`);
       assert.match(sql.replace(/\s+/g, ' ').trim(), step.sql);
@@ -64,6 +66,12 @@ for (const scenario of [
     const before = {...character, ...scenario.before};
     const changes = Object.fromEntries(['hp', 'blood', 'ap', 'currency'].map((key, i) => [key, scenario.changes[i]]));
     const after = {...before, ...Object.fromEntries(['hp', 'blood', 'ap', 'currency', 'status', 'death_count'].map((key, i) => [key, scenario.expected[i]]))};
+    if (before.status !== 'ALIVE') {
+      const f=fixture([{sql:/^update public.game_character /,params:[...scenario.expected,character.id],result:rows([after])}]);
+      const client=await f.pool.connect();
+      assert.deepEqual(await changeCharacterResources(client,before,changes),after);
+      client.release();f.done();return;
+    }
     const f = fixture([
       begin(), own(before),
       {sql: /^update public.game_character .*where id=\$7 returning \*$/, params: [...scenario.expected, character.id], result: rows([after])},

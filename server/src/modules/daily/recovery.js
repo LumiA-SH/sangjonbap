@@ -57,6 +57,22 @@ export function createDailyRecovery(pool) {
                 });
                 await client.query(`update public.game_character set daily_meal_count=0,
                     daily_training_done=false where id=$1`,[before.id]);
+                // Character locks precede battle locks, as in commands and timeout processing.
+                // No turn resolution or reward code runs on a midnight defeat.
+                if (after.status === 'NEAR_DEATH' && Number(after.blood) === 0) {
+                    const battles = await client.query(`select id,turn_no from public.battle
+                        where character_id=$1 and battle_status='ACTIVE' order by id for update`, [before.id]);
+                    for (const battle of battles.rows) {
+                        await client.query(`update public.battle set battle_status='DEFEAT',
+                            end_reason='MIDNIGHT_NEAR_DEATH',character_hp=$2,ended_at=clock_timestamp(),
+                            updated_at=clock_timestamp() where id=$1`, [battle.id, after.hp]);
+                        await client.query(`insert into public.battle_log(battle_id,turn_no,actor_type,action_type,message)
+                            values($1,$2,'SYSTEM','MIDNIGHT_DEFEAT','빈사로 인한 전투 중단')`, [battle.id, battle.turn_no]);
+                        await writeActionLog(client, {characterId:before.id,category:'BATTLE',actionType:'BATTLE_MIDNIGHT_DEFEAT',
+                            targetType:'BATTLE',targetId:battle.id,description:'빈사로 인한 전투 중단',
+                            detail:{date:today,turnNo:battle.turn_no,bloodBefore:before.blood,bloodAfter:after.blood}});
+                    }
+                }
                 await writeActionLog(client,{characterId:before.id,category:'CHARACTER',actionType:'DAILY_RESET',
                     description:'KST 일일 초기화 및 누락 기간 통합 복구',
                     detail:{from:first,to:today,decaySkipped:reason,before:characterState(before),after:characterState(after),

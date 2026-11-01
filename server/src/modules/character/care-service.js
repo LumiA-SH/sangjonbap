@@ -1,4 +1,5 @@
 import {AppError} from '../../shared/http.js';
+import {bloodLimit} from '../../shared/balance.js';
 
 function validateRequest(targetId, body) {
     if (typeof targetId !== 'string' || !/^[1-9][0-9]*$/.test(targetId) ||
@@ -35,7 +36,7 @@ function planCare(action, provider, target, settings) {
     if (Number(provider.blood) < cost) {
         throw new AppError(409, 'NOT_ENOUGH_BLOOD', '제공자의 혈량이 부족합니다.');
     }
-    if (revive && (Number(target.max_hp) < settings.revive_hp || Number(target.max_blood) < settings.revive_blood)) {
+    if (revive && (Number(target.max_hp) < settings.revive_hp || bloodLimit(target) < settings.revive_blood)) {
         throw new AppError(409, 'REVIVE_LIMIT_CONFLICT', '대상의 최대 HP 또는 혈량이 부활 규칙과 충돌합니다.');
     }
     return {
