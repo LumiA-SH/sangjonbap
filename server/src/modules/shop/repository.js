@@ -2,6 +2,7 @@ import {isBloodPack,validateBloodPack} from '../inventory/blood-pack.js';
 import {currentKstDay, requireNoActiveBattle, requireActionCharacter} from '../../shared/actions.js';
 import {AppError} from '../../shared/http.js';
 import {lockCharacterByUser, changeCharacterResources, changeInventoryQuantity, writeActionLog} from '../../shared/game.js';
+import {buyRecipeProduct} from '../../shared/recipes.js';
 
 function requireCharacter(character) {
     if (!character) throw new AppError(404, 'CHARACTER_NOT_FOUND', '연결된 활성 캐릭터가 없습니다.');
@@ -24,15 +25,18 @@ export function createShopRepository(pool) {
             // One statement keeps ownership, products and both counts in one snapshot.
             const result = await pool.query(
                 `select c.id,c.status,coalesce((select jsonb_agg(to_jsonb(p) order by p.sort_order,p.id)
-                  from (select s.id::text,s.item_id::text,i.name,i.description,i.effect_type,s.price,s.purchase_limit,s.stock_limit,s.daily_limit,s.sort_order,
+                  from (select s.id::text,s.item_id::text,s.recipe_id::text,coalesce(i.name,r.name) name,coalesce(i.description,r.description) description,i.effect_type,s.price,s.purchase_limit,s.stock_limit,s.daily_limit,s.sort_order,
+                    exists(select 1 from public.character_recipe cr where cr.character_id=c.id and cr.recipe_id=s.recipe_id) learned,
 case when i.effect_type='BLOOD_PACK' then greatest(0,1-coalesce((select quantity from public.blood_pack_purchase_day where character_id=c.id and purchase_date=(statement_timestamp() at time zone 'Asia/Seoul')::date),0))
 when s.daily_limit is null then null else greatest(0,s.daily_limit-coalesce(t.daily,0)) end as "dailyRemaining",
-                    case when s.purchase_limit is null then null else greatest(0,s.purchase_limit-coalesce(t.personal,0)) end as "personalRemaining",
+                    case when s.recipe_id is not null and exists(select 1 from public.character_recipe cr where cr.character_id=c.id and cr.recipe_id=s.recipe_id) then 0
+                    when s.purchase_limit is null then null else greatest(0,s.purchase_limit-coalesce(t.personal,0)) end as "personalRemaining",
                     case when s.stock_limit is null then null else greatest(0,s.stock_limit-coalesce(t.total,0)) end as "globalRemaining"
-                    from public.shop_product s join public.item i on i.id=s.item_id
+                    from public.shop_product s left join public.item i on i.id=s.item_id
+                    left join public.recipe r on r.id=s.recipe_id
                     left join lateral (select sum(quantity) total,sum(quantity) filter(where character_id=c.id) personal,sum(quantity) filter(where character_id=c.id and coalesce(purchase_date,(created_at at time zone 'Asia/Seoul')::date)=(statement_timestamp() at time zone 'Asia/Seoul')::date) daily
                       from public.shop_purchase where product_id=s.id) t on true
-                    where s.is_active and i.is_active) p),'[]'::jsonb) products
+                    where s.is_active and (i.is_active or (r.is_active and exists(select 1 from public.recipe_discovery d where d.recipe_id=r.id)))) p),'[]'::jsonb) products
                  from public.game_character c join public.auth_user u on u.character_id=c.id
                  where u.id=$1 and u.is_active and c.is_active`, [userId]
             );
@@ -53,6 +57,11 @@ when s.daily_limit is null then null else greatest(0,s.daily_limit-coalesce(t.da
                 requireCharacter(before);
                 requireActionCharacter(before,{allowNearDeath:true});
                 await requireNoActiveBattle(client,before);
+                if(product.recipe_id!=null) {
+                    const result=await buyRecipeProduct(client,before,product,quantity,requestKey,await currentKstDay(client));
+                    await client.query('commit');
+                    return result;
+                }
                 const item = (await client.query('select * from public.item where id=$1 for update', [product.item_id])).rows[0];
                 if (!item?.is_active) throw new AppError(409, 'ITEM_UNAVAILABLE', '판매할 수 없는 아이템입니다.');
                 const pack=isBloodPack(item);

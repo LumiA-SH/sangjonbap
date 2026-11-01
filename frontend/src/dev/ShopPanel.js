@@ -11,7 +11,7 @@ export default function ShopPanel({products, character, error, busy, run, refres
   const count = id => quantities[id] ?? '1';
   const valid = value => /^[1-9][0-9]*$/.test(value) && Number(value) <= 2147483647;
   async function buy(product) {
-    if (sending.current || blocked || !valid(count(product.id))) return;
+    if (sending.current || blocked || product.learned || !valid(count(product.id))) return;
     sending.current = true;
     try {
       await run(async () => {
@@ -40,9 +40,10 @@ export default function ShopPanel({products, character, error, busy, run, refres
       <h3>{product.name} · 상품 {product.id}</h3><p>{product.description}</p>
       <p>개당 가격 {product.price} · 개인 잔여 {product.personalRemaining ?? '무제한'} · 전체 잔여 {product.globalRemaining ?? '무제한'} · 오늘 잔여 {product.dailyRemaining ?? '무제한'}</p>
       <label htmlFor={`shop-${product.id}`}>구매 수량</label>
-      <input id={`shop-${product.id}`} inputMode="numeric" value={count(product.id)} disabled={busy}
+      {product.recipe_id && <p>레시피 · {product.learned ? '습득 완료' : '구매 즉시 습득'}</p>}
+      <input id={`shop-${product.id}`} inputMode="numeric" value={count(product.id)} disabled={busy || !!product.recipe_id}
         onChange={event => setQuantities({...quantities, [product.id]: event.target.value})}/>
-      <button disabled={blocked || (product.dailyRemaining != null && Number(count(product.id)) > product.dailyRemaining) || !valid(count(product.id)) ||
+      <button disabled={blocked || product.learned || (product.dailyRemaining != null && Number(count(product.id)) > product.dailyRemaining) || !valid(count(product.id)) ||
         (product.personalRemaining !== null && Number(count(product.id)) > product.personalRemaining) ||
         (product.globalRemaining !== null && Number(count(product.id)) > product.globalRemaining)} onClick={() => buy(product)}>구매</button>
     </li>)}</ul>

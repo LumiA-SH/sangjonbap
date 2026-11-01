@@ -11,7 +11,7 @@ const key2 = '12345678-1234-4234-8234-123456789abd';
 const rows = values => ({rows: values, rowCount: values.length});
 const clone = value => structuredClone(value);
 
-function fixture(overrides = {}, {random = () => 0, failAt, duplicateAtLog = false} = {}) {
+function fixture(overrides = {}, {random = () => 0, failAt, duplicateAtLog = false, battleRepository = null} = {}) {
   let state = {
     character: {id: '10', hp: 100, max_hp: 100, blood: 100, max_blood: 100,
       ap: 3, max_ap: 10, currency: 0, status: 'ALIVE', death_count: 0},
@@ -32,6 +32,8 @@ function fixture(overrides = {}, {random = () => 0, failAt, duplicateAtLog = fal
       if (sql === 'begin') { snapshot = clone(state); return rows([]); }
       if (sql === 'rollback') { state = snapshot; return rows([]); }
       if (sql === 'commit') return rows([]);
+      if (sql.startsWith('select m.id from public.area_monster')) return rows([]);
+      if (sql.startsWith('select id from public.battle')) return rows(state.activeBattle?[{id:'1'}]:[]);
       if (sql.startsWith('select config_key,config_value')) return rows([{config_key: 'investigation_ap_cost', config_value: state.apCost ?? 1}]);
       if (sql.startsWith('select id from public.action_log')) return rows(state.logs.filter(log => log.requestKey === params[0]));
       if (sql.startsWith('select * from public.area')) {
@@ -85,13 +87,41 @@ function fixture(overrides = {}, {random = () => 0, failAt, duplicateAtLog = fal
     },
     release() { released++; }
   };
-  return {repository: createInvestigationRepository({connect: async () => client}, {random}),
+  return {repository: createInvestigationRepository({connect: async () => client}, {random,battleRepository}),
     state: () => state, calls, released: () => released};
 }
 
 const reward = {id: '5', item_id: '3', quantity: 2, probability: '100'};
 const unique = {id: '2', area_id: '1', result_grade: 'RARE', result_text: '최초 단서',
   weight: 1, is_unique: true, investigation_rate_value: '15', clue_id: '4'};
+
+test('encounter is called once after rewards; zero rewards still completes; encounter error rolls back',async()=>{
+  for(const hasReward of [true,false]) {
+    let calls=0;
+    const f=fixture({rewards:hasReward?[reward]:[]},{battleRepository:{async encounter(){
+      calls++;assert.equal(f.state().inventory['3']||0,hasReward?2:0);return null;
+    }}});
+    const r=await f.repository.investigate('7','1',key);
+    assert.equal(calls,1);assert.equal(r.battle,null);assert.equal(r.rewards.length,hasReward?1:0);
+  }
+  const f=fixture({rewards:[reward]},{battleRepository:{async encounter(){throw Error('invalid monster config');}}});
+  const before=clone(f.state());await assert.rejects(f.repository.investigate('7','1',key));assert.deepEqual(f.state(),before);
+});
+
+test('ACTIVE battle prevents investigation before rewards',async()=>{
+  const f=fixture({activeBattle:true,rewards:[reward]});
+  await assert.rejects(f.repository.investigate('7','1',key),e=>e.code==='BATTLE_ACTIVE');
+  assert.deepEqual(f.state().inventory,{});
+});
+
+test('NEAR_DEATH and DEAD may list areas but cannot investigate',async()=>{
+  for(const status of ['NEAR_DEATH','DEAD']) {
+    const repo=createInvestigationRepository({query:async()=>rows([{status,areas:[{id:'1'}]}])});
+    assert.deepEqual(await repo.getInvestigationAreas('7'),[{id:'1'}]);
+    const f=fixture({character:{status,hp:100,blood:0}});
+    await assert.rejects(f.repository.investigate('7','1',key),e=>e.code==='CHARACTER_'+status);
+  }
+});
 
 test('normal investigation deducts exactly one AP, returns/logs rewards and locks in order', async () => {
   const f = fixture({rewards: [reward]});

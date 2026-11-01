@@ -3,6 +3,7 @@ import {validateMasterInput,validateMasterState} from './master-service.js';
 import {adminTransaction,requireAdminRow,checkDuplicate,fail} from './transaction.js';
 
 const definitions={
+    areas:{table:'area',pk:'id',target:'AREA'},
     foods:{table:'food_config',pk:'item_id',target:'FOOD_CONFIG'},
     recipes:{table:'recipe',pk:'id',target:'RECIPE',child:'recipe_ingredient',foreign:'recipe_id',rows:'ingredients'},
     gachas:{table:'gacha',pk:'id',target:'GACHA',child:'gacha_reward',foreign:'gacha_id',rows:'rewards'}
@@ -14,7 +15,7 @@ async function records(client,kind,id,after='0') {
     const timestamps=kind==='gachas'?`,to_char(p.start_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') start_at,to_char(p.end_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') end_at`:'';
     const rows=(await client.query(`select p.*,p.${d.pk} as id${nested}${timestamps} from public.${d.table} p where p.${d.pk}${id?'=':'>'}$1 order by p.${d.pk} limit 100`,[id||after])).rows;
     return rows.map(row=>{
-        for (const key of ['stat_growth_rate','success_rate']) if (key in row) row[key]=Number(row[key]);
+        for (const key of ['stat_growth_rate','success_rate','encounter_rate']) if (key in row) row[key]=Number(row[key]);
         if (row.rewards) {
             const total=row.rewards.reduce((sum,r)=>sum+r.weight,0);
             row.rewards=row.rewards.map(r=>({...r,probability:total?r.weight/total*100:0}));
@@ -44,10 +45,15 @@ export function createAdminMasterRepository(pool) {
                 if (kind==='foods') await lockItems(c,[id||patch.item_id]);
                 if (id && !(await c.query(`select ${d.pk} from public.${d.table} where ${d.pk}=$1 for update`,[id])).rowCount) fail('ADMIN_RECORD_NOT_FOUND','대상이 없습니다.',404);
                 const before=id?(await records(c,kind,id))[0]:null;
+                if(kind==='recipes'&&before&&Object.hasOwn(patch,'discovery_grade')&&patch.discovery_grade!==before.discovery_grade&&
+                    (await c.query('select 1 from public.recipe_discovery where recipe_id=$1',[id])).rowCount) {
+                    fail('RECIPE_GRADE_CHANGE_HOLD','발견 이후 등급·가격 변경 정책은 별도 확인이 필요합니다.');
+                }
                 const defaults=kind==='foods'?{blood_recovery:0,stat_growth_enabled:false,stat_growth_rate:0,stat_growth_target:null,stat_growth_value:0,rp_effect_text:null}:
-                    kind==='recipes'?{result_quantity:4,learn_cost:0,failure_item_id:null,is_active:true}:{is_active:true,start_at:null,end_at:null};
+                    kind==='recipes'?{result_quantity:3,learn_cost:0,failure_item_id:null,is_active:true}:{is_active:true,start_at:null,end_at:null};
                 const merged={...defaults,...before,...patch};
-                if (kind==='recipes') merged.result_quantity=4;
+                if (kind==='recipes') {merged.result_quantity=3;merged.success_rate=80;}
+                if (kind==='foods' && merged.stat_growth_enabled) {merged.stat_growth_rate=20;merged.stat_growth_value=1;}
                 validateMasterState(kind,merged);
                 if (kind==='gachas' && merged.start_at && merged.end_at) {
                     const period=(await c.query('select $2::timestamptz > $1::timestamptz as valid',[merged.start_at,merged.end_at])).rows[0];
@@ -58,7 +64,8 @@ export function createAdminMasterRepository(pool) {
                     if (!merged[d.rows]?.length) fail('INVALID_ADMIN_INPUT','재료/보상을 한 개 이상 등록하세요.',400);
                 }
                 const values=Object.fromEntries(Object.entries(patch).filter(([k])=>k!==d.rows));
-                if (kind==='recipes') values.result_quantity=4;
+                if (kind==='recipes') {values.result_quantity=3;values.success_rate=80;}
+                if (kind==='foods' && merged.stat_growth_enabled) {values.stat_growth_rate=20;values.stat_growth_value=1;}
                 const columns=Object.keys(values), params=Object.values(values);
                 let savedId=id;
                 if (!id) {

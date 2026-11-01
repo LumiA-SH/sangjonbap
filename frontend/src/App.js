@@ -36,6 +36,7 @@ export default function App() {
   const [areas, setAreas] = useState([]);
   const [logs, setLogs] = useState([]);
   const [products, setProducts] = useState([]);
+  const [battle, setBattle] = useState(null);
   const [cooking, setCooking] = useState(null);
   const [gachas, setGachas] = useState([]);
   const [investigationApCost, setInvestigationApCost] = useState(null);
@@ -56,6 +57,7 @@ export default function App() {
 
   async function refreshAll(authProvider=provider) {
     const requests = [
+      ['battle', '/battles/current', data => setBattle(data.battle)],
       ['gachas', '/gacha/catalog', data => setGachas(data.gachas)],
       ['cooking', '/cooking/catalog', setCooking],
       ['products', '/shop/products', data => setProducts(data.products)],
@@ -142,7 +144,7 @@ export default function App() {
         refresh={refreshAll} notify={setMessage}/>
       </details>
       <details className="dev-fold" open><summary>조사</summary>
-      <InvestigationPanel investigationApCost={investigationApCost} areas={areas} character={character} error={errors.areas} characterError={errors.character}
+      <InvestigationPanel activeBattle={battle?.battle_status==='ACTIVE'} battleError={errors.battle} investigationApCost={investigationApCost} areas={areas} character={character} error={errors.areas} characterError={errors.character}
         busy={busy} run={run} refresh={refreshAll} notify={setMessage}/>
       </details>
       {provider==='dev'&&<details className="dev-fold"><summary>최근 행동 로그</summary>
@@ -153,7 +155,7 @@ export default function App() {
           run={run} refresh={refreshAll} notify={setMessage}/>
       </details>
       <details className="dev-fold"><summary>요리·식사</summary>
-        <CookingPanel catalog={cooking} character={character} error={errors.cooking} busy={busy}
+        <CookingPanel activeBattle={battle?.battle_status==='ACTIVE'} battleError={errors.battle} inventory={inventory} catalog={cooking} character={character} error={errors.cooking} busy={busy}
           run={run} refresh={refreshAll} notify={setMessage}/>
       </details>
       <details className="dev-fold"><summary>가챠</summary>

@@ -67,8 +67,8 @@ export default function AdminPanel({onBack}) {
     <p>서버 ADMIN 권한 검증 영역입니다. 인증 방식: {authentication||'확인 중'}</p>
     <button onClick={onBack}>DEV 콘솔로 돌아가기</button><p role="alert">{message}</p>
     {allowed&&<>
-      <nav className="actions">{[['items','아이템'],['products','상점 상품'],['foods','음식 설정'],['recipes','레시피'],['gachas','가챠'],['users','관리자 권한'],['battle','PVE·캐릭터 등록']].map(([type,label])=><button key={type} disabled={busy} onClick={()=>{setKind(type);setSelected(null);setEditorKey(v=>v+1);if(['items','products'].includes(type))load(type);}}>{label}</button>)}</nav>
-      {kind==='battle'?<BattleAdminPanel onDenied={denied}/>:kind==='users'?<RolePanel onDenied={denied}/>:['foods','recipes','gachas'].includes(kind)?<MasterPanel key={kind} kind={kind} onDenied={denied}/>:<>
+      <nav className="actions">{[['items','아이템'],['products','상점 상품'],['foods','음식 설정'],['recipes','레시피'],['gachas','가챠'],['areas','지역 조우 확률'],['users','관리자 권한'],['battle','PVE·캐릭터 등록']].map(([type,label])=><button key={type} disabled={busy} onClick={()=>{setKind(type);setSelected(null);setEditorKey(v=>v+1);if(['items','products'].includes(type))load(type);}}>{label}</button>)}</nav>
+      {kind==='battle'?<BattleAdminPanel onDenied={denied}/>:kind==='users'?<RolePanel onDenied={denied}/>:['foods','recipes','gachas','areas'].includes(kind)?<MasterPanel key={kind} kind={kind} onDenied={denied}/>:<>
       <p>혈액팩은 명시적 효과로 지정하며 무료 상품의 일일 한도는 1입니다. 다른 효과·이미지 URL 편집은 HOLD입니다. 삭제 기능은 제공하지 않습니다.</p>
       {kind==='items'&&selected&&<button disabled={busy} onClick={()=>{
         setProductSeed({item_id:String(selected.id),price:0,daily_limit:selected.effect_type==='BLOOD_PACK'?1:null});

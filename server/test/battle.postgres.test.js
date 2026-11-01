@@ -22,7 +22,9 @@ test('PVE PostgreSQL transactions, snapshots, registration and concurrency', {sk
     const raw=createPool(loadConfig()),schema=`test_pve_${randomUUID().replaceAll('-','')}`;
     const tables=['auth_user','game_character','item','inventory','action_log','system_config','battle','battle_log','area',
         'daily_reset_state','daily_reset_run','monster','monster_action','monster_drop','area_monster','investigation_result','investigation_reward','unique_discovery','clue',
-        'shop_product','shop_purchase','blood_pack_purchase_day','storage','gacha','gacha_reward'];
+        'recipe','character_recipe','shop_product','shop_purchase','blood_pack_purchase_day','storage','gacha','gacha_reward'];
+    const migrated=(await raw.query("select to_regclass('public.recipe_discovery') is not null as ready")).rows[0].ready;
+    if(migrated)tables.push('recipe_discovery');
     const sql=q=>q.replaceAll('public.',`${schema}.`);
     let failLog=false;
     const pool={query:(q,p)=>raw.query(sql(q),p),async connect(){const c=await raw.connect();return {
@@ -48,6 +50,7 @@ test('PVE PostgreSQL transactions, snapshots, registration and concurrency', {sk
             values($1,'https://example.invalid',$2,now()) returning *`,[role,randomUUID()])).rows[0];
         // Execute the new migration only through the isolated-schema SQL rewriter.
         await pool.query(readFileSync(new URL('../../supabase/migrations/20261101032815_common_rules_v02.sql',import.meta.url),'utf8'));
+        if(!migrated)await pool.query(readFileSync(new URL('../../supabase/migrations/20261101091456_recipe_first_discovery.sql',import.meta.url),'utf8'));
         const configured=Object.fromEntries((await pool.query("select config_key,config_value from public.system_config where config_key in ('revive_blood','training_great_rate_a','training_great_rate_s')")).rows.map(r=>[r.config_key,r.config_value]));
         assert.deepEqual(configured,{revive_blood:50,training_great_rate_a:20,training_great_rate_s:15});
         const admin=await account('ADMIN'),user=await account(),other=await account();

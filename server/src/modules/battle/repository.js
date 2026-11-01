@@ -4,6 +4,7 @@ import {lockCharacterByUser, lockCharacter, changeCharacterResources, changeInve
 import {readNumberSettings, resourceNumber} from '../../shared/settings.js';
 import {resolveTurn, chooseMonsterAction, commandOptions, sampleUnit} from './engine.js';
 import {randomUnit} from '../investigation/random.js';
+import {lockRecipeDrops,discoverRecipe,filterDiscoveredRecipeDrops} from '../../shared/recipes.js';
 
 const fail = (code, message, status=409) => {throw new AppError(status, code, message);};
 const idOrder = (a,b) => BigInt(a)<BigInt(b)?-1:BigInt(a)>BigInt(b)?1:0;
@@ -55,7 +56,7 @@ export function createBattleRepository(pool, {random=randomUnit}={}) {
             fail('BATTLE_CONFIG_INVALID','마물 스탯이 올바르지 않습니다.');
         const actions=(await client.query('select * from public.monster_action where monster_id=$1 order by sort_order,id',[monster.id])).rows;
         const declaration=chooseMonsterAction(actions,random);
-        const drops=(await client.query('select * from public.monster_drop where monster_id=$1 order by item_id,id',[monster.id])).rows;
+        const drops=await filterDiscoveredRecipeDrops(client,(await client.query('select * from public.monster_drop where monster_id=$1 order by item_id,id',[monster.id])).rows);
         if (drops.some(d=>!Number.isFinite(Number(d.drop_rate))||Number(d.drop_rate)<0||Number(d.drop_rate)>100||
             !Number.isInteger(d.min_quantity)||d.min_quantity<1||!Number.isInteger(d.max_quantity)||d.max_quantity<d.min_quantity))
             fail('BATTLE_CONFIG_INVALID','드롭 설정이 올바르지 않습니다.');
@@ -97,8 +98,9 @@ export function createBattleRepository(pool, {random=randomUnit}={}) {
                 if (battle.turn_no!==turnNo) fail('STALE_BATTLE_TURN','이미 처리된 턴입니다. 전투를 다시 조회하세요.');
                 if (!battle.snapshot||!battle.declaration) fail('LEGACY_BATTLE_HOLD','스냅샷이 없는 기존 전투는 운영자 확인이 필요합니다.');
                 requireActionCharacter(before);
+                const recipes=await lockRecipeDrops(client,battle.snapshot.drops);
                 // Lock all possible item rows once in ascending order, including drops.
-                const itemIds=[...new Set([...battle.snapshot.drops.map(d=>String(d.item_id)),...(action==='ITEM'?[itemId]:[])])].sort(idOrder);
+                const itemIds=[...new Set([...battle.snapshot.drops.filter(d=>d.item_id!=null).map(d=>String(d.item_id)),...(action==='ITEM'?[itemId]:[])])].sort(idOrder);
                 const items=new Map();
                 for (const itemId of itemIds) items.set(itemId,(await client.query('select * from public.item where id=$1 for update',[itemId])).rows[0]);
                 const grade=before.ability_grade?.toLowerCase(),settings=battle.snapshot.abilities;
@@ -112,7 +114,14 @@ export function createBattleRepository(pool, {random=randomUnit}={}) {
                 const character=await changeCharacterResources(client,before,{hp:resolved.hp-before.hp,blood:resolved.blood-before.blood,ap:resolved.ap-before.ap});
                 const rewards=[];
                 if (resolved.status==='VICTORY') for (const drop of battle.snapshot.drops) {
+                    if(drop.recipe_id!=null&&!recipes.has(String(drop.recipe_id)))continue;
                     if (sampleUnit(random)*100>=Number(drop.drop_rate)) continue;
+                    if(drop.recipe_id!=null) {
+                        const found=await discoverRecipe(client,before.id,recipes.get(String(drop.recipe_id)),'BATTLE',id);
+                        recipes.delete(String(drop.recipe_id));
+                        if(found)rewards.push(found);
+                        continue;
+                    }
                     const item=items.get(String(drop.item_id));
                     if (!item) fail('BATTLE_REWARD_UNAVAILABLE','스냅샷 보상 아이템이 없습니다.');
                     const quantity=drop.min_quantity+Math.floor(sampleUnit(random)*(drop.max_quantity-drop.min_quantity+1));

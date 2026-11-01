@@ -1,16 +1,12 @@
 import {AppError} from '../../shared/http.js';
+import {requireActionCharacter,requireNoActiveBattle} from '../../shared/actions.js';
 import {lockCharacterByUser, changeCharacterResources, changeInventoryQuantity, writeActionLog} from '../../shared/game.js';
 import {readNumberSettings, resourceNumber} from '../../shared/settings.js';
 import {chooseResult, winsReward, randomUnit} from './random.js';
+import {lockRecipeDrops,discoverRecipe} from '../../shared/recipes.js';
 
 function duplicateRequest() {
   return new AppError(409, 'DUPLICATE_REQUEST', '이미 처리된 요청입니다.');
-}
-
-function requireCharacter(character) {
-  if (!character) throw new AppError(404, 'CHARACTER_NOT_FOUND', '연결된 활성 캐릭터가 없습니다.');
-  if(character.status==='NEAR_DEATH')throw new AppError(409,'CHARACTER_NEAR_DEATH','빈사 상태에서는 조사할 수 없습니다.');
-  if (character.status === 'DEAD') throw new AppError(409, 'CHARACTER_DEAD', '사망한 캐릭터는 조사할 수 없습니다.');
 }
 
 function areaView(area) {
@@ -44,7 +40,7 @@ export function createInvestigationRepository(pool, {random = randomUnit, battle
          from public.game_character c join public.auth_user u on u.character_id=c.id
          where u.id=$1 and u.is_active and c.is_active`, [userId]
       );
-      requireCharacter(r.rows[0]);
+      if (!r.rows[0]) throw new AppError(404,'CHARACTER_NOT_FOUND','연결된 활성 캐릭터가 없습니다.');
       return r.rows[0].areas;
     },
 
@@ -69,8 +65,8 @@ export function createInvestigationRepository(pool, {random = randomUnit, battle
         const before = await lockCharacterByUser(client, userId);
         // A concurrent retry may have committed while we waited for row locks.
         await rejectDuplicate(client, requestKey);
-        requireCharacter(before);
-        if (battleRepository) await battleRepository.ensureNoActiveBattle(client,before);
+        requireActionCharacter(before);
+        await requireNoActiveBattle(client,before);
         const {investigation_ap_cost: cost} = await readNumberSettings(client, {investigation_ap_cost: resourceNumber});
         if (Number(before.ap) < cost) throw new AppError(409, 'NOT_ENOUGH_AP', '조사에 필요한 AP가 부족합니다.');
 
@@ -81,8 +77,10 @@ export function createInvestigationRepository(pool, {random = randomUnit, battle
         const selected = chooseResult(candidates.rows, random);
         if (!selected) throw new AppError(409, 'NO_INVESTIGATION_RESULT', '등록된 조사 결과가 없습니다.');
         const character = await changeCharacterResources(client, before, {ap: -cost});
-        // Snapshot before item locks; creation and investigation commit together.
-        const battle = battleRepository ? await battleRepository.encounter(client,area,character) : null;
+        // Preserve monster -> recipe -> item ordering without rolling encounter yet.
+        if (battleRepository) await client.query(`select m.id from public.area_monster am
+          join public.monster m on m.id=am.monster_id where am.area_id=$1 and m.is_active
+          order by m.id for update of m`,[area.id]);
 
         let firstDiscovery = false;
         const rateBefore = Number(area.investigation_rate);
@@ -107,8 +105,16 @@ export function createInvestigationRepository(pool, {random = randomUnit, battle
            where investigation_result_id=$1 order by item_id,id for share`, [selected.id]
         );
         const rewards = [];
+        const recipes=await lockRecipeDrops(client,rewardRows.rows);
         for (const reward of rewardRows.rows) {
+          if (reward.recipe_id!=null && !recipes.has(String(reward.recipe_id))) continue;
           if (!winsReward(reward.probability, random)) continue;
+          if (reward.recipe_id!=null) {
+            const found=await discoverRecipe(client,before.id,recipes.get(String(reward.recipe_id)),'INVESTIGATION',selected.id);
+            recipes.delete(String(reward.recipe_id));
+            if(found) rewards.push({rewardId:reward.id,...found});
+            continue;
+          }
           const itemResult = await client.query(
             'select id,name,is_active from public.item where id=$1 for update', [reward.item_id]
           );
@@ -120,6 +126,8 @@ export function createInvestigationRepository(pool, {random = randomUnit, battle
             quantity: reward.quantity, inventoryQuantity: inventory.after});
         }
 
+        // One independent encounter roll, after all rewards. Same transaction: errors roll back everything.
+        const battle = battleRepository ? await battleRepository.encounter(client,area,character) : null;
         let clue = null;
         if (selected.clue_id !== null) {
           const clueResult = await client.query('select * from public.clue where id=$1', [selected.clue_id]);

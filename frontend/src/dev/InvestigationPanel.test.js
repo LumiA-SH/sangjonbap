@@ -1,6 +1,11 @@
 import React from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
-import InvestigationPanel from './InvestigationPanel';
+import InvestigationPanel, {rewardText} from './InvestigationPanel';
+
+test('recipe entitlement and inventory reward have distinct displays', () => {
+  expect(rewardText({recipeId: 2, name: '레시피'})).toBe('레시피 · 레시피 최초 발견 · 무료 습득 · 상점 등록');
+  expect(rewardText({name: '재료', quantity: 2, inventoryQuantity: 3})).toBe('재료 × 2 · 지급 후 보유 3');
+});
 
 function render(cost, ap) {
   const container = document.createElement('div');

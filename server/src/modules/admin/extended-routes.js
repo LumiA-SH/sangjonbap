@@ -24,7 +24,7 @@ export function mountExtendedAdminRoutes(router,repo) {
     router.post('/users/:id/character',async(req,res)=>{
         id(req.params.id);ok(res,{character:await repo.registerAdminCharacter(req.auth.user.id,req.params.id,req.body)},201);
     });
-    for (const kind of ['foods','recipes','gachas']) {
+    for (const kind of ['foods','recipes','gachas','areas']) {
         router.get(`/${kind}`,async(req,res)=>{
             const records=await repo.listAdminMasters(kind,cursor(req));
             ok(res,{records,nextAfter:records.length===100?records.at(-1).id:null});

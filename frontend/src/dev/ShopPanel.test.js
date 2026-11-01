@@ -49,3 +49,10 @@ test('active battle blocks purchase even while otherwise ALIVE',async()=>{
   expect(buy().disabled).toBe(true);
   await act(async()=>buy().click());expect(api).not.toHaveBeenCalled();
 });
+
+test('recipe product has fixed quantity and prevents already learned purchase',async()=>{
+  await render({products:[{...product,item_id:null,recipe_id:'23',learned:false}]});
+  expect(container.textContent).toContain('구매 즉시 습득');expect(container.querySelector('input').disabled).toBe(true);
+  await render({products:[{...product,item_id:null,recipe_id:'23',learned:true}]});
+  expect(buy().disabled).toBe(true);expect(container.textContent).toContain('습득 완료');
+});

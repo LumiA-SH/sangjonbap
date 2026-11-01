@@ -1,11 +1,17 @@
 import {useState} from 'react';
 import {api} from '../api/client';
 
-export default function InvestigationPanel({areas, investigationApCost, character, error, characterError, busy, run, refresh, notify}) {
+export function rewardText(reward) {
+  return reward.recipeId != null
+    ? `${reward.name} · 레시피 최초 발견 · 무료 습득 · 상점 등록`
+    : `${reward.name} × ${reward.quantity} · 지급 후 보유 ${reward.inventoryQuantity}`;
+}
+
+export default function InvestigationPanel({activeBattle, battleError, areas, investigationApCost, character, error, characterError, busy, run, refresh, notify}) {
   const [latest, setLatest] = useState(null);
   const costReady = Number.isSafeInteger(investigationApCost) && investigationApCost >= 0;
   const insufficientAp = costReady && character && Number(character.ap) < investigationApCost;
-  const blocked = !costReady || !character || character.status === 'DEAD' || insufficientAp || !!error || !!characterError;
+  const blocked = !costReady || !character || ['DEAD','NEAR_DEATH'].includes(character.status) || activeBattle || !!battleError || insufficientAp || !!error || !!characterError;
 
   async function investigate(area) {
     setLatest(null);
@@ -19,7 +25,10 @@ export default function InvestigationPanel({areas, investigationApCost, characte
   return <section aria-labelledby="investigation-title">
     <span className="badge">INVESTIGATION</span>
     <h2 id="investigation-title">조사 DEV</h2>
-    <p>{costReady ? `조사 1회당 AP ${investigationApCost}을 소비합니다.` : '조사 비용을 불러오지 못했습니다.'} 최초 발견은 모든 캐릭터가 공유합니다.</p>
+    <p>{costReady ? `조사 1회당 AP ${investigationApCost}을 소비합니다.` : '조사 비용을 불러오지 못했습니다.'} 최초 발견은 모든 캐릭터가 공유합니다. 조사 완료 후 지역 설정에 따라 조우를 별도로 판정합니다. 개별 보상 확률에 따라 지급물이 없을 수 있습니다.</p>
+    {activeBattle && <p>진행 중인 전투를 종료한 후 조사할 수 있습니다.</p>}
+    {battleError && <p role="alert">전투 상태 확인 실패: {battleError}</p>}
+    {character?.status === 'NEAR_DEATH' && <p>빈사 상태에서는 지역 조회만 가능합니다.</p>}
     <button disabled={busy} onClick={() => run(refresh)}>조사 지역 새로고침</button>
     {error && <p role="alert">지역 조회 실패: {error} · 이전 표시값일 수 있습니다.</p>}
     {character?.status === 'DEAD' && <p>DEAD 캐릭터는 조사할 수 없습니다.</p>}
@@ -39,9 +48,10 @@ export default function InvestigationPanel({areas, investigationApCost, characte
       <p>{latest.data.result.result_text}</p>
       <p>등급 {latest.data.result.result_grade} · unique {latest.data.result.is_unique ? '예' : '아니오'} · 최초 발견 {latest.data.firstDiscovery ? '예' : '아니오'}</p>
       <p>조사 진행률 {latest.data.area.investigation_rate}% · 변경 후 AP {latest.data.ap}</p>
+      <p>{latest.data.battle ? `마물 조우 · 전투 ID ${latest.data.battle.id}` : '조우 없음'} · 조사 보상은 이후 전투 결과와 무관하게 유지됩니다.</p>
       <h4>지급된 보상</h4>
       {latest.data.rewards.length === 0 ? <p>지급된 보상 없음</p> : <ul>
-        {latest.data.rewards.map(reward => <li key={reward.rewardId}>{reward.name} × {reward.quantity} · 지급 후 보유 {reward.inventoryQuantity}</li>)}
+        {latest.data.rewards.map(reward => <li key={reward.rewardId}>{rewardText(reward)}</li>)}
       </ul>}
       <h4>단서 정보</h4>
       {latest.data.clue ? <>

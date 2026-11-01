@@ -1,4 +1,5 @@
 import {AppError} from '../../shared/http.js';
+import {validateQuantity} from './batch.js';
 
 export function createCookingService(repository) {
     function ready() {
@@ -6,11 +7,11 @@ export function createCookingService(repository) {
             throw new AppError(501,'COOKING_UNAVAILABLE','요리·식사는 Supabase 모드에서 지원합니다.');
         }
     }
-    function validate(id,body) {
+    function validate(id,body, cooking = false) {
         if (typeof id !== 'string' || !/^[1-9][0-9]{0,18}$/.test(id) || BigInt(id)>9223372036854775807n) {
             throw new AppError(400,'INVALID_COOKING_ID','유효한 양의 정수 ID가 필요합니다.');
         }
-        if (!body || Array.isArray(body) || Object.keys(body).some(key=>key!=='requestKey') ||
+        if (!body || Array.isArray(body) || Object.keys(body).some(key=>key!=='requestKey' && !(cooking && key==='quantity')) ||
             typeof body.requestKey !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(body.requestKey)) {
             throw new AppError(400,'INVALID_REQUEST_KEY','requestKey UUID만 입력하세요.');
         }
@@ -20,7 +21,11 @@ export function createCookingService(repository) {
     return {
         async getCatalog(userId) {ready();return repository.getCookingCatalog(userId);},
         async learn(userId,id,body) {return repository.learnRecipe(userId,id,validate(id,body));},
-        async cook(userId,id,body) {return repository.cookRecipe(userId,id,validate(id,body));},
+        async cook(userId,id,body) {
+            const key = validate(id,body,true);
+            const quantity = validateQuantity(body.quantity === undefined ? 1 : body.quantity);
+            return body.quantity === undefined ? repository.cookRecipe(userId,id,key) : repository.cookRecipe(userId,id,key,quantity);
+        },
         async eat(userId,id,body) {return repository.eatFood(userId,id,validate(id,body));}
     };
 }
