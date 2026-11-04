@@ -1,5 +1,6 @@
 import {useState} from 'react';
 import {api} from '../api/client';
+import ItemTransferPanel from './ItemTransferPanel';
 
 function ItemTransfer({item, direction, disabled, run, refresh, notify}) {
   const [quantity, setQuantity] = useState('1');
@@ -35,6 +36,8 @@ export default function InventoryPanel({inventory, storage, character, errors, b
     <span className="badge">INVENTORY / STORAGE</span>
     <h2 id="inventory-title">인벤토리·공용창고 DEV</h2>
     <button disabled={busy} onClick={() => run(refresh)}>인벤토리 새로고침</button>
+    <ItemTransferPanel inventory={inventory} character={character} busy={busy} error={errors.inventory}
+      run={run} refresh={refresh} notify={notify}/>
     {[
       {title: '개인 인벤토리', items: inventory, direction: 'deposit', error: errors.inventory},
       {title: '공용창고', items: storage, direction: 'withdraw', error: errors.storage}

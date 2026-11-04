@@ -6,14 +6,16 @@ import {createGachaService} from '../src/modules/gacha/service.js';
 import {createApp} from '../src/app.js';
 import {createMemoryRepository} from '../src/db/memory.js';
 
-test('weight sum selection boundary and invalid configurations',()=>{
-    const rewards=[{id:'1',weight:2,quantity:1},{id:'2',weight:6,quantity:3}];
-    assert.equal(validateRewards(rewards),8);
+test('remaining stock selection boundary ignores legacy weights and quantities',()=>{
+    const rewards=[{id:'1',weight:99,quantity:4,max_stock:1,remaining_stock:1},{id:'2',weight:1,quantity:3,max_stock:3,remaining_stock:3},{id:'3',max_stock:9,remaining_stock:0}];
+    assert.equal(validateRewards(rewards),4);
     for(const [sample,id] of [[0,'1'],[0.249999,'1'],[0.25,'2'],[0.999999,'2']]) assert.equal(selectReward(rewards,()=>sample).id,id);
-    for(const rows of [[],[{weight:0,quantity:1}],[{weight:-1,quantity:1}],[{weight:1.5,quantity:1}],[{weight:1,quantity:0}],[{weight:Number.MAX_SAFE_INTEGER,quantity:1},{weight:1,quantity:1}]]) {
+    for(const rows of [[{max_stock:0,remaining_stock:0}],[{max_stock:1,remaining_stock:-1}],[{max_stock:1,remaining_stock:2}],[{max_stock:1,remaining_stock:.5}]]) {
         assert.throws(()=>validateRewards(rows),e=>e.code==='GACHA_REWARDS_INVALID');
     }
     assert.throws(()=>selectReward(rewards,()=>1));
+    assert.throws(()=>validateRewards([]),e=>e.code==='GACHA_SOLD_OUT');
+    assert.throws(()=>validateRewards([{max_stock:null,remaining_stock:null}]),e=>e.code==='GACHA_STOCK_HOLD');
 });
 test('period interior, outside and exact boundary HOLD; input validation and memory fallback',async()=>{
     requirePeriod({boundary:false,outside:false});

@@ -18,6 +18,7 @@ export function battleRoutes(repo,sessions) {
         next();
     });
     router.get('/current',async(req,res)=>ok(res,await repo.getBattle(req.auth.user.id)));
+    router.get('/latest',async(req,res)=>ok(res,await repo.getBattle(req.auth.user.id,null,{latest:true})));
     router.use('/:id',(req,res,next)=>{if(!validId(req.params.id))throw new AppError(400,'INVALID_BATTLE_ID','전투 ID가 올바르지 않습니다.');next();});
     router.get('/:id',async(req,res)=>ok(res,await repo.getBattle(req.auth.user.id,req.params.id)));
     router.post('/:id/commands',async(req,res)=>ok(res,await repo.commandBattle(req.auth.user.id,req.params.id,validateBattleCommand(req.body))));

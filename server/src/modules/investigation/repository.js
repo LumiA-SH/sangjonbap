@@ -12,7 +12,7 @@ function duplicateRequest() {
 function areaView(area) {
   return {
     id: area.id, name: area.name, description: area.description, image_url: area.image_url,
-    is_open: area.is_open, unlock_at: area.unlock_at, investigation_rate: Number(area.investigation_rate)
+    encounter_rate: Number(area.encounter_rate), is_open: area.is_open, unlock_at: area.unlock_at, investigation_rate: Number(area.investigation_rate)
   };
 }
 
@@ -34,7 +34,7 @@ export function createInvestigationRepository(pool, {random = randomUnit, battle
         `select c.id as character_id,c.status,
                 coalesce((select jsonb_agg(jsonb_build_object(
                   'id',a.id::text,'name',a.name,'description',a.description,'image_url',a.image_url,
-                  'is_open',a.is_open,'unlock_at',a.unlock_at,'investigation_rate',a.investigation_rate
+                  'encounter_rate',a.encounter_rate,'is_open',a.is_open,'unlock_at',a.unlock_at,'investigation_rate',a.investigation_rate
                 ) order by a.sort_order,a.id)
                 from public.area a where a.is_open and (a.unlock_at is null or a.unlock_at<=statement_timestamp())), '[]'::jsonb) as areas
          from public.game_character c join public.auth_user u on u.character_id=c.id
@@ -130,6 +130,10 @@ export function createInvestigationRepository(pool, {random = randomUnit, battle
         const battle = battleRepository ? await battleRepository.encounter(client,area,character) : null;
         let clue = null;
         if (selected.clue_id !== null) {
+          // The conditional UPDATE serializes a shared clue's first finder across areas.
+          // Publish only after this investigation commits; later discoveries preserve its owner.
+          await client.query(`update public.clue set is_discovered=true,first_discoverer_id=$2,
+            discovered_at=clock_timestamp() where id=$1 and is_discovered=false`, [selected.clue_id,before.id]);
           const clueResult = await client.query('select * from public.clue where id=$1', [selected.clue_id]);
           clue = clueResult.rows[0] || null;
         }

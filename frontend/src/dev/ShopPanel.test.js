@@ -26,7 +26,8 @@ test('shows independent limits and validates quantity, stock, DEAD and HOLD',asy
   await act(async()=>Simulate.change(container.querySelector('input'),{target:{value:'1'}}));
   expect(buy().disabled).toBe(false);
   await render({character:{status:'DEAD'}});expect(buy().disabled).toBe(true);
-  await render({character:{status:'NEAR_DEATH'}});expect(container.textContent).toContain('상점을 이용');expect(buy().disabled).toBe(false);
+  await render({character:{status:'NEAR_DEATH'}});expect(container.textContent).toContain('일반 상품을 구매');expect(buy().disabled).toBe(false);
+  await render({character:{status:'NEAR_DEATH'},products:[{...product,recipe_id:'9'}]});expect(buy().disabled).toBe(true);
   await render({character:{status:'NEAR_DEATH'},products:[{...product,effect_type:'BLOOD_PACK',price:0,dailyRemaining:1}]});expect(buy().disabled).toBe(false);
   await render({character:{status:'NEAR_DEATH'},products:[{...product,effect_type:'BLOOD_PACK',price:0,dailyRemaining:0}]});expect(buy().disabled).toBe(true);
 });

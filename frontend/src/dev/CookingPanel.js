@@ -10,7 +10,7 @@ export default function CookingPanel({catalog, inventory = [], activeBattle, bat
   const craftBlocked = blocked || character?.status === 'NEAR_DEATH';
   const validQuantity = Number.isInteger(quantity) && quantity >= 1 && quantity <= (catalog?.maxBatchQuantity ?? 1000);
   async function perform(path, craft = false) {
-    if (sending.current || blocked || (craft && (craftBlocked || !validQuantity))) return;
+    if (sending.current || blocked || (craft && craftBlocked) || (path.endsWith('/cook') && !validQuantity)) return;
     sending.current = true;
     try {
       await run(async () => {
@@ -29,7 +29,7 @@ export default function CookingPanel({catalog, inventory = [], activeBattle, bat
     {error && <p role="alert">조회 실패: {error} · 이전 값일 수 있습니다.</p>}
     {character?.status === 'DEAD' && <p>DEAD 행동 불가</p>}
     {character?.status === 'NEAR_DEATH' && <p>빈사 상태에서는 식사가 가능하며 요리·레시피 습득은 불가합니다.</p>}
-    <p>요리 AP {catalog?.cookingApCost ?? '조회 필요'} · 성공 {catalog?.successQuantity ?? '-'}개 / 실패 {catalog?.failureQuantity ?? '-'}개</p>
+    <p>요리 AP {catalog?.cookingApCost ?? '조회 필요'} · 성공 수량은 레시피별 설정 · 실패 {catalog?.failureQuantity ?? '-'}개</p>
     <p>식사 {catalog?.dailyMealCount ?? '-'} / {catalog?.dailyMealLimit ?? '-'}회 · 일일 초기화 자동 실행은 현재 HOLD입니다.</p>
     {activeBattle && <p>전투 중에는 요리·식사·습득을 할 수 없습니다.</p>}
     {battleError && <p role="alert">전투 상태 확인 실패: {battleError}</p>}
@@ -39,7 +39,7 @@ export default function CookingPanel({catalog, inventory = [], activeBattle, bat
     {catalog?.recipes.length === 0 && <p>등록된 레시피가 없습니다.</p>}
     <ul className="dev-list">{catalog?.recipes.map(recipe => <li className="dev-row" key={recipe.id}>
       <strong>{recipe.name}</strong><p>{recipe.description}</p>
-      <p>상점 가격 {recipe.shop_price ?? '미등록'} · 성공률 {(catalog.successRate ?? 80)}% · {recipe.learned ? '습득 완료' : '미습득'}</p>
+      <p>상점 가격 {recipe.shop_price ?? '미등록'} · 성공률 {recipe.success_rate}% · 성공 {recipe.result_quantity}개 · {recipe.learned ? '습득 완료' : '미습득'}</p>
       <p>재료: {recipe.ingredients.map(row => `${row.name} × ${validQuantity ? row.quantity*quantity : '-'} (보유 ${inventory.find(i=>String(i.item_id ?? i.itemId)===String(row.itemId))?.quantity ?? 0})`).join(', ')}</p>
       <div className="actions">
         <button disabled={craftBlocked || recipe.learned || !recipe.shop_product_id} onClick={() => perform(`/cooking/recipes/${recipe.id}/learn`, true)}>습득</button>
@@ -59,7 +59,8 @@ export default function CookingPanel({catalog, inventory = [], activeBattle, bat
     {result && <div className="dev-result"><h3>처리 결과</h3>
       {typeof result.succeeded === 'boolean' && <p>요리 {result.succeeded ? '성공' : '실패'} · 재료/AP 소모와 지급이 반영되었습니다.</p>}
       {result.quantity != null && <p>요청 {result.quantity}회 · 성공 {result.successCount}회 / 실패 {result.failureCount}회 · AP {result.apCost} 소모</p>}
-      {result.outputs?.map(row=><p key={row.itemId}>음식 ID {row.itemId} × {row.quantity} 지급</p>)}
+      {result.outputs?.map(row=><p key={row.itemId}>{row.name || `음식 ID ${row.itemId}`} × {row.quantity} 지급</p>)}
+      {result.rpEffectText&&<p>RP 효과: {result.rpEffectText}</p>}
       <pre>{JSON.stringify(result,null,2)}</pre></div>}
   </section>;
 }

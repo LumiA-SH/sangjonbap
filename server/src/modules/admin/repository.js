@@ -3,17 +3,26 @@ import {writeActionLog} from '../../shared/game.js';
 import {createAdminMasterRepository} from './master-repository.js';
 import {createAdminRoleRepository} from './role-repository.js';
 import {createAdminBattleRepository} from './battle-repository.js';
+import {createAdminSettingsRepository} from './settings-repository.js';
+import {createAdminDeleteRepository} from './delete-repository.js';
+import {createAdminCharacterOperations} from './character-operations.js';
+import {createAdminInvestigationOperations} from './investigation-operations.js';
 const tables={items:'item',products:'shop_product'};
 const fail=(code,message,status=409)=>{throw new AppError(status,code,message);};
 
 export function createAdminRepository(pool) {
     return {
+        ...createAdminSettingsRepository(pool),
+        ...createAdminDeleteRepository(pool),
+        ...createAdminCharacterOperations(pool),
+        ...createAdminInvestigationOperations(pool),
         ...createAdminBattleRepository(pool),
         ...createAdminMasterRepository(pool),
         ...createAdminRoleRepository(pool),
-        async searchAdminItems(query) {
+        async searchAdminItems(query,rpOnly=false) {
             return (await pool.query(`select id::text,name,category,is_active,effect_type
                 from public.item where strpos(lower(name),lower($1))>0
+                ${rpOnly?"and is_active and transferable and not usable and not battle_usable and effect_type is null and effect_value is null and use_target='NONE' and category<>'FOOD' and not exists(select 1 from public.food_config f where f.item_id=item.id)":''}
                 order by name,id limit 30`, [query])).rows;
         },
         async listAdminRecords(kind,after='0') {

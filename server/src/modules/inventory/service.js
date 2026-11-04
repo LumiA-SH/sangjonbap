@@ -1,4 +1,5 @@
 import {AppError} from '../../shared/http.js';
+import {validId} from '../admin/service.js';
 
 function validatePositiveId(value, name) {
     if (!Number.isSafeInteger(value) || value < 1) {
@@ -65,6 +66,17 @@ function resultOrThrow(result) {
 
 export function createInventoryService(repository) {
     return {
+        async transfer(userId, body) {
+            if (!body || Array.isArray(body) || typeof body !== 'object' ||
+                Object.keys(body).some(key => !['targetId', 'itemId', 'quantity', 'requestKey'].includes(key)) ||
+                !validId(body.targetId) || !validId(body.itemId) ||
+                !Number.isInteger(body.quantity) || body.quantity < 1 || body.quantity > 2147483647) {
+                throw new AppError(400, 'INVALID_INVENTORY_REQUEST', '대상 ID, 아이템 ID와 양의 정수 수량을 확인하세요.');
+            }
+            validateRequestKey(body.requestKey);
+            if (!repository.transferItem) throw new AppError(501, 'ITEM_UNAVAILABLE', '양도는 Supabase 모드에서 지원합니다.');
+            return repository.transferItem(userId, String(body.targetId), String(body.itemId), body.quantity, body.requestKey.toLowerCase());
+        },
         async getInventory(userId) {
             return repository.getInventory(userId);
         },

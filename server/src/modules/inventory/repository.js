@@ -1,4 +1,5 @@
 import {requireNoActiveBattle} from '../../shared/actions.js';
+import {transferInventoryItem} from './transfer.js';
 import {AppError} from '../../shared/http.js';
 import {lockCharacterByUser, changeInventoryQuantity, writeActionLog} from '../../shared/game.js';
 
@@ -58,11 +59,14 @@ async function changeStorageQuantity(client, itemId, delta) {
 
 export function createInventoryRepository(pool) {
     return {
+        transferItem(userId, targetId, itemId, quantity, requestKey) {
+            return transferInventoryItem(pool, userId, targetId, itemId, quantity, requestKey);
+        },
         async getInventory(userId) {
             const r = await pool.query(
                 `select i.item_id,i.quantity,
                 m.name,m.category,m.description,m.image_url,
-                m.usable,m.use_target,m.effect_type,m.effect_value,m.transferable
+                m.usable,m.use_target,m.effect_type,m.effect_value,m.transferable,m.battle_usable
          from public.inventory i
          join public.item m on m.id=i.item_id
          join public.auth_user u on u.character_id=i.character_id

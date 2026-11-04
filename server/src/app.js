@@ -16,11 +16,13 @@ import {cookingRoutes} from './modules/cooking/routes.js';
 import {gachaRoutes} from './modules/gacha/routes.js';
 import {adminRoutes} from './modules/admin/routes.js';
 import {investigationRoutes} from './modules/investigation/routes.js';
+import {recordsRoutes} from './modules/records/routes.js';
 
 
 export function createApp(config, repository, authDependencies={}) {
 
   const app = express();
+  app.locals.developmentErrors = config.nodeEnv === 'development';
 
   app.disable('x-powered-by');
 
@@ -80,6 +82,7 @@ export function createApp(config, repository, authDependencies={}) {
 
   app.use('/api/investigation', investigationRoutes(repository, sessions));
   app.use('/api/dev', devRoutes(config, repository, sessions));
+  app.use('/api/records', recordsRoutes(repository, sessions));
   app.use('/api/shop', shopRoutes(repository, sessions));
   app.use('/api/training', trainingRoutes(repository, sessions));
   app.use('/api/cooking', cookingRoutes(repository, sessions));

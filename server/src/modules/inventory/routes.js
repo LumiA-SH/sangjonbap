@@ -10,6 +10,10 @@ export function inventoryRoutes(repository, sessions) {
     router.use(sessions.require);
     mountBloodPackRoutes(router,repository);
 
+    router.post('/transfer', async (req,res) => {
+        ok(res, await service.transfer(req.auth.user.id, req.body));
+    });
+
     router.get('/me', async (req,res) => {
         const items = await service.getInventory(req.auth.user.id);
         ok(res, {items});

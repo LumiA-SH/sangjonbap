@@ -7,7 +7,7 @@ export default function GachaPanel({gachas, character, error, busy, run, refresh
   const sending = useRef(false);
   const blocked = busy || character?.in_active_battle || !!error || !character || character.status==='DEAD' || character.status==='NEAR_DEATH';
   async function draw(gacha) {
-    if (sending.current || blocked || gacha.outside || gacha.boundary) return;
+    if (sending.current || blocked || gacha.outside || gacha.boundary || gacha.sold_out || gacha.stock_hold || Number(character.currency)<1) return;
     sending.current=true;
     try {
       await run(async()=>{
@@ -32,10 +32,13 @@ export default function GachaPanel({gachas, character, error, busy, run, refresh
       <p>기간: {gacha.start_at || '시작 제한 없음'} ~ {gacha.end_at || '종료 제한 없음'}</p>
       {gacha.outside && <p>현재 운영 기간 외 · 시작 후 새로고침하세요.</p>}
       {gacha.boundary && <p>HOLD: 기간 경계 포함 정책 확정 대기</p>}
-      <button disabled={blocked || gacha.outside || gacha.boundary} onClick={()=>draw(gacha)}>1회 뽑기</button>
+      {gacha.stock_hold?<p>재고 설정 준비 중</p>:gacha.sold_out&&<p>전체 품절</p>}
+      {Number(character?.currency)<1&&<p>코인 1개가 필요합니다.</p>}
+      <button disabled={blocked || gacha.outside || gacha.boundary || gacha.sold_out || gacha.stock_hold || Number(character?.currency)<1} onClick={()=>draw(gacha)}>1회 뽑기</button>
     </li>)}</ul>
     {failure && <p role="alert">{failure}</p>}
     {result && <div className="dev-result"><h3>추첨 결과</h3><p>{result.reward.name} × {result.reward.quantity}</p>
+      <p>{result.reward.description}</p>
       <pre>{JSON.stringify(result,null,2)}</pre></div>}
   </section>;
 }

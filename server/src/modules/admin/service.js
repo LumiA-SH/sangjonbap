@@ -1,5 +1,5 @@
 import {AppError} from '../../shared/http.js';
-export const itemFields = ['name','category','description','transferable','is_active','effect_type','effect_value','usable','use_target','battle_usable'];
+export const itemFields = ['name','category','description','image_url','transferable','is_active','effect_type','effect_value','usable','use_target','battle_usable'];
 export const productFields = ['item_id','price','purchase_limit','stock_limit','daily_limit','is_active','sort_order'];
 export function validId(id) {return typeof id==='string' && /^[1-9][0-9]{0,18}$/.test(id) && BigInt(id)<=9223372036854775807n;}
 function invalid(message) {throw new AppError(400,'INVALID_ADMIN_INPUT',message);}
@@ -14,6 +14,7 @@ export function validateAdminInput(kind,body,create) {
     if ('name' in patch && (typeof patch.name!=='string' || !patch.name.trim() || [...patch.name].length>100)) invalid('아이템 이름은 1~100자입니다.');
     if ('category' in patch && !['MATERIAL','CONSUMABLE','FOOD','ETC'].includes(patch.category)) invalid('아이템 종류가 올바르지 않습니다.');
     if ('description' in patch && patch.description!==null && typeof patch.description!=='string') invalid('설명은 문자열 또는 NULL입니다.');
+    if ('image_url' in patch && patch.image_url!==null && typeof patch.image_url!=='string') invalid('이미지 URL은 문자열 또는 NULL입니다.');
     for (const key of ['is_active','transferable','usable','battle_usable']) if (key in patch && typeof patch[key]!=='boolean') invalid(`${key}는 boolean입니다.`);
     if ('item_id' in patch && !validId(patch.item_id)) invalid('아이템 ID는 숫자 문자열이어야 합니다.');
     for (const key of ['price','purchase_limit','stock_limit','daily_limit','sort_order']) {

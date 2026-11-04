@@ -2,7 +2,7 @@ import {useRef,useState} from 'react';
 import {api} from '../api/client';
 
 // Selection stores only the ID. Names never identify a game item.
-export default function ItemPicker({value,onChange,disabled=false,label='아이템',onDenied=()=>{}}) {
+export default function ItemPicker({value,onChange,disabled=false,label='아이템',onDenied=()=>{},rpOnly=false}) {
   const [query,setQuery]=useState(''),[rows,setRows]=useState([]),[message,setMessage]=useState('');
   const [busy,setBusy]=useState(false);
   const sequence=useRef(0);
@@ -11,7 +11,7 @@ export default function ItemPicker({value,onChange,disabled=false,label='아이�
     if(!query.trim()){setRows([]);setMessage('이름을 입력하세요.');return;}
     setBusy(true);setMessage('');
     try {
-      const data=await api(`/admin/items/search?q=${encodeURIComponent(query.trim())}`);
+      const data=await api(`/admin/items/search?q=${encodeURIComponent(query.trim())}${rpOnly?'&rp=true':''}`);
       if(version===sequence.current){setRows(data.records);setMessage(data.records.length?'최대 30건입니다. 이름을 더 입력하여 좁힐 수 있습니다.':'검색 결과가 없습니다.');}
     } catch(e){if(version===sequence.current){setRows([]);setMessage(`${e.code}: ${e.message}`);if([401,403].includes(e.status))onDenied(e.message);}}
     finally{if(version===sequence.current)setBusy(false);}

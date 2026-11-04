@@ -76,9 +76,10 @@ test('command input never accepts client damage/state or invalid IDs',()=>{
     for(const b of [{...body,damage:100},{...body,turnNo:0},{...body,action:'ITEM',itemId:'-1'},{...body,requestKey:'bad'}])reject(()=>validateBattleCommand(b),'INVALID_BATTLE_COMMAND');
 });
 test('admin monster validator rejects duplicate rewards, malformed quantities and inactive sum',()=>{
-    const body={requestKey:randomUUID(),name:'test',is_active:true,max_hp:10,atk:10,def:10,agi:10,areas:[],drops:[],
+    const body={requestKey:randomUUID(),name:'test',is_active:true,max_hp:10,atk:10,def:10,agi:10,areas:[],drops:[{item_id:'1',drop_rate:20,min_quantity:1,max_quantity:2,is_ingredient:true}],
         actions:[{name:'attack',action_type:'ATTACK',probability:100,multiplier:1,is_active:true,sort_order:0}]};
     validateMonster(body);
+    reject(()=>validateMonster({...body,drops:[]}),'MONSTER_INGREDIENT_REQUIRED');
     reject(()=>validateMonster({...body,actions:[null]}),'INVALID_ADMIN_INPUT');
     reject(()=>validateMonster({...body,actions:[{...body.actions[0],probability:33.333}]}),'INVALID_ADMIN_INPUT');
     reject(()=>validateMonster({...body,drops:[{item_id:'1',drop_rate:100,min_quantity:0,max_quantity:1,is_ingredient:false}]}),'INVALID_ADMIN_INPUT');

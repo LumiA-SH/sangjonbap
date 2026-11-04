@@ -19,7 +19,7 @@ function fixture(overrides = {}, {random = () => 0, failAt, duplicateAtLog = fal
     results: [{id: '2', area_id: '1', result_grade: 'NORMAL', result_text: '발견했다.',
       weight: 1, is_unique: false, investigation_rate_value: '15', clue_id: null}],
     rewards: [], items: [{id: '3', name: '식량', is_active: true}], inventory: {},
-    discoveries: [], logs: [], clue: {id: '4', title: '단서', content: '내용'}, ...clone(overrides)
+    discoveries: [], logs: [], clue: {id: '4', title: '단서', content: '내용', is_discovered:false}, ...clone(overrides)
   };
   let snapshot;
   let released = 0;
@@ -74,6 +74,13 @@ function fixture(overrides = {}, {random = () => 0, failAt, duplicateAtLog = fal
       }
       if (sql.startsWith('insert into public.inventory')) { state.inventory[params[1]] = params[2]; return rows([]); }
       if (sql.startsWith('update public.inventory')) { state.inventory[params[1]] = params[0]; return rows([]); }
+      if (sql.startsWith('update public.clue')) {
+        assert.match(sql,/where id=\$1 and is_discovered=false$/);
+        if (state.clue && !state.clue.is_discovered) {
+          Object.assign(state.clue,{is_discovered:true,first_discoverer_id:params[1],discovered_at:'2026-11-02T00:00:00Z'});
+        }
+        return rows([]);
+      }
       if (sql.startsWith('select * from public.clue')) return rows([clone(state.clue)]);
       if (sql.startsWith('insert into public.action_log')) {
         if (duplicateAtLog || state.logs.some(log => log.requestKey === params[8])) {
@@ -94,6 +101,21 @@ function fixture(overrides = {}, {random = () => 0, failAt, duplicateAtLog = fal
 const reward = {id: '5', item_id: '3', quantity: 2, probability: '100'};
 const unique = {id: '2', area_id: '1', result_grade: 'RARE', result_text: '최초 단서',
   weight: 1, is_unique: true, investigation_rate_value: '15', clue_id: '4'};
+
+test('clue publication keeps the first finder and rolls back with a failed investigation', async()=>{
+  const f=fixture({results:[unique]});
+  const first=await f.repository.investigate('7','1',key);
+  assert.equal(first.clue.is_discovered,true);
+  assert.equal(first.clue.first_discoverer_id,'10');
+  f.state().character.id='11';
+  const again=await f.repository.investigate('7','1',key2);
+  assert.equal(again.clue.first_discoverer_id,'10');
+  assert.equal(again.firstDiscovery,false);
+  const broken=fixture({results:[unique]},{failAt:'insert into public.action_log'});
+  await assert.rejects(broken.repository.investigate('7','1',key));
+  assert.equal(broken.state().clue.is_discovered,false);
+  assert.deepEqual(broken.state().discoveries,[]);
+});
 
 test('encounter is called once after rewards; zero rewards still completes; encounter error rolls back',async()=>{
   for(const hasReward of [true,false]) {

@@ -17,6 +17,10 @@ export function validateQuantity(quantity) {
 // Validate full materials before rolling; randomness must never make an unaffordable request valid.
 export function planBatch(recipe, ingredients, quantities, quantity, random) {
     validateQuantity(quantity);
+    const rate=Number(recipe.success_rate),outputQuantity=Number(recipe.result_quantity);
+    if(!Number.isFinite(rate)||rate<0||rate>100||!Number.isSafeInteger(outputQuantity)||outputQuantity<1||outputQuantity>2147483647) {
+        throw new AppError(500,'RECIPE_CONFIG_INVALID','레시피 성공률 또는 산출량 설정 오류입니다.');
+    }
     for (const row of ingredients) {
         const required = Number(row.quantity) * quantity;
         if (!Number.isSafeInteger(required) || required > (quantities.get(String(row.item_id)) || 0)) {
@@ -26,9 +30,9 @@ export function planBatch(recipe, ingredients, quantities, quantity, random) {
     const attempts = [];
     const consumed = new Map(), outputs = new Map();
     for (let i = 0; i < quantity; i++) {
-        const succeeded = winsReward(SUCCESS_RATE, random);
+        const succeeded = winsReward(rate, random);
         const materials = ingredients.map(row => ({itemId:String(row.item_id), quantity:succeeded ? Number(row.quantity) : Math.max(1,Math.floor(Number(row.quantity)/2))}));
-        const output = {itemId:String(succeeded ? recipe.result_item_id : recipe.failure_item_id), quantity:succeeded ? SUCCESS_QUANTITY : FAILURE_QUANTITY};
+        const output = {itemId:String(succeeded ? recipe.result_item_id : recipe.failure_item_id), quantity:succeeded ? outputQuantity : FAILURE_QUANTITY};
         for (const row of materials) consumed.set(row.itemId,(consumed.get(row.itemId)||0)+row.quantity);
         outputs.set(output.itemId,(outputs.get(output.itemId)||0)+output.quantity);
         attempts.push({attempt:i+1,succeeded,consumed:materials,output});

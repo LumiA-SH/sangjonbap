@@ -6,6 +6,7 @@ import {abilityRequirements} from '../battle/repository.js';
 import {readNumberSettings} from '../../shared/settings.js';
 import {validateInitialStats} from '../character/initial-stats.js';
 import {writeActionLog} from '../../shared/game.js';
+import {requireIngredientDrops} from '../battle/rewards.js';
 
 const fields=['name','description','image_url','max_hp','atk','def','agi','is_active'];
 const integer=(v,min=0)=>Number.isInteger(v)&&v>=min&&v<=2147483647;
@@ -26,13 +27,17 @@ export function validateMonster(body) {
             !decimal2(a.multiplier)||a.multiplier<=0||a.multiplier>9999.99||!integer(a.sort_order))invalid('행동 설정을 확인하세요. 확률과 배율은 DB에 맞게 소수 둘째 자리까지 입력합니다.');
     }
     chooseMonsterAction(body.actions,()=>0); // Includes unsupported conditional-policy HOLD.
-    for(const [key,rows] of [['item_id',body.drops],['area_id',body.areas]]) {
+    for(const [key,rows] of [['area_id',body.areas]]) {
         if(rows.some(r=>!validId(r[key]))||new Set(rows.map(r=>r[key])).size!==rows.length)invalid('참조 ID 중복 또는 형식 오류입니다.');
     }
-    for(const d of body.drops)if(Object.keys(d).some(k=>!['item_id','drop_rate','min_quantity','max_quantity','is_ingredient'].includes(k))||
+    const dropKeys=body.drops.map(d=>`${d.recipe_id!=null?'recipe':'item'}:${d.recipe_id??d.item_id}`);
+    if(new Set(dropKeys).size!==dropKeys.length)invalid('드롭 대상이 중복되었습니다.');
+    for(const d of body.drops)if(Object.keys(d).some(k=>!['item_id','recipe_id','drop_rate','min_quantity','max_quantity','is_ingredient'].includes(k))||
+        (d.item_id!=null)===(d.recipe_id!=null)||!validId(d.recipe_id??d.item_id)||(d.recipe_id!=null&&(d.is_ingredient||d.min_quantity!==1||d.max_quantity!==1))||
         !decimal2(d.drop_rate)||d.drop_rate<0||d.drop_rate>100||
         !integer(d.min_quantity,1)||!integer(d.max_quantity,d.min_quantity)||typeof d.is_ingredient!=='boolean')invalid('드롭 설정을 확인하세요.');
     for(const a of body.areas)if(Object.keys(a).some(k=>!['area_id','weight'].includes(k))||!integer(a.weight,1))invalid('지역 가중치를 확인하세요.');
+    if(body.is_active)requireIngredientDrops(body.drops);
     return {body,key};
 }
 async function readMonster(c,id) {
@@ -83,7 +88,9 @@ export function createAdminBattleRepository(pool) {
                 let before=null;
                 if(id){await c.query('select id from public.monster where id=$1 for update',[id]);before=await readMonster(c,id);}
                 if(before?.actions.some(a=>a.condition_type!=null||a.condition_value!=null))fail('MONSTER_CONDITION_HOLD','기존 조건부 행동을 덮어쓸 수 없습니다.');
-                const sorted=[...body.drops].sort((a,b)=>BigInt(a.item_id)<BigInt(b.item_id)?-1:1);
+                const recipeDrops=body.drops.filter(d=>d.recipe_id!=null).sort((a,b)=>BigInt(a.recipe_id)<BigInt(b.recipe_id)?-1:1);
+                for(const d of recipeDrops)if(!(await c.query('select id from public.recipe where id=$1 for share',[d.recipe_id])).rowCount)fail('RECIPE_NOT_FOUND','레시피가 없습니다.',404);
+                const sorted=body.drops.filter(d=>d.item_id!=null).sort((a,b)=>BigInt(a.item_id)<BigInt(b.item_id)?-1:1);
                 for(const d of sorted)if(!(await c.query('select id from public.item where id=$1 for share',[d.item_id])).rowCount)fail('ITEM_NOT_FOUND','아이템이 없습니다.',404);
                 const values=fields.map(k=>body[k]??null);
                 const row=(await c.query(id?`update public.monster set ${fields.map((k,i)=>`${k}=$${i+1}`).join(',')} where id=$9 returning *`:
@@ -92,8 +99,8 @@ export function createAdminBattleRepository(pool) {
                 for(const a of body.areas)await c.query('insert into public.area_monster(area_id,monster_id,weight) values($1,$2,$3)',[a.area_id,row.id,a.weight]);
                 for(const a of body.actions)await c.query(`insert into public.monster_action(monster_id,name,action_type,probability,multiplier,is_active,sort_order)
                     values($1,$2,$3,$4,$5,$6,$7)`,[row.id,a.name,a.action_type,a.probability,a.multiplier,a.is_active,a.sort_order]);
-                for(const d of body.drops)await c.query(`insert into public.monster_drop(monster_id,item_id,drop_rate,min_quantity,max_quantity,is_ingredient)
-                    values($1,$2,$3,$4,$5,$6)`,[row.id,d.item_id,d.drop_rate,d.min_quantity,d.max_quantity,d.is_ingredient]);
+                for(const d of body.drops)await c.query(`insert into public.monster_drop(monster_id,item_id,drop_rate,min_quantity,max_quantity,is_ingredient,recipe_id)
+                    values($1,$2,$3,$4,$5,$6,$7)`,[row.id,d.item_id??null,d.drop_rate,d.min_quantity,d.max_quantity,d.is_ingredient,d.recipe_id??null]);
                 const after=await readMonster(c,row.id);
                 await writeActionLog(c,{adminUserId:actor,category:'ADMIN',actionType:id?'MONSTER_UPDATE':'MONSTER_CREATE',targetType:'MONSTER',targetId:row.id,
                     description:'마물 설정 변경',detail:{before,after},requestKey:key});

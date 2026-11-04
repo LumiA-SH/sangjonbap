@@ -39,7 +39,7 @@ export default function InvestigationPanel({activeBattle, battleError, areas, in
         <h3>{area.name}</h3>
         <p>{area.description || '설명 없음'}</p>
         <p>진행률 <strong>{area.investigation_rate}%</strong> · ID {area.id} · {area.is_open ? '오픈' : '닫힘'}</p>
-        <p>unlock_at: {area.unlock_at || '제한 없음'}</p>
+        <p>조우 확률: {area.encounter_rate ?? '조회 필요'}% · unlock_at: {area.unlock_at || '제한 없음'}</p>
         <button disabled={busy || blocked || !area.is_open} onClick={() => run(() => investigate(area))}>조사하기</button>
       </li>)}
     </ul>
@@ -49,6 +49,7 @@ export default function InvestigationPanel({activeBattle, battleError, areas, in
       <p>등급 {latest.data.result.result_grade} · unique {latest.data.result.is_unique ? '예' : '아니오'} · 최초 발견 {latest.data.firstDiscovery ? '예' : '아니오'}</p>
       <p>조사 진행률 {latest.data.area.investigation_rate}% · 변경 후 AP {latest.data.ap}</p>
       <p>{latest.data.battle ? `마물 조우 · 전투 ID ${latest.data.battle.id}` : '조우 없음'} · 조사 보상은 이후 전투 결과와 무관하게 유지됩니다.</p>
+      {latest.data.battle&&<a href="#battle-panel">전투 화면으로 이동</a>}
       <h4>지급된 보상</h4>
       {latest.data.rewards.length === 0 ? <p>지급된 보상 없음</p> : <ul>
         {latest.data.rewards.map(reward => <li key={reward.rewardId}>{rewardText(reward)}</li>)}

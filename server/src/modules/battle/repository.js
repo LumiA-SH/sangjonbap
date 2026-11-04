@@ -5,6 +5,7 @@ import {readNumberSettings, resourceNumber} from '../../shared/settings.js';
 import {resolveTurn, chooseMonsterAction, commandOptions, sampleUnit} from './engine.js';
 import {randomUnit} from '../investigation/random.js';
 import {lockRecipeDrops,discoverRecipe,filterDiscoveredRecipeDrops} from '../../shared/recipes.js';
+import {requireIngredientDrops,victoryCurrency,guaranteedIngredient} from './rewards.js';
 
 const fail = (code, message, status=409) => {throw new AppError(status, code, message);};
 const idOrder = (a,b) => BigInt(a)<BigInt(b)?-1:BigInt(a)>BigInt(b)?1:0;
@@ -61,6 +62,7 @@ export function createBattleRepository(pool, {random=randomUnit}={}) {
             !Number.isInteger(d.min_quantity)||d.min_quantity<1||!Number.isInteger(d.max_quantity)||d.max_quantity<d.min_quantity))
             fail('BATTLE_CONFIG_INVALID','드롭 설정이 올바르지 않습니다.');
         const abilities=await readNumberSettings(client,abilityRequirements);
+        requireIngredientDrops(drops);
         const snapshot={monster,actions,drops,abilities};
         const battle=(await client.query(`insert into public.battle(character_id,monster_id,area_id,character_hp,
             monster_hp,monster_max_hp,monster_atk,monster_def,monster_agi,snapshot,declaration)
@@ -75,14 +77,19 @@ export function createBattleRepository(pool, {random=randomUnit}={}) {
 
     return {
         ensureNoActiveBattle, encounter,
-        getBattle(userId, id=null) {
+        getBattle(userId, id=null, {latest=false}={}) {
             return actionTransaction(pool,async client=>{
                 const character=await lockCharacterByUser(client,userId);
                 if (!character) fail('CHARACTER_NOT_FOUND','연결된 활성 캐릭터가 없습니다.',404);
                 const battle=(await client.query(`select * from public.battle where character_id=$1
-                    and ${id?'id=$2':"battle_status='ACTIVE'"} for update`,id?[character.id,id]:[character.id])).rows[0];
+                    and ${id?'id=$2':latest?'true':"battle_status='ACTIVE'"} order by id desc limit 1 for update`,id?[character.id,id]:[character.id])).rows[0];
                 if (id&&!battle) fail('BATTLE_NOT_FOUND','전투를 찾을 수 없습니다.',404);
-                return {battle:battleView(await expire(client,battle)),character};
+                const current=await expire(client,battle);
+                const logs=current?(await client.query('select * from public.battle_log where battle_id=$1 order by id desc limit 100',[current.id])).rows.reverse():[];
+                const outcome=current?.battle_status==='VICTORY'?(await client.query(`select detail from public.action_log
+                    where character_id=$1 and target_type='BATTLE' and target_id=$2 and action_type='BATTLE_COMMAND'
+                    order by id desc limit 1`,[character.id,current.id])).rows[0]?.detail:null;
+                return {battle:battleView(current),character,logs,rewards:outcome?.rewards||[],currencyReward:outcome?.currencyReward||0};
             });
         },
         commandBattle(userId,id,{requestKey,turnNo,action,itemId}) {
@@ -111,7 +118,9 @@ export function createBattleRepository(pool, {random=randomUnit}={}) {
                     const used=await changeInventoryQuantity(client,before.id,itemId,-1);
                     if (!used.ok) fail('NOT_ENOUGH_ITEMS','아이템이 부족합니다.');
                 }
-                const character=await changeCharacterResources(client,before,{hp:resolved.hp-before.hp,blood:resolved.blood-before.blood,ap:resolved.ap-before.ap});
+                const currencyReward=resolved.status==='VICTORY'?victoryCurrency(random):0;
+                if(Number(before.currency)+currencyReward>2147483647)fail('CURRENCY_LIMIT_CONFLICT','재화 저장 범위를 초과합니다.');
+                const character=await changeCharacterResources(client,before,{hp:resolved.hp-before.hp,blood:resolved.blood-before.blood,ap:resolved.ap-before.ap,currency:currencyReward});
                 const rewards=[];
                 if (resolved.status==='VICTORY') for (const drop of battle.snapshot.drops) {
                     if(drop.recipe_id!=null&&!recipes.has(String(drop.recipe_id)))continue;
@@ -128,6 +137,13 @@ export function createBattleRepository(pool, {random=randomUnit}={}) {
                     await changeInventoryQuantity(client,before.id,item.id,quantity);
                     rewards.push({itemId:item.id,name:item.name,quantity,isIngredient:drop.is_ingredient});
                 }
+                if(resolved.status==='VICTORY'&&!rewards.some(row=>row.isIngredient)) {
+                    const {drop,quantity}=guaranteedIngredient(battle.snapshot.drops,random);
+                    const item=items.get(String(drop.item_id));
+                    if(!item)fail('BATTLE_REWARD_UNAVAILABLE','스냅샷 식재료가 없습니다.');
+                    await changeInventoryQuantity(client,before.id,item.id,quantity);
+                    rewards.push({itemId:item.id,name:item.name,quantity,isIngredient:true,guaranteed:true});
+                }
                 const next=resolved.status==='ACTIVE'?chooseMonsterAction(battle.snapshot.actions,random):null;
                 const after=(await client.query(`update public.battle set character_hp=$2,monster_hp=$3,battle_status=$4::varchar,
                     fled_actor_type=$5,end_reason=$6,turn_no=$7,declaration=$8::jsonb,last_command_at=clock_timestamp(),
@@ -140,8 +156,8 @@ export function createBattleRepository(pool, {random=randomUnit}={}) {
                         values($1,$2,$3,$4,$5,$6)`,[id,turnNo,actor,type,`${type}: ${resolved.status}`,appliedDamage]);
                 }
                 await writeActionLog(client,{characterId:before.id,category:'BATTLE',actionType:'BATTLE_COMMAND',targetType:'BATTLE',targetId:id,
-                    description:'전투 턴 처리',detail:{turnNo,action,itemId,declaration:battle.declaration,before:{hp:before.hp,blood:before.blood,ap:before.ap},resolved,rewards},requestKey});
-                return {battle:battleView(after),character,rewards,resolved};
+                    description:'전투 턴 처리',detail:{turnNo,action,itemId,declaration:battle.declaration,before:{hp:before.hp,blood:before.blood,ap:before.ap},resolved,rewards,currencyReward},requestKey});
+                return {battle:battleView(after),character,rewards,currencyReward,resolved};
             });
         },
         async expireBattles() {

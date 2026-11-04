@@ -18,6 +18,7 @@ import {createBloodPackRepository} from './modules/inventory/blood-pack.js';
 import {createOAuthRepository} from './modules/auth/oauth-repository.js';
 import {createDailyRecovery} from './modules/daily/recovery.js';
 import {startDailyScheduler} from './modules/daily/scheduler.js';
+import {createRecordsRepository} from './modules/records/repository.js';
 
 const config = loadConfig();
 const pool = config.mode === 'supabase' ? createPool(config) : null;
@@ -36,6 +37,7 @@ if (pool) {
         ...createBloodPackRepository(pool),
         ...characterRepository,
         ...createDevRepository(pool),
+        ...createRecordsRepository(pool),
         ...createShopRepository(pool),
         ...createCookingRepository(pool),
         ...createGachaRepository(pool),

@@ -1,7 +1,7 @@
 import {useRef, useState} from 'react';
 import {api} from '../api/client';
 
-export default function CharacterSearch({busy, onSelect}) {
+export default function CharacterSearch({busy, onSelect, inputId = 'character-search', label = '치료·부활 대상 이름 검색'}) {
   const [query, setQuery] = useState('');
   const [rows, setRows] = useState(null);
   const [error, setError] = useState('');
@@ -17,8 +17,8 @@ export default function CharacterSearch({busy, onSelect}) {
   }
   return <div>
     <form onSubmit={search}>
-      <label htmlFor="character-search">치료·부활 대상 이름 검색</label>
-      <input id="character-search" value={query} maxLength={40} disabled={busy || pending}
+      <label htmlFor={inputId}>{label}</label>
+      <input id={inputId} value={query} maxLength={40} disabled={busy || pending}
         onChange={event => {setQuery(event.target.value); setRows(null); setError('');}}/>
       <button disabled={busy || pending || !query.trim()}>이름 검색</button>
     </form>
@@ -26,7 +26,7 @@ export default function CharacterSearch({busy, onSelect}) {
     {error && <p role="alert">검색 실패: {error}</p>}
     {rows?.length === 0 && <p>검색 결과가 없습니다.</p>}
     <ul>{rows?.map(row => <li key={row.id}>{row.name} · ID {row.id}
-      <button disabled={busy || pending} onClick={() => onSelect(String(row.id))}>ID {row.id} 선택</button>
+      <button disabled={busy || pending} onClick={() => onSelect(String(row.id), row)}>ID {row.id} 선택</button>
     </li>)}</ul>
   </div>;
 }

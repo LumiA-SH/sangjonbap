@@ -77,7 +77,7 @@ export function createCookingRepository(pool, {random = randomUnit} = {}) {
                 where r.is_active and (d.recipe_id is not null or exists(select 1 from public.character_recipe cr where cr.character_id=$1 and cr.recipe_id=r.id)) order by r.id`, [c.id])).rows;
             const foods = (await pool.query(`select f.*,i.name,v.quantity from public.inventory v join public.item i on i.id=v.item_id
                 join public.food_config f on f.item_id=i.id where v.character_id=$1 and v.quantity>0 and i.is_active order by i.id`, [c.id])).rows;
-            return {recipes:recipes.map(r=>({...r,success_rate:SUCCESS_RATE,result_quantity:SUCCESS_QUANTITY})),foods:foods.map(f=>({...f,stat_growth_rate:20,stat_growth_value:f.stat_growth_enabled?1:0})),cookingApCost,dailyMealLimit: DAILY_MEAL_LIMIT,dailyMealCount:c.daily_meal_count,
+            return {recipes,foods,cookingApCost,dailyMealLimit: DAILY_MEAL_LIMIT,dailyMealCount:c.daily_meal_count,
                 successQuantity:SUCCESS_QUANTITY,failureQuantity:FAILURE_QUANTITY,successRate:SUCCESS_RATE,maxBatchQuantity:MAX_BATCH_QUANTITY};
         },
         async learnRecipe(userId, recipeId, requestKey) {
@@ -93,7 +93,7 @@ export function createCookingRepository(pool, {random = randomUnit} = {}) {
             return transact(userId, requestKey, 'COOK', async (client, before) => {
                 const recipe = await activeRecipe(client, recipeId);
                 if (!(await client.query('select 1 from public.character_recipe where character_id=$1 and recipe_id=$2', [before.id,recipeId])).rowCount) fail('RECIPE_NOT_LEARNED', '먼저 레시피를 습득하세요.');
-                if (!recipe.failure_item_id) fail('RECIPE_CONFIG_INVALID','실패 음식이필요합니다.',500);
+                if (!recipe.failure_item_id) fail('RECIPE_CONFIG_INVALID','실패 음식이 필요합니다.',500);
                 const {cooking_ap_cost: unitCost} = await readNumberSettings(client, {cooking_ap_cost:resourceNumber});
                 const cost = unitCost * quantity;
                 if (!Number.isSafeInteger(cost) || Number(before.ap)<cost) fail('NOT_ENOUGH_AP', '요리에 필요한 AP가 부족합니다.');
@@ -107,11 +107,14 @@ export function createCookingRepository(pool, {random = randomUnit} = {}) {
                     if (final>INT_MAX) fail('INVENTORY_LIMIT_CONFLICT','음식 수량이 저장 범위를 초과합니다.');
                 }
                 const after = await changeCharacterResources(client,before,{ap:-cost});
-                for (const row of plan.consumed) await changeInventoryQuantity(client,before.id,row.itemId,-row.quantity);
+                for (const row of plan.consumed) {
+                    const changed = await changeInventoryQuantity(client,before.id,row.itemId,-row.quantity);
+                    if (!changed.ok) fail('NOT_ENOUGH_INGREDIENTS','요리 재료 수량이 변경되었습니다.');
+                }
                 const outputs = [];
                 for (const row of plan.outputs) {
                     const granted = await changeInventoryQuantity(client,before.id,row.itemId,row.quantity);
-                    outputs.push({...row,inventoryQuantity:granted.after});
+                    outputs.push({...row,name:items.get(row.itemId).name,inventoryQuantity:granted.after});
                 }
                 return {recipeId,...plan,outputs,apBefore:before.ap,ap:after.ap,apCost:cost,
                     ...(quantity===1 ? {succeeded:plan.attempts[0].succeeded,output:outputs[0]} : {})};
@@ -132,8 +135,9 @@ export function createCookingRepository(pool, {random = randomUnit} = {}) {
                 if (food.stat_growth_enabled) {
                     const stat = {ATK:'atk',DEF:'def',AGI:'agi'}[food.stat_growth_target];
                     if (!stat) fail('FOOD_CONFIG_INVALID','음식 성장 대상 설정 오류입니다.',500);
-                    if (stats[stat]<cap && winsReward(20,random)) {
-                        const amount = Math.min(1,cap-stats[stat]);
+                    if(!Number.isInteger(food.stat_growth_value)||food.stat_growth_value<1)fail('FOOD_CONFIG_INVALID','음식 성장량 설정 오류입니다.',500);
+                    if (stats[stat]<cap && winsReward(Number(food.stat_growth_rate),random)) {
+                        const amount = Math.min(food.stat_growth_value,cap-stats[stat]);
                         growth={stat:food.stat_growth_target,before:stats[stat],after:stats[stat]+amount,amount};
                         stats[stat]+=amount;
                     }
@@ -143,7 +147,7 @@ export function createCookingRepository(pool, {random = randomUnit} = {}) {
                 await client.query('update public.game_character set atk=$1,def=$2,agi=$3,daily_meal_count=$4 where id=$5',
                     [stats.atk,stats.def,stats.agi,before.daily_meal_count+1,before.id]);
                 return {itemId,inventoryQuantity:inventory.after,bloodBefore:before.blood,blood:after.blood,
-                    dailyMealCount:before.daily_meal_count+1,dailyMealLimit:DAILY_MEAL_LIMIT,growth,stats,permanentStatCap:cap};
+                    dailyMealCount:before.daily_meal_count+1,dailyMealLimit:DAILY_MEAL_LIMIT,growth,stats,permanentStatCap:cap,rpEffectText:food.rp_effect_text??null};
             });
         }
     };

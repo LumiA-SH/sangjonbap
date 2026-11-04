@@ -9,7 +9,7 @@ const cleanMonster=m=>({...Object.fromEntries(fields.map(k=>[k,m[k]])),
   areas:m.areas.map(a=>({area_id:String(a.area_id),weight:a.weight})),
   actions:m.actions.map(a=>({name:a.name,action_type:a.action_type,probability:Number(a.probability),multiplier:Number(a.multiplier),is_active:a.is_active,sort_order:a.sort_order,
     condition_type:a.condition_type??null,condition_value:a.condition_value??null})),
-  drops:m.drops.map(d=>({item_id:String(d.item_id),drop_rate:Number(d.drop_rate),min_quantity:d.min_quantity,max_quantity:d.max_quantity,is_ingredient:d.is_ingredient}))});
+  drops:m.drops.map(d=>({item_id:d.item_id==null?null:String(d.item_id),...(d.recipe_id!=null?{recipe_id:String(d.recipe_id)}:{}),drop_rate:Number(d.drop_rate),min_quantity:d.min_quantity,max_quantity:d.max_quantity,is_ingredient:d.is_ingredient}))});
 
 export default function BattleAdminPanel({onDenied}) {
   const [rows,setRows]=useState([]),[areas,setAreas]=useState([]),[draft,setDraft]=useState(emptyMonster),[id,setId]=useState(null);
@@ -42,6 +42,10 @@ export default function BattleAdminPanel({onDenied}) {
     <button disabled={busy} onClick={()=>work(reload)}>새로고침</button>
     <details open><summary>마물 등록·수정</summary>
       <button disabled={busy} onClick={()=>{setId(null);setDraft(emptyMonster());}}>새 마물</button>
+      {id&&<button disabled={busy} onClick={()=>work(async()=>{
+        if(!window.confirm(`마물 ${id}을 영구 삭제합니까? 기존 전투 참조가 있으면 거부됩니다.`))return;
+        await api(`/admin/monsters/${id}`,{method:'DELETE',body:{requestKey:crypto.randomUUID()}});setId(null);setDraft(emptyMonster());await reload();setMessage('마물 삭제 완료');
+      })}>미참조 마물 영구 삭제</button>}
       <ul>{rows.map(r=><li key={r.id}>{r.name} · ID {r.id}<button disabled={busy} onClick={()=>work(async()=>{
         const data=await api(`/admin/monsters/${r.id}`);setId(r.id);setDraft(cleanMonster(data.record));
       })}>상세/수정</button></li>)}</ul>
@@ -64,7 +68,7 @@ export default function BattleAdminPanel({onDenied}) {
         <button type="button" disabled={busy} onClick={()=>change('actions',[...draft.actions,{name:'',action_type:'ATTACK',probability:0,multiplier:1,is_active:true,sort_order:draft.actions.length}])}>행동 추가</button>
         <p>활성 확률 합계: {draft.actions.filter(a=>a.is_active).reduce((n,a)=>n+Number(a.probability),0)}%</p>
         <h3>드롭</h3>{draft.drops.map((d,i)=><fieldset key={i}>
-          <ItemPicker label="드롭 아이템" value={d.item_id} disabled={busy} onDenied={onDenied} onChange={v=>rowChange('drops',i,'item_id',v)}/>
+          {d.recipe_id!=null?<p>기존 레시피 드롭 ID {d.recipe_id} (대상 보존)</p>:<ItemPicker label="드롭 아이템" value={d.item_id} disabled={busy} onDenied={onDenied} onChange={v=>rowChange('drops',i,'item_id',v)}/>}
           {number('드롭 확률 %',d.drop_rate,v=>rowChange('drops',i,'drop_rate',v))}{number('최소 수량',d.min_quantity,v=>rowChange('drops',i,'min_quantity',v))}{number('최대 수량',d.max_quantity,v=>rowChange('drops',i,'max_quantity',v))}
           <label>식재료<input type="checkbox" checked={d.is_ingredient} disabled={busy} onChange={e=>rowChange('drops',i,'is_ingredient',e.target.checked)}/></label>
           <button type="button" disabled={busy} onClick={()=>remove('drops',i)}>드롭 제거</button></fieldset>)}

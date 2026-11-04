@@ -4,10 +4,21 @@ import {planBatch,validateQuantity} from '../src/modules/cooking/batch.js';
 import {createCookingRepository} from '../src/modules/cooking/repository.js';
 import {createCookingService} from '../src/modules/cooking/service.js';
 import {validateMasterInput} from '../src/modules/admin/master-service.js';
+import {createBattleRepository} from '../src/modules/battle/repository.js';
 
-const recipe={id:'2',is_active:true,result_item_id:'3',failure_item_id:'4',success_rate:0,result_quantity:4};
+const recipe={id:'2',is_active:true,result_item_id:'3',failure_item_id:'4',success_rate:80,result_quantity:3};
 const ingredients=[{item_id:'1',quantity:3},{item_id:'2',quantity:1}];
 const key='12345678-1234-4234-8234-123456789012';
+test('encounter owns the single 40 percent roll and respects its boundary',async()=>{
+    for(const [roll,encountered] of [[.39999,true],[.4,false],[.99,false]]) {
+        let rolls=0,queries=0;
+        const repo=createBattleRepository({}, {random:()=>{rolls++;return roll;}});
+        const pending=repo.encounter({query:async()=>{queries++;return {rows:[]};}},{id:'1',encounter_rate:40},{});
+        if(encountered)await assert.rejects(pending,e=>e.code==='MONSTER_CONFIG_MISSING');
+        else assert.equal(await pending,null);
+        assert.equal(rolls,1);assert.equal(queries,encountered?1:0);
+    }
+});
 test('independent 80% boundaries; success 3, failure 1; minimum-one ingredient consumption',()=>{
     const rolls=[0,.8,.799999];
     const p=planBatch(recipe,ingredients,new Map([['1',9],['2',3]]),3,()=>rolls.shift());
@@ -28,14 +39,21 @@ test('cook quantity is accepted only for cooking; missing quantity keeps old cal
     assert.deepEqual(calls,[['u','2',key,3],['u','2',key]]);
     await assert.rejects(service.learn('u','2',{requestKey:key,quantity:3}));
 });
-test('area editor only changes validated encounter probability; no area creation',()=>{
+test('area editor validates encounter probability and requires explicit creation fields',()=>{
     assert.equal(validateMasterInput('areas',{encounter_rate:40,requestKey:key},false).patch.encounter_rate,40);
     for(const rate of [-1,101,'40',NaN])assert.throws(()=>validateMasterInput('areas',{encounter_rate:rate,requestKey:key},false));
     assert.throws(()=>validateMasterInput('areas',{encounter_rate:40,requestKey:key},true));
 });
 
+test('food configured recovery, growth chance/amount and RP text reach actual meal settlement',async()=>{
+    const food={blood_recovery:22,stat_growth_rate:100,stat_growth_value:3,rp_effect_text:'잠시 말끝이 노래처럼 들린다.'};
+    const f=fixture({atk:10,food});const result=await f.repo.eatFood('u','3',key);
+    assert.equal(result.blood,72);assert.equal(result.growth.amount,3);assert.equal(result.stats.atk,13);assert.equal(result.rpEffectText,food.rp_effect_text);
+    assert.equal((await fixture({atk:10,food:{...food,stat_growth_rate:0}}).repo.eatFood('u','3',key)).growth,null);
+});
+
 // Transaction emulator for repository control flow only; not a substitute for PostgreSQL locking tests.
-function fixture({status='ALIVE',ap=10,active=false,failLog=false,foodCount=0,atk=39,random=()=>0}={}) {
+function fixture({status='ALIVE',ap=10,active=false,failLog=false,foodCount=0,atk=39,random=()=>0,food={}}={}) {
     let state={character:{id:'7',hp:100,max_hp:100,blood:status==='NEAR_DEATH'?0:50,max_blood:100,ap,max_ap:10,currency:10,status,death_count:0,atk,def:10,agi:10,daily_meal_count:foodCount},inventory:{1:12,2:4,3:2},logs:[]};
     let snapshot;
     const calls=[];
@@ -53,7 +71,7 @@ function fixture({status='ALIVE',ap=10,active=false,failLog=false,foodCount=0,at
         if(sql.startsWith('select config_key,config_value'))return rows(p[0].map(config_key=>({config_key,config_value:config_key==='cooking_ap_cost'?2:40})));
         if(sql.startsWith('select * from public.recipe_ingredient'))return rows(ingredients);
         if(sql.startsWith('select * from public.item'))return rows([{id:p[0],is_active:true}]);
-        if(sql.startsWith('select * from public.food_config'))return rows([{blood_recovery:10,stat_growth_enabled:true,stat_growth_target:'ATK',stat_growth_value:9,stat_growth_rate:100}]);
+        if(sql.startsWith('select * from public.food_config'))return rows([{blood_recovery:10,stat_growth_enabled:true,stat_growth_target:'ATK',stat_growth_value:1,stat_growth_rate:20,...food}]);
         if(sql.startsWith('select item_id,quantity from public.inventory'))return rows(p[1].filter(id=>state.inventory[id]!=null).map(id=>({item_id:id,quantity:state.inventory[id]})));
         if(sql.startsWith('select id,quantity from public.inventory'))return rows(state.inventory[p[1]]==null?[]:[{id:p[1],quantity:state.inventory[p[1]]}]);
         if(sql.startsWith('insert into public.inventory')){state.inventory[p[1]]=p[2];return rows([]);}

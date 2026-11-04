@@ -2,10 +2,14 @@ import {useEffect, useRef, useState} from 'react';
 import {api} from '../api/client';
 import MasterPanel from './MasterPanel';
 import RolePanel from './RolePanel';
+import RecordsPanel from '../dev/RecordsPanel';
 import BattleAdminPanel from './BattleAdminPanel';
 import ItemPicker from './ItemPicker';
+import BalancePanel from './BalancePanel';
+import CharacterOperationsPanel from './CharacterOperationsPanel';
+import InvestigationAdminPanel from './InvestigationAdminPanel';
 
-const emptyItem={name:'',category:'ETC',description:null,transferable:true,is_active:true,effect_type:null,effect_value:null,usable:false,use_target:'NONE',battle_usable:false};
+const emptyItem={name:'',category:'ETC',description:null,image_url:null,transferable:true,is_active:true,effect_type:null,effect_value:null,usable:false,use_target:'NONE',battle_usable:false};
 const emptyProduct={item_id:'',price:0,purchase_limit:null,stock_limit:null,daily_limit:null,is_active:true,sort_order:0};
 function Editor({kind,record,seed,onSaved,onDenied}) {
   const fields=kind==='items'?emptyItem:emptyProduct;
@@ -28,6 +32,7 @@ function Editor({kind,record,seed,onSaved,onDenied}) {
         key==='effect_type'?<select value={draft[key]??''} disabled={busy} onChange={e=>setDraft({...draft,effect_type:e.target.value||null,effect_value:e.target.value?10:null,usable:!!e.target.value,use_target:e.target.value?'SELF':'NONE',transferable:true})}><option value="">없음</option><option value="BLOOD_PACK">혈액팩</option></select>:
         key==='effect_value'?<input type="number" min="1" value={draft[key]??''} disabled={busy} onChange={e=>change(key,e.target.value===''?null:Number(e.target.value))}/>:key==='use_target'?<input value={draft[key]??''} readOnly/>:
         key==='category'?<select value={draft[key]} disabled={busy} onChange={e=>change(key,e.target.value)}>{['MATERIAL','CONSUMABLE','FOOD','ETC'].map(v=><option key={v}>{v}</option>)}</select>:
+        key==='image_url'?<><span>이미지 URL</span><input value={draft[key]??''} disabled={busy} onChange={e=>change(key,e.target.value||null)}/></>:
         key==='description'?<textarea value={draft[key]??''} disabled={busy} onChange={e=>change(key,e.target.value||null)}/>:
         ['purchase_limit','stock_limit','daily_limit'].includes(key)?<><span><input type="checkbox" checked={draft[key]===null} disabled={busy} onChange={e=>change(key,e.target.checked?null:['purchase_limit','daily_limit'].includes(key)?1:0)}/>무제한(NULL)</span>
           <input type="number" min={key==='purchase_limit'?1:0} max={2147483647} value={draft[key]??''} disabled={busy||draft[key]===null} required={draft[key]!==null} onChange={e=>change(key,e.target.value===''?'':Number(e.target.value))}/></>:
@@ -67,9 +72,18 @@ export default function AdminPanel({onBack}) {
     <p>서버 ADMIN 권한 검증 영역입니다. 인증 방식: {authentication||'확인 중'}</p>
     <button onClick={onBack}>DEV 콘솔로 돌아가기</button><p role="alert">{message}</p>
     {allowed&&<>
-      <nav className="actions">{[['items','아이템'],['products','상점 상품'],['foods','음식 설정'],['recipes','레시피'],['gachas','가챠'],['areas','지역 조우 확률'],['users','관리자 권한'],['battle','PVE·캐릭터 등록']].map(([type,label])=><button key={type} disabled={busy} onClick={()=>{setKind(type);setSelected(null);setEditorKey(v=>v+1);if(['items','products'].includes(type))load(type);}}>{label}</button>)}</nav>
-      {kind==='battle'?<BattleAdminPanel onDenied={denied}/>:kind==='users'?<RolePanel onDenied={denied}/>:['foods','recipes','gachas','areas'].includes(kind)?<MasterPanel key={kind} kind={kind} onDenied={denied}/>:<>
-      <p>혈액팩은 명시적 효과로 지정하며 무료 상품의 일일 한도는 1입니다. 다른 효과·이미지 URL 편집은 HOLD입니다. 삭제 기능은 제공하지 않습니다.</p>
+      <button disabled={busy} onClick={()=>setKind('balance')}>공통 밸런스</button>
+      <button disabled={busy} onClick={()=>setKind('characters')}>캐릭터 운영 관리</button>
+      <button disabled={busy} onClick={()=>setKind('investigation')}>조사 결과·보상</button>
+      <nav className="actions">{[['items','아이템'],['products','상점 상품'],['foods','음식 설정'],['recipes','레시피'],['gachas','가챠'],['areas','지역 공개·조우'],['users','관리자 권한'],['battle','PVE·캐릭터 등록'],['logs','전체 행동 로그']].map(([type,label])=><button key={type} disabled={busy} onClick={()=>{setKind(type);setSelected(null);setEditorKey(v=>v+1);if(['items','products'].includes(type))load(type);}}>{label}</button>)}</nav>
+      {kind==='investigation'?<InvestigationAdminPanel onDenied={denied}/>:kind==='characters'?<CharacterOperationsPanel onDenied={denied}/>:kind==='balance'?<BalancePanel onDenied={denied}/>:kind==='logs'?<RecordsPanel admin onDenied={denied}/>:kind==='battle'?<BattleAdminPanel onDenied={denied}/>:kind==='users'?<RolePanel onDenied={denied}/>:['foods','recipes','gachas','areas'].includes(kind)?<MasterPanel key={kind} kind={kind} onDenied={denied}/>:<>
+      <p>혈액팩은 명시적 효과로 지정하며 무료 상품의 일일 한도는 1입니다. 영구 삭제는 참조가 없는 아이템만 가능하며 기록은 보존합니다.</p>
+      {kind==='items'&&selected&&<button disabled={busy} onClick={async()=>{
+        if(!window.confirm(`아이템 ${selected.name} (ID ${selected.id})을 영구 삭제합니까? 참조가 있으면 거부됩니다.`))return;
+        setBusy(true);
+        try{await api(`/admin/items/${selected.id}`,{method:'DELETE',body:{requestKey:crypto.randomUUID()}});setSelected(null);setEditorKey(v=>v+1);await load();setMessage('삭제 완료');}
+        catch(e){setMessage(`${e.code||'DELETE_FAILED'}: ${e.message}`);if([401,403].includes(e.status))denied(e.message);}finally{setBusy(false);}
+      }}>미참조 아이템 영구 삭제</button>}
       {kind==='items'&&selected&&<button disabled={busy} onClick={()=>{
         setProductSeed({item_id:String(selected.id),price:0,daily_limit:selected.effect_type==='BLOOD_PACK'?1:null});
         setKind('products');setSelected(null);setEditorKey(v=>v+1);load('products');

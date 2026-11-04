@@ -10,7 +10,7 @@ create table public.recipe_discovery (
     discovered_at timestamptz not null default now()
 );
 create index recipe_discovery_character_idx on public.recipe_discovery(character_id);
-create index character_recipe_recipe_lookup_idx on public.character_recipe(recipe_id);
+-- Reuse existing idx_character_recipe_recipe: btree (recipe_id), valid and non-partial.
 alter table public.recipe_discovery enable row level security;
 revoke all on public.recipe_discovery from anon, authenticated;
 

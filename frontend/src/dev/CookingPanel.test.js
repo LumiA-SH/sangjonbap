@@ -1,5 +1,6 @@
 import React, {act} from 'react';
 import {createRoot} from 'react-dom/client';
+import {Simulate} from 'react-dom/test-utils';
 import CookingPanel from './CookingPanel';
 import {api} from '../api/client';
 jest.mock('../api/client',()=>({api:jest.fn()}));
@@ -19,6 +20,18 @@ beforeEach(async()=>{
   container=document.createElement('div');document.body.appendChild(container);root=createRoot(container);await render();
 });
 afterEach(async()=>{await act(async()=>root.unmount());container.remove();});
+
+test('batch quantity drives AP/material preview, request and mixed outcome display',async()=>{
+  await render({catalog:{...catalog,recipes:[{...catalog.recipes[0],learned:true,ingredients:[{itemId:'5',name:'재료',quantity:2}]}]},inventory:[{item_id:'5',quantity:10}]});
+  await act(async()=>Simulate.change(container.querySelector('input[type=number]'),{target:{value:'3'}}));
+  expect(container.textContent).toContain('필요 AP: 9');expect(container.textContent).toContain('재료 × 6 (보유 10)');
+  api.mockResolvedValueOnce({quantity:3,successCount:2,failureCount:1,apCost:9,outputs:[{itemId:'8',quantity:6},{itemId:'9',quantity:1}]});
+  await act(async()=>button('요리').click());
+  expect(api).toHaveBeenLastCalledWith('/cooking/recipes/2/cook',{method:'POST',body:{requestKey:'12345678-1234-4234-8234-123456789012',quantity:3}});
+  expect(container.textContent).toContain('성공 2회 / 실패 1회');expect(container.textContent).toContain('음식 ID 8 × 6 지급');
+  await act(async()=>Simulate.change(container.querySelector('input[type=number]'),{target:{value:'0'}}));
+  expect(button('요리').disabled).toBe(true);
+});
 test('server AP cost, learned state, meal limit and policy HOLD drive controls',async()=>{
   expect(button('요리').disabled).toBe(true);expect(container.textContent).toContain('요리 AP 3');
   const learned={...catalog,recipes:[{...catalog.recipes[0],learned:true}]};

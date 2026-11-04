@@ -7,11 +7,11 @@ test('recipe entitlement and inventory reward have distinct displays', () => {
   expect(rewardText({name: '재료', quantity: 2, inventoryQuantity: 3})).toBe('재료 × 2 · 지급 후 보유 3');
 });
 
-function render(cost, ap) {
+function render(cost, ap, overrides={}) {
   const container = document.createElement('div');
   container.innerHTML = renderToStaticMarkup(<InvestigationPanel
     areas={[{id: '1', name: 'DEV', is_open: true, investigation_rate: 0}]}
-    investigationApCost={cost} character={{ap, status: 'ALIVE'}}/>);
+    investigationApCost={cost} character={{ap, status: 'ALIVE'}} {...overrides}/>);
   return {text: container.textContent,
     button: [...container.querySelectorAll('button')].find(button => button.textContent === '조사하기')};
 }
@@ -23,6 +23,13 @@ test('server cost drives both displayed AP and investigation button', () => {
   expect(render(7, 3).button.disabled).toBe(true);
   expect(render(7, 7).text).toContain('AP 7을 소비');
   expect(render(0, 0).button.disabled).toBe(false);
+});
+
+test('near-death, dead and active battle disable actions without hiding areas',()=>{
+  for(const overrides of [{character:{ap:10,status:'NEAR_DEATH'}},{character:{ap:10,status:'DEAD'}},{activeBattle:true},{battleError:'조회 실패'}]) {
+    const view=render(1,10,overrides);
+    expect(view.button.disabled).toBe(true);expect(view.text).toContain('DEV');
+  }
 });
 
 test('missing or invalid cost never falls back to one AP', () => {

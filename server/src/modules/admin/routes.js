@@ -17,10 +17,10 @@ export function adminRoutes(config,repository,sessions) {
     });
     router.get('/items/search', async (req,res) => {
         const q=req.query.q;
-        if (typeof q!=='string'||!q.trim()||q.length>100||Object.keys(req.query).some(k=>k!=='q')) {
+        if (typeof q!=='string'||!q.trim()||q.length>100||Object.keys(req.query).some(k=>!['q','rp'].includes(k))||(req.query.rp!==undefined&&req.query.rp!=='true')) {
             throw new AppError(400,'INVALID_SEARCH','아이템 이름을 1~100자로 입력하세요.');
         }
-        ok(res,{records:await repository.searchAdminItems(q.trim())});
+        ok(res,{records:await repository.searchAdminItems(q.trim(),req.query.rp==='true')});
     });
     for (const kind of ['items','products']) {
         router.get(`/${kind}`,async(req,res)=>{
