@@ -1,6 +1,6 @@
-import {useEffect,useRef, useState} from 'react';
+import { useEffect, useRef, useState } from 'react';
 import CharacterCreationPanel from './dev/CharacterCreationPanel';
-import {api, setToken} from './api/client';
+import { api, setToken } from './api/client';
 import AdminPanel from './admin/AdminPanel';
 import TrainingBloodPanel from './dev/TrainingBloodPanel';
 import CharacterCarePanel from './dev/CharacterCarePanel';
@@ -13,24 +13,67 @@ import InventoryPanel from './dev/InventoryPanel';
 import InvestigationPanel from './dev/InvestigationPanel';
 import RecordsPanel from './dev/RecordsPanel';
 import BattlePanel from './dev/BattlePanel';
+import { HomeHeaderDecor } from './HomeDecor';
+
+const FALLBACK_IMAGE = '/test.png';
+
+function NavIcon({ name, className = '' }) {
+    return <img src={`/assets/decor/icon-${name}.svg`} alt="" aria-hidden="true" className={className} />;
+}
+
+function GameImage({ src, alt, className }) {
+  const [imageSrc, setImageSrc] = useState(src || FALLBACK_IMAGE);
+
+  useEffect(() => {
+    setImageSrc(src || FALLBACK_IMAGE);
+  }, [src]);
+
+  function handleImageError() {
+    if (imageSrc !== FALLBACK_IMAGE) {
+      setImageSrc(FALLBACK_IMAGE);
+    }
+  }
+
+  return <img src={imageSrc} alt={alt} className={className} onError={handleImageError} />;
+}
+
+function DashboardCard({ title, subtitle, action, children, className = '' }) {
+  return (
+      <section className={`survival-card ${className}`}>
+        <div className="survival-card-title">
+          <div>
+            <strong>{title}</strong>
+            {subtitle && <span>{subtitle}</span>}
+          </div>
+          {action}
+        </div>
+        {children}
+      </section>
+  );
+}
+
+function ResourceBar({ label, value, max }) {
+  const current = Math.max(0, Number(value) || 0);
+  const maximum = Math.max(1, Number(max) || 1);
+
+  return (
+      <div className="survival-resource">
+        <div className="survival-resource-label">
+          <b>{label}</b>
+          <span>{current} / {maximum}</span>
+        </div>
+        <progress max={maximum} value={Math.min(current, maximum)} />
+      </div>
+  );
+}
 
 export default function App() {
   const [key, setKey] = useState('');
+  const [view, setView] = useState('home');
+  const [menuOpen, setMenuOpen] = useState(false);
   const [loggedIn, setLoggedIn] = useState(false);
-  const [provider,setProvider]=useState(null),[user,setUser]=useState(null);
-  useEffect(()=>{
-    let live=true;
-    api('/auth/config').then(async config=>{
-      if(!live)return;setProvider(config.provider);
-      if(config.provider==='mastodon'){
-        try {const data=await api('/auth/me');if(live){setUser(data.user);setLoggedIn(true);if(data.user.character_id)await refreshAll('mastodon');}}
-        catch(e){if(live&&e.status!==401)setMessage(e.message);}
-      }
-    }).catch(e=>{if(live)setMessage(e.message);});
-    return()=>{live=false;};
-    // Authentication is restored once using the HttpOnly session cookie.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[]);
+  const [provider, setProvider] = useState(null);
+  const [user, setUser] = useState(null);
   const [adminOpen, setAdminOpen] = useState(false);
   const [character, setCharacter] = useState(null);
   const [inventory, setInventory] = useState([]);
@@ -44,20 +87,73 @@ export default function App() {
   const [errors, setErrors] = useState({});
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
-  const [revision,setRevision]=useState(0);
+  const [revision, setRevision] = useState(0);
+  const [now, setNow] = useState(() => new Date());
+
   const running = useRef(false);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    let live = true;
+
+    api('/auth/config')
+        .then(async config => {
+          if (!live) return;
+
+          setProvider(config.provider);
+
+          if (config.provider === 'mastodon') {
+            try {
+              const data = await api('/auth/me');
+
+              if (live) {
+                setUser(data.user);
+                setLoggedIn(true);
+
+                if (data.user.character_id) {
+                  await refreshAll('mastodon');
+                }
+              }
+            } catch (error) {
+              if (live && error.status !== 401) {
+                setMessage(error.message);
+              }
+            }
+          }
+        })
+        .catch(error => {
+          if (live) setMessage(error.message);
+        });
+
+    return () => {
+      live = false;
+    };
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function run(task) {
     if (running.current) return;
+
     running.current = true;
     setBusy(true);
     setMessage('');
-    try { await task(); }
-    catch (error) { setMessage(error.message); }
-    finally { running.current = false; setBusy(false); }
+
+    try {
+      await task();
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      running.current = false;
+      setBusy(false);
+    }
   }
 
-  async function refreshAll(authProvider=provider) {
+  async function refreshAll(authProvider = provider) {
     const requests = [
       ['gachas', '/gacha/catalog', data => setGachas(data.gachas)],
       ['cooking', '/cooking/catalog', setCooking],
@@ -66,38 +162,57 @@ export default function App() {
       ['character', '/characters/me', data => setCharacter(data.character)],
       ['inventory', '/inventory/me', data => setInventory(data.items)],
       ['storage', '/inventory/storage', data => setStorage(data.items)],
-      ['areas', '/investigation/areas', data => { setAreas(data.areas); setInvestigationApCost(data.investigationApCost); }]
-    ].filter(([name])=>name!=='logs'||authProvider!=='mastodon');
+      ['areas', '/investigation/areas', data => {
+        setAreas(data.areas);
+        setInvestigationApCost(data.investigationApCost);
+      }]
+    ].filter(([name]) => name !== 'logs' || authProvider !== 'mastodon');
+
     const results = await Promise.allSettled(requests.map(([, path]) => api(path)));
     const nextErrors = {};
+
     results.forEach((result, index) => {
       const [name, , apply] = requests[index];
-      if (result.status === 'fulfilled') apply(result.value);
-      else nextErrors[name] = result.reason.message;
+
+      if (result.status === 'fulfilled') {
+        apply(result.value);
+      } else {
+        nextErrors[name] = result.reason.message;
+      }
     });
+
     setErrors(nextErrors);
-    setRevision(value=>value+1);
+    setRevision(value => value + 1);
+
     return Object.keys(nextErrors).length === 0;
   }
 
   async function login(event) {
     event.preventDefault();
+
     await run(async () => {
-      const data = await api('/auth/dev/login', {method: 'POST', body: {key}});
+      const data = await api('/auth/dev/login', {
+        method: 'POST',
+        body: { key }
+      });
+
       setToken(data.token);
       setUser(data.user);
       setKey('');
       setLoggedIn(true);
+
       await refreshAll();
     });
   }
 
   async function logout() {
-    try { await api('/auth/logout', {method: 'POST'}); }
-    finally {
+    try {
+      await api('/auth/logout', { method: 'POST' });
+    } finally {
       setToken(null);
       setLoggedIn(false);
-      setUser(null);setAdminOpen(false);
+      setUser(null);
+      setAdminOpen(false);
       setCharacter(null);
       setInventory([]);
       setStorage([]);
@@ -112,61 +227,289 @@ export default function App() {
     }
   }
 
-  if (loggedIn && adminOpen) return <main><AdminPanel onBack={() => setAdminOpen(false)}/></main>;
+  const navigation = [
+    ['home', '홈', 'home'],
+    ['character', '캐릭터', 'user'],
+    ['investigation', '조사', 'compass'],
+    ['battle', '전투', 'swords'],
+    ['cooking', '요리', 'cooking'],
+    ['inventory', '인벤토리', 'box'],
+    ['shop', '상점', 'shop'],
+    ['records', '기록', 'book'],
+    ['gacha', '가챠', 'sparkle']
+  ];
 
-  return <main>
-    <header>
-      <span className="badge">SANGJONBAP / DEV CONSOLE</span>
-      <h1>생존밥 개발실</h1>
-      <p>백엔드 기능 검증용 화면입니다. 조작은 연결된 DB에 실제로 반영됩니다.</p>
-    </header>
-    <section aria-labelledby="login-title">
-      <h2 id="login-title">{provider==='mastodon'?'Mastodon 로그인':'개발 로그인'}</h2>
-      {provider==='dev'&&<p>서버의 DEV_LOGIN_KEY를 입력하세요. 토큰은 메모리에만 보관되며 새로고침하면 다시 로그인해야 합니다.</p>}
-      {!loggedIn ? provider==='mastodon'?<a href="/api/auth/mastodon/login">Mastodon으로 로그인</a>:provider==='dev'?<form onSubmit={login}>
-        <label htmlFor="key">개발 로그인 키</label>
-        <input id="key" type="password" value={key} onChange={event => setKey(event.target.value)} required autoComplete="off" disabled={busy}/>
-        <button disabled={busy}>로그인</button>
-      </form>:<p>인증 방식 확인 중…</p> : <div className="actions">
-        <span>로그인됨</span>
-        {user?.role==='ADMIN'&&<button disabled={busy} onClick={() => setAdminOpen(true)}>관리자 영역</button>}
-        <button disabled={busy} onClick={() => run(refreshAll)}>전체 상태 새로고침</button>
-        <button disabled={busy} onClick={() => run(logout)}>로그아웃</button>
-      </div>}
-    </section>
-    <p className="dev-message" role="status" aria-live="polite">{busy ? '처리 중…' : message}</p>
-    {loggedIn&&!user?.character_id&&<CharacterCreationPanel/>}
-    {loggedIn&&user?.character_id && <>
-      <CharacterPanel character={character} error={errors.character} busy={busy} run={run}
-        onCharacter={setCharacter} refresh={refreshAll} notify={setMessage} dev={provider==='dev'}/>
-      <CharacterCarePanel character={character} busy={busy} run={run} refresh={refreshAll} notify={setMessage}/>
-      <TrainingBloodPanel character={character} inventory={inventory} busy={busy} run={run} refresh={refreshAll}/>
-      <BattlePanel inventory={inventory} busy={busy} run={run} refresh={refreshAll} revision={revision}/>
-      <details className="dev-fold"><summary>기록·단서 아카이브</summary><RecordsPanel/></details>
-      <details className="dev-fold"><summary>인벤토리·공용 창고</summary>
-      <InventoryPanel character={character} inventory={inventory} storage={storage} errors={errors} busy={busy} run={run}
-        refresh={refreshAll} notify={setMessage}/>
-      </details>
-      <details className="dev-fold" open><summary>조사</summary>
-      <InvestigationPanel activeBattle={character?.in_active_battle} battleError={errors.character} investigationApCost={investigationApCost} areas={areas} character={character} error={errors.areas} characterError={errors.character}
-        busy={busy} run={run} refresh={refreshAll} notify={setMessage}/>
-      </details>
-      {provider==='dev'&&<details className="dev-fold"><summary>최근 행동 로그</summary>
-        <ActionLogPanel logs={logs} error={errors.logs} busy={busy} run={run} refresh={refreshAll}/>
-      </details>}
-      <details className="dev-fold"><summary>상점</summary>
-        <ShopPanel products={products} character={character} error={errors.products} busy={busy}
-          run={run} refresh={refreshAll} notify={setMessage}/>
-      </details>
-      <details className="dev-fold"><summary>요리·식사</summary>
-        <CookingPanel activeBattle={character?.in_active_battle} battleError={errors.character} inventory={inventory} catalog={cooking} character={character} error={errors.cooking} busy={busy}
-          run={run} refresh={refreshAll} notify={setMessage}/>
-      </details>
-      <details className="dev-fold"><summary>가챠</summary>
-        <GachaPanel gachas={gachas} character={character} error={errors.gachas} busy={busy}
-          run={run} refresh={refreshAll} notify={setMessage}/>
-      </details>
-    </>}
-    <footer>CRA → JavaScript API → Supabase PostgreSQL · DEV 전용, 최종 서비스 화면 아님</footer>
-  </main>;
+  const quickNavigation = [
+    ['investigation', '조사', 'compass', '지역을 탐색하고 자원을 확보합니다.'],
+    ['battle', '전투', 'swords', '조우한 위협과 전투를 진행합니다.'],
+    ['cooking', '요리', 'cooking', '재료를 조리해 식량을 만듭니다.'],
+    ['inventory', '인벤토리', 'box', '보유한 아이템을 확인하고 관리합니다.'],
+    ['shop', '상점', 'shop', '필요한 물자를 구매합니다.']
+  ];
+
+  const pageDescriptions = {
+    home: '식량을 확보하고, 조리하고, 버텨내세요.',
+    character: '생존자 정보와 상태를 확인합니다.',
+    investigation: '탐사 지역과 조사 결과를 확인합니다.',
+    battle: '진행 중인 전투를 확인합니다.',
+    cooking: '재료를 조리하고 식사합니다.',
+    inventory: '보유 물자와 공용 창고를 관리합니다.',
+    shop: '보급 물자를 확인합니다.',
+    records: '기록과 단서를 확인합니다.',
+    gacha: '가챠 목록을 확인합니다.'
+  };
+
+  const navigate = next => {
+    setView(next);
+    setMenuOpen(false);
+    window.scrollTo(0, 0);
+  };
+
+  const display = name => ({ display: view === name ? 'block' : 'none' });
+  const maxBlood = character?.effective_max_blood ?? Math.min(100, character?.max_blood ?? 100);
+
+  const resourceStats = character ? [
+    ['HP', character.hp, character.max_hp],
+    ['혈량', character.blood, maxBlood],
+    ['AP', character.ap, character.max_ap]
+  ] : [];
+
+  const characterImage = character?.image_url || character?.profile_image_url || user?.avatar_url || null;
+  const currentTime = now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false });
+  const currentDate = now.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' });
+
+  if (loggedIn && adminOpen) {
+    return (
+        <main>
+          <AdminPanel onBack={() => setAdminOpen(false)} />
+        </main>
+    );
+  }
+
+  return (
+      <div className="survival-app">
+        <aside className={`survival-sidebar ${menuOpen ? 'is-open' : ''}`}>
+          <button type="button" className="survival-logo survival-logo-link" onClick={() => navigate('home')} aria-label="생존밥 홈으로 이동">
+            <img src="/saengjonbap_logo.png" alt="생존밥" />
+          </button>
+
+          <nav aria-label="주 메뉴">
+            {navigation.map(([id, label, symbol]) => (
+                <button key={id} type="button" className={view === id ? 'is-active' : ''} onClick={() => navigate(id)}>
+                  <NavIcon name={symbol} className="survival-nav-icon" />
+                  {label}
+                </button>
+            ))}
+          </nav>
+
+          <div className="survival-sidebar-foot">
+            <img className="survival-sidebar-cutlery" src="/assets/decor/side-cutlery.svg" alt="" aria-hidden="true" />
+            REVIVAL COMPLETE
+            <br />
+            OF THE CORPSE
+            <div className="survival-barcode" />
+          </div>
+        </aside>
+
+        <div className="survival-main">
+          <header className="survival-topbar">
+            <button className="survival-menu-toggle" type="button" onClick={() => setMenuOpen(!menuOpen)} aria-label="전체 메뉴" aria-expanded={menuOpen}>☰</button>
+
+            <button type="button" className="survival-mobile-logo survival-logo-link" onClick={() => navigate('home')} aria-label="생존밥 홈으로 이동">
+              <img src="/saengjonbap_logo.png" alt="생존밥" />
+            </button>
+
+            <span className="survival-top-caption">SURVIVAL COOKING SYSTEM</span>
+            <span className="survival-account">{character?.name || user?.username || 'SURVIVOR'}</span>
+          </header>
+
+          <div className="survival-warning" aria-hidden="true">
+            <span>WARNING!</span>
+            <span>WARNING!</span>
+            <span>WARNING!</span>
+            <span>WARNING!</span>
+            <span>WARNING!</span>
+          </div>
+
+          <main className="survival-content">
+            <div className="survival-heading">
+              {view === 'home' && <HomeHeaderDecor />}
+              <small>SURVIVOR TERMINAL</small>
+              <h1>{view === 'home' ? `${character?.name ? `${character.name}, ` : ''}오늘도 생존을 이어가세요.` : navigation.find(([id]) => id === view)?.[1]}</h1>
+              <p>{pageDescriptions[view]}</p>
+            </div>
+
+            {loggedIn && user?.character_id && (
+                <div className="survival-home" style={{ display: view === 'home' ? 'grid' : 'none' }}>
+                  <DashboardCard title="SURVIVOR ID" subtitle={`#${String(character?.id ?? '---').padStart(3, '0')}`} className="survival-profile">
+                    <div className="survival-profile-body">
+                      <div className="survival-identity">
+                        <GameImage src={characterImage} alt={`${character?.name || '생존자'} 프로필`} className="survival-avatar" />
+
+                        <div className="survival-identity-info">
+                          <div className="survival-identity-name">{character?.name || '불러오는 중'}</div>
+                          <span className="survival-role-badge">{character?.role || '생존자'}</span>
+                          <p>헌터등급 <b>{character?.hunter_grade ?? '-'}</b> <span className="survival-divider">|</span> 이능등급 <b>{character?.ability_grade ?? '-'}</b></p>
+                          <p>상태: {character?.status ?? '-'}</p>
+                        </div>
+                      </div>
+
+                      <div className="survival-resource-list">
+                        {resourceStats.map(([label, value, max]) => (
+                            <ResourceBar key={label} label={label} value={value} max={max} />
+                        ))}
+                      </div>
+                    </div>
+                  </DashboardCard>
+
+                  <DashboardCard title="오늘의 상황" subtitle="TODAY'S STATUS" className="survival-today">
+                    <div className="survival-today-body">
+                      <div className="survival-calendar">
+                        <span>DAY</span>
+                        <strong>{String(now.getDate()).padStart(2, '0')}</strong>
+                      </div>
+
+                      <div className="survival-today-details">
+                        <div><span>현재 시간</span><strong>{currentTime}</strong></div>
+                        <div><span>현재 날짜</span><strong>{currentDate}</strong></div>
+                        <div><span>보유 재화</span><strong>{character?.currency ?? '-'}</strong></div>
+                        <div><span>진행 중 전투</span><strong>{character?.in_active_battle ? '있음' : '없음'}</strong></div>
+                      </div>
+                    </div>
+                  </DashboardCard>
+
+                  <DashboardCard title="주요 행동" subtitle="QUICK ACCESS" className="survival-actions-card">
+                    <div className="survival-quick">
+                      {quickNavigation.map(([id, label, symbol, description]) => (
+                          <button key={id} type="button" onClick={() => navigate(id)}>
+                            <NavIcon name={symbol} className="survival-quick-icon" />
+                            <b>{label}</b>
+                            <small>{description}</small>
+                          </button>
+                      ))}
+                    </div>
+                  </DashboardCard>
+
+                  <DashboardCard title="최근 기록" subtitle="ACTIVITY LOG" action={<button type="button" className="survival-card-link" onClick={() => navigate('records')}>더보기 ›</button>} className="survival-activity">
+                    <div className="survival-empty">
+                      <span>MASTODON FEED</span>
+                      <p>생존밥 자동 공지 기록 연동 예정</p>
+                    </div>
+                  </DashboardCard>
+
+                  <DashboardCard title="현재 진행 중인 이벤트" subtitle="EVENT" className="survival-event">
+                    <div className="survival-event-banner">
+                      <GameImage alt="이벤트 배너 임시 이미지" className="survival-event-image" />
+                      <div className="survival-event-overlay">
+                        <span>EVENT</span>
+                        <strong>스토리 이벤트 준비 중</strong>
+                        <small>운영진 이벤트 등록 기능 연동 예정</small>
+                      </div>
+                    </div>
+                  </DashboardCard>
+
+                  <DashboardCard title="공지사항" subtitle="NOTICE" className="survival-notice">
+                    <div className="survival-empty">
+                      <span>OFFICIAL NOTICE</span>
+                      <p>운영진 공지사항 연동 예정</p>
+                    </div>
+                  </DashboardCard>
+                </div>
+            )}
+
+            <div className="survival-auth" style={{ display: loggedIn && view !== 'home' ? 'none' : 'block' }}>
+              <section aria-labelledby="login-title">
+                <h2 id="login-title">{provider === 'mastodon' ? 'Mastodon 로그인' : '개발 로그인'}</h2>
+
+                {provider === 'dev' && (
+                    <p>서버의 DEV_LOGIN_KEY를 입력하세요. 토큰은 메모리에만 보관되며 새로고침하면 다시 로그인해야 합니다.</p>
+                )}
+
+                {!loggedIn ? (
+                    provider === 'mastodon' ? (
+                        <a href="/api/auth/mastodon/login">Mastodon으로 로그인</a>
+                    ) : provider === 'dev' ? (
+                        <form onSubmit={login}>
+                          <label htmlFor="key">개발 로그인 키</label>
+                          <input id="key" type="password" value={key} onChange={event => setKey(event.target.value)} required autoComplete="off" disabled={busy} />
+                          <button disabled={busy}>로그인</button>
+                        </form>
+                    ) : (
+                        <p>인증 방식 확인 중…</p>
+                    )
+                ) : (
+                    <div className="actions">
+                      <span>로그인됨</span>
+                      {user?.role === 'ADMIN' && <button disabled={busy} onClick={() => setAdminOpen(true)}>관리자 영역</button>}
+                      <button disabled={busy} onClick={() => run(refreshAll)}>전체 상태 새로고침</button>
+                      <button disabled={busy} onClick={() => run(logout)}>로그아웃</button>
+                    </div>
+                )}
+              </section>
+            </div>
+
+            {(busy || message) && <p className="dev-message" role="status" aria-live="polite">{busy ? '처리 중…' : message}</p>}
+            {loggedIn && !user?.character_id && <CharacterCreationPanel />}
+
+            {loggedIn && user?.character_id && (
+                <>
+                  <div className="survival-page" style={display('character')}>
+                    <CharacterPanel character={character} error={errors.character} busy={busy} run={run} onCharacter={setCharacter} refresh={refreshAll} notify={setMessage} dev={provider === 'dev'} />
+                    <CharacterCarePanel character={character} busy={busy} run={run} refresh={refreshAll} notify={setMessage} />
+                    <TrainingBloodPanel character={character} inventory={inventory} busy={busy} run={run} refresh={refreshAll} />
+                  </div>
+
+                  <div className="survival-page" style={display('battle')}>
+                    <BattlePanel inventory={inventory} busy={busy} run={run} refresh={refreshAll} revision={revision} />
+                  </div>
+
+                  <div className="survival-page" style={display('records')}>
+                    <RecordsPanel />
+                  </div>
+
+                  <div className="survival-page" style={display('inventory')}>
+                    <InventoryPanel character={character} inventory={inventory} storage={storage} errors={errors} busy={busy} run={run} refresh={refreshAll} notify={setMessage} />
+                  </div>
+
+                  <div className="survival-page" style={display('investigation')}>
+                    <InvestigationPanel activeBattle={character?.in_active_battle} battleError={errors.character} investigationApCost={investigationApCost} areas={areas} character={character} error={errors.areas} characterError={errors.character} busy={busy} run={run} refresh={refreshAll} notify={setMessage} />
+                  </div>
+
+                  {provider === 'dev' && (
+                      <div className="survival-page" style={display('records')}>
+                        <ActionLogPanel logs={logs} error={errors.logs} busy={busy} run={run} refresh={refreshAll} />
+                      </div>
+                  )}
+
+                  <div className="survival-page" style={display('shop')}>
+                    <ShopPanel products={products} character={character} error={errors.products} busy={busy} run={run} refresh={refreshAll} notify={setMessage} />
+                  </div>
+
+                  <div className="survival-page" style={display('cooking')}>
+                    <CookingPanel activeBattle={character?.in_active_battle} battleError={errors.character} inventory={inventory} catalog={cooking} character={character} error={errors.cooking} busy={busy} run={run} refresh={refreshAll} notify={setMessage} />
+                  </div>
+
+                  <div className="survival-page" style={display('gacha')}>
+                    <GachaPanel gachas={gachas} character={character} error={errors.gachas} busy={busy} run={run} refresh={refreshAll} notify={setMessage} />
+                  </div>
+                </>
+            )}
+          </main>
+
+          <nav className="survival-bottom-nav" aria-label="모바일 메뉴">
+            {navigation.filter(([id]) => ['home', 'character', 'investigation', 'battle'].includes(id)).map(([id, label, symbol]) => (
+                <button type="button" key={id} className={view === id ? 'is-active' : ''} onClick={() => navigate(id)}>
+                  <NavIcon name={symbol} className="survival-nav-icon" />
+                  {label}
+                </button>
+            ))}
+
+            <button type="button" onClick={() => setMenuOpen(!menuOpen)}>
+              <span>☰</span>
+              더보기
+            </button>
+          </nav>
+        </div>
+      </div>
+  );
 }

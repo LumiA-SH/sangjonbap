@@ -1,0 +1,434 @@
+/* Home-only mockup fidelity overrides. All images are served from public/assets/decor. */
+
+.survival-main {
+    position: relative;
+    background: #f1f1f1;
+}
+
+.survival-content {
+    background-image: url('../public/assets/decor/background-pattern.svg');
+    background-size: 760px auto;
+    background-repeat: repeat;
+}
+
+.survival-heading:has(.home-decor-header) {
+    position: relative;
+    isolation: isolate;
+    min-height: 104px;
+}
+
+.home-decor-header {
+    position: absolute;
+    inset: -22px -28px -38px;
+    z-index: -1;
+    pointer-events: none;
+    overflow: visible;
+}
+
+.home-decor-header img {
+    position: absolute;
+    display: block;
+    object-fit: contain;
+}
+
+.home-decor-cutlery {
+    width: 195px;
+    height: 165px;
+    top: -18px;
+    right: 30%;
+    filter: drop-shadow(2px 5px 3px #0003);
+}
+
+.home-decor-stamp {
+    width: 120px;
+    height: 120px;
+    top: 0;
+    right: 20%;
+    opacity: .94;
+}
+
+.home-decor-tray {
+    width: 230px;
+    height: 190px;
+    top: -28px;
+    right: -30px;
+    filter: drop-shadow(3px 7px 4px #0004);
+}
+
+.home-decor-splatter {
+    width: 220px;
+    height: 145px;
+    opacity: .93;
+}
+
+.home-decor-splatter-left {
+    bottom: -42px;
+    right: 24%;
+}
+
+.home-decor-splatter-right {
+    bottom: -48px;
+    right: 1%;
+}
+
+.survival-sidebar {
+    overflow: hidden;
+}
+
+.survival-sidebar::before {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 110px;
+    height: 105px;
+    background: url('../public/assets/decor/blood-splatter-logo.svg') center/contain no-repeat;
+    content: '';
+    pointer-events: none;
+    z-index: 1;
+}
+
+.survival-sidebar-foot {
+    position: relative;
+    min-height: 185px;
+}
+
+.survival-sidebar-cutlery {
+    position: absolute;
+    width: 200px;
+    height: 180px;
+    left: -65px;
+    bottom: -95px;
+    transform: rotate(-10deg);
+    pointer-events: none;
+}
+
+.survival-sidebar nav button .survival-nav-icon {
+    width: 21px;
+    height: 21px;
+    filter: grayscale(1) brightness(0) invert(1);
+}
+
+.survival-sidebar nav button span {
+    width: auto;
+}
+
+.survival-bottom-nav .survival-nav-icon {
+    width: 22px;
+    height: 22px;
+    opacity: .65;
+}
+
+.survival-bottom-nav button.is-active .survival-nav-icon {
+    opacity: 1;
+}
+
+.survival-warning {
+    border: 0;
+    height: 27px;
+    background: #4b4b4b;
+    position: relative;
+}
+
+.survival-warning::before,
+.survival-warning::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    height: 100%;
+    width: 140px;
+    background: url('../public/assets/decor/warning-stripe.svg') left center/auto 100% repeat-x;
+}
+
+.survival-warning::before {
+    left: 0;
+}
+
+.survival-warning::after {
+    right: 0;
+    transform: scaleX(-1);
+}
+
+.survival-warning span {
+    background: transparent;
+}
+
+.survival-home {
+    gap: 13px;
+    grid-template-columns: minmax(0, 1.65fr) minmax(310px, 1fr);
+}
+
+.survival-home .survival-card {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid #c9c9c9;
+    border-radius: 10px;
+    background: #fffefa;
+    box-shadow: 0 3px 6px #00000020;
+    padding: 15px 17px;
+}
+
+.survival-home .survival-card-title {
+    padding-left: 13px;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    position: relative;
+}
+
+.survival-home .survival-card-title::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 3px;
+    height: 16px;
+    width: 4px;
+    background: #650c13;
+    transform: skew(-15deg);
+}
+
+.home-card-decor {
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 0;
+    height: 0;
+    border-top: 22px solid #650c13;
+    border-left: 22px solid transparent;
+    pointer-events: none;
+}
+
+.home-profile-barcode {
+    width: 108px;
+    height: 39px;
+    display: block;
+    margin-top: 9px;
+    object-fit: contain;
+    object-position: left;
+}
+
+.survival-profile-body {
+    grid-template-columns: minmax(0, 1.2fr) minmax(185px, 1fr);
+    gap: 14px;
+}
+
+.survival-profile .survival-resource-list {
+    border-left: 1px dashed #c9c9c9;
+    padding-left: 20px;
+}
+
+.survival-quick button {
+    min-height: 112px;
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background-color 0.18s ease;
+}
+
+.survival-quick button:hover:not(:disabled) {
+    transform: translateY(-3px);
+    border-color: var(--survival-red);
+    background: #f7eeee;
+    box-shadow: 0 5px 12px #00000020;
+}
+
+.survival-quick button:active:not(:disabled) {
+    transform: translateY(-1px);
+}
+
+.survival-quick-icon {
+    display: block;
+    width: 34px;
+    height: 34px;
+}
+
+.home-empty-icon {
+    width: 34px;
+    height: 34px;
+    margin-bottom: 8px;
+    opacity: .75;
+}
+
+.survival-home .survival-empty {
+    min-height: 135px;
+}
+
+.survival-event-banner {
+    height: 145px;
+}
+
+@media (max-width: 1100px) {
+    .home-decor-tray {
+        width: 175px;
+        right: -30px;
+    }
+
+    .home-decor-stamp {
+        right: 19%;
+        width: 100px;
+    }
+
+    .home-decor-cutlery {
+        right: 29%;
+        width: 150px;
+    }
+
+    .survival-profile-body {
+        grid-template-columns: 1fr;
+    }
+
+    .survival-profile .survival-resource-list {
+        border: 0;
+        padding: 0;
+    }
+}
+
+@media (max-width: 900px) {
+    .survival-home {
+        grid-template-columns: 1fr;
+    }
+
+    .home-decor-cutlery,
+    .home-decor-stamp,
+    .home-decor-tray {
+        display: none !important;
+    }
+
+    .home-decor-splatter-left {
+        right: -35px;
+        bottom: -38px;
+        width: 150px;
+    }
+
+    .home-decor-splatter-right {
+        display: none !important;
+    }
+
+    .survival-warning::before,
+    .survival-warning::after {
+        width: 55px;
+    }
+
+    .survival-profile-body {
+        grid-template-columns: minmax(0, 1fr) minmax(160px, 1fr);
+    }
+
+    .survival-home .survival-profile {
+        order: 1;
+    }
+
+    .survival-home .survival-actions-card {
+        order: 2;
+    }
+
+    .survival-home .survival-today {
+        order: 3;
+    }
+
+    .survival-home .survival-activity {
+        order: 4;
+    }
+
+    .survival-home .survival-event {
+        order: 5;
+    }
+
+    .survival-home .survival-notice {
+        order: 6;
+    }
+}
+
+@media (max-width: 600px) {
+    .survival-content {
+        padding: 16px 12px 105px;
+        background-size: 500px auto;
+    }
+
+    .survival-heading:has(.home-decor-header) {
+        min-height: 88px;
+    }
+
+    .survival-home .survival-card {
+        padding: 12px;
+    }
+
+    .survival-profile-body {
+        grid-template-columns: 1fr;
+    }
+
+    .survival-quick {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+    }
+
+    .survival-quick button {
+        min-height: 66px;
+        flex-direction: row;
+    }
+
+    .survival-quick-icon {
+        width: 27px;
+        height: 27px;
+    }
+
+    .survival-warning span:nth-child(n + 4) {
+        display: none;
+    }
+
+    .survival-event-banner {
+        height: 135px;
+    }
+}
+
+@media (max-width: 900px) {
+    .survival-app,
+    .survival-main,
+    .survival-content {
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .survival-main {
+        overflow-x: clip;
+    }
+
+    .survival-content {
+        margin: 0 auto;
+    }
+
+    .survival-home {
+        width: 100%;
+        min-width: 0;
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .survival-home .survival-card {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .home-decor-header {
+        overflow: hidden;
+    }
+
+    .survival-bottom-nav {
+        width: 100%;
+        box-sizing: border-box;
+    }
+}
+
+@media (max-width: 600px) {
+    .survival-home .survival-actions-card {
+        min-width: 0;
+    }
+
+    .survival-home .survival-quick {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .survival-home .survival-quick button {
+        min-width: 0;
+    }
+
+    .survival-home .survival-quick button:last-child {
+        grid-column: 1 / -1;
+        justify-self: center;
+        width: calc(50% - 5px);
+    }
+}

@@ -1,37 +1,1086 @@
-*{box-sizing:border-box}body{margin:0;background:#f3f3ec;color:#213e33;font-family:system-ui,sans-serif}main{max-width:820px;margin:auto;padding:52px 22px}header{margin-bottom:32px}h1{font-size:40px;letter-spacing:-2px;margin:14px 0}h2{margin-top:12px}.badge{font-size:12px;font-weight:750;letter-spacing:2px;color:#55755b}p{line-height:1.7}section{padding:26px;background:#fff;border:1px solid #dce3d7;border-radius:18px;margin-bottom:20px}form{display:flex;align-items:center;gap:10px;flex-wrap:wrap}label{font-size:14px}input{flex:1;min-width:150px;padding:12px;border:1px solid #bccbbb;border-radius:7px;font:inherit}button{padding:12px 18px;border:0;border-radius:7px;background:#254f3e;color:white;cursor:pointer;font:inherit}button:disabled{opacity:.5;cursor:wait}.actions{display:flex;gap:10px;margin-top:16px}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.stats div{background:#f1f5ed;padding:18px;border-radius:10px}.stats small,.stats strong{display:block}.stats strong{font-size:22px;margin-top:8px}footer{margin-top:28px;font-size:13px;color:#68786c}@media(max-width:520px){.stats{grid-template-columns:repeat(2,1fr)}h1{font-size:32px}form{align-items:stretch;flex-direction:column}}
+/* =========================================================
+   01. DESIGN TOKENS
+========================================================= */
 
-/* DEV console only; these panels are independent of future service screens. */
-.actions { flex-wrap: wrap; align-items: center; }
-section form { margin-top: 16px; }
-.dev-list { list-style: none; padding: 0; }
-.dev-row { border-top: 1px solid #dce3d7; padding: 16px 0; overflow-wrap: anywhere; }
-.dev-row input[type="number"] { flex: 0 1 100px; min-width: 80px; }
-.dev-message { min-height: 28px; overflow-wrap: anywhere; }
-[role="alert"] { color: #9b2828; }
-.dev-result { margin-top: 20px; border: 1px solid #bccbbb; padding: 16px; }
-.dev-text { white-space: pre-wrap; }
-pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; }
-button:disabled { cursor: not-allowed; }
-@media (max-width: 520px) { .dev-row input[type="number"] { flex: none; width: 100%; } }
+:root {
+  --survival-red: #650c13;
+  --survival-red-hover: #80141e;
+  --survival-ink: #242428;
+  --survival-gray: #8c8c8c;
+  --survival-paper: #f0f0f0;
+  --survival-background: #e9e9e9;
+  --survival-border: #d0d0d0;
+  --survival-muted: #666666;
+  --survival-white: #ffffff;
+}
 
-.dev-fold { margin-bottom: 20px; }
-.dev-fold > summary { cursor: pointer; padding: 12px; font-weight: 700; }
-.care-states { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
-.log-scroll { max-height: 520px; overflow: auto; }
-@media (max-width: 520px) { .care-states { grid-template-columns: 1fr; } }
-.admin-form {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
-.admin-form h3,.admin-form p {grid-column:1/-1}
-.admin-form label {display:flex;flex-direction:column;gap:8px;min-width:0}
-.admin-form input,.admin-form select,.admin-form textarea {width:100%;min-width:0;padding:10px;font:inherit}
-.admin-form input[type=checkbox] {width:auto;align-self:start}
-.admin-panel li {padding:8px 0;overflow-wrap:anywhere}
-@media(max-width:600px){.admin-form{grid-template-columns:1fr}.admin-panel{padding:16px}}
+/* =========================================================
+   02. GLOBAL
+========================================================= */
 
-.admin-wide { grid-column: 1 / -1; min-width: 0; }
-.admin-child-row { display: flex; flex-wrap: wrap; align-items: end; gap: 0.75rem; margin-bottom: 1rem; }
-.admin-child-row label { flex: 1 1 140px; min-width: 0; }
-.admin-panel input, .admin-panel textarea, .admin-panel select { max-width: 100%; box-sizing: border-box; }
-.admin-item-picker { min-width: 0; border: 1px solid #8885; padding: .6rem; border-radius: .3rem; }
-.admin-item-picker ul { padding-left: 1.2rem; overflow-wrap: anywhere; }
-.admin-item-picker label { display: grid; gap: .3rem; }
-.admin-item-picker input { width: 100%; min-width: 0; box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--survival-background);
+  color: var(--survival-ink);
+  font-family: system-ui, sans-serif;
+}
+
+h1 {
+  margin: 14px 0;
+  font-size: 40px;
+  letter-spacing: -1.5px;
+}
+
+h2 {
+  margin-top: 12px;
+}
+
+p {
+  line-height: 1.7;
+}
+
+.badge {
+  color: var(--survival-red);
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: 2px;
+}
+
+footer {
+  margin-top: 28px;
+  color: var(--survival-muted);
+  font-size: 13px;
+}
+
+[role="alert"] {
+  color: #9b2828;
+}
+
+/* =========================================================
+   03. COMMON FORM ELEMENTS
+========================================================= */
+
+form {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+label {
+  font-size: 14px;
+}
+
+input {
+  flex: 1;
+  min-width: 150px;
+  padding: 12px;
+  border: 1px solid #bcbcbc;
+  border-radius: 7px;
+  background: var(--survival-white);
+  color: var(--survival-ink);
+  font: inherit;
+}
+
+button {
+  padding: 12px 18px;
+  border: 0;
+  border-radius: 7px;
+  background: var(--survival-red);
+  color: var(--survival-white);
+  cursor: pointer;
+  font: inherit;
+}
+
+button:hover:not(:disabled) {
+  background: var(--survival-red-hover);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--survival-red);
+  outline-offset: 2px;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+/* =========================================================
+   04. LEGACY CONTENT
+========================================================= */
+
+.survival-page > section,
+.survival-page > div > section,
+.survival-auth > section {
+  min-width: 0;
+  margin: 0 0 18px;
+  padding: 22px;
+  border: 1px solid var(--survival-border);
+  border-radius: 12px;
+  background: var(--survival-white);
+  box-shadow: 0 2px 5px #00000012;
+}
+
+.survival-page section form,
+.survival-auth section form {
+  margin-top: 16px;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.stats div {
+  padding: 18px;
+  border-radius: 10px;
+  background: #f1f1f1;
+}
+
+.stats small,
+.stats strong {
+  display: block;
+}
+
+.stats strong {
+  margin-top: 8px;
+  font-size: 22px;
+}
+
+/* =========================================================
+   05. DEV PANELS
+========================================================= */
+
+.dev-list {
+  padding: 0;
+  list-style: none;
+}
+
+.dev-row {
+  padding: 16px 0;
+  border-top: 1px solid var(--survival-border);
+  overflow-wrap: anywhere;
+}
+
+.dev-row input[type="number"] {
+  flex: 0 1 100px;
+  min-width: 80px;
+}
+
+.dev-message {
+  min-height: 28px;
+  overflow-wrap: anywhere;
+}
+
+.dev-result {
+  margin-top: 20px;
+  padding: 16px;
+  border: 1px solid var(--survival-border);
+}
+
+.dev-text {
+  white-space: pre-wrap;
+}
+
+pre {
+  font-size: 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.dev-fold {
+  margin-bottom: 20px;
+}
+
+.dev-fold > summary {
+  padding: 12px;
+  color: var(--survival-ink);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.care-states {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.log-scroll {
+  max-height: 520px;
+  overflow: auto;
+}
+
+/* =========================================================
+   06. ADMIN
+========================================================= */
+
+.admin-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 16px;
+}
+
+.admin-form h3,
+.admin-form p {
+  grid-column: 1 / -1;
+}
+
+.admin-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.admin-form input,
+.admin-form select,
+.admin-form textarea {
+  width: 100%;
+  min-width: 0;
+  padding: 10px;
+  font: inherit;
+}
+
+.admin-form input[type="checkbox"] {
+  width: auto;
+  align-self: start;
+}
+
+.admin-panel li {
+  padding: 8px 0;
+  overflow-wrap: anywhere;
+}
+
+.admin-wide {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+
+.admin-child-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.admin-child-row label {
+  flex: 1 1 140px;
+  min-width: 0;
+}
+
+.admin-panel input,
+.admin-panel textarea,
+.admin-panel select {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.admin-item-picker {
+  min-width: 0;
+  padding: 0.6rem;
+  border: 1px solid #8885;
+  border-radius: 0.3rem;
+}
+
+.admin-item-picker ul {
+  padding-left: 1.2rem;
+  overflow-wrap: anywhere;
+}
+
+.admin-item-picker label {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.admin-item-picker input {
+  width: 100%;
+  min-width: 0;
+}
+
+body > #root > main {
+  max-width: 820px;
+  margin: auto;
+  padding: 52px 22px;
+}
+
+body > #root > main > section {
+  margin-bottom: 20px;
+  padding: 26px;
+  border: 1px solid var(--survival-border);
+  border-radius: 18px;
+  background: var(--survival-white);
+}
+
+/* =========================================================
+   07. SURVIVAL APP LAYOUT
+========================================================= */
+
+.survival-app {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.survival-main {
+  min-width: 0;
+}
+
+/* =========================================================
+   08. SIDEBAR
+========================================================= */
+
+.survival-sidebar {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: linear-gradient(155deg, #454545, #242428);
+  color: var(--survival-white);
+}
+
+.survival-sidebar nav {
+  display: flex;
+  flex-direction: column;
+  padding: 12px 0;
+}
+
+.survival-sidebar nav button {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 20px;
+  border-radius: 0;
+  background: transparent;
+  color: var(--survival-white);
+  text-align: left;
+}
+
+.survival-sidebar nav button span {
+  width: 24px;
+  font-size: 22px;
+  text-align: center;
+}
+
+.survival-sidebar nav button:hover,
+.survival-sidebar nav button.is-active {
+  background: var(--survival-red);
+}
+
+.survival-sidebar-foot {
+  margin-top: auto;
+  padding: 22px;
+  color: #cccccc;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.survival-barcode {
+  height: 45px;
+  margin-top: 15px;
+  background: repeating-linear-gradient(
+          90deg,
+          #dddddd 0 2px,
+          transparent 2px 4px,
+          #dddddd 4px 5px,
+          transparent 5px 9px
+  );
+}
+
+/* =========================================================
+   09. OFFICIAL LOGO
+========================================================= */
+
+.survival-logo-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: #f4f4f4;
+  cursor: pointer;
+}
+
+.survival-logo-link:hover:not(:disabled) {
+  background: var(--survival-white);
+}
+
+.survival-logo-link:focus-visible {
+  outline: 3px solid var(--survival-red);
+  outline-offset: -3px;
+}
+
+.survival-logo-link img {
+  display: block;
+  width: 100%;
+  max-width: 160px;
+  height: auto;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.survival-sidebar .survival-logo {
+  width: 100%;
+  height: 92px;
+  flex-shrink: 0;
+  padding: 8px 18px;
+}
+
+.survival-topbar .survival-mobile-logo {
+  display: none;
+}
+
+/* =========================================================
+   10. TOP BAR
+========================================================= */
+
+.survival-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 58px;
+  padding: 0 30px;
+  border-bottom: 1px solid #cccccc;
+  background: #f5f5f5;
+}
+
+.survival-top-caption {
+  color: var(--survival-muted);
+  font-size: 12px;
+}
+
+.survival-account {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.survival-menu-toggle {
+  display: none;
+}
+
+/* =========================================================
+   11. WARNING STRIP
+========================================================= */
+
+.survival-warning {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  gap: 12px;
+  height: 30px;
+  padding: 0 24px;
+  border-left: 14px solid var(--survival-red);
+  border-right: 14px solid var(--survival-red);
+  background: repeating-linear-gradient(115deg, #650c13 0 8px, #ffffff 8px 12px, #666666 12px 70px);
+  color: var(--survival-white);
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.survival-warning span {
+  padding: 3px 12px;
+  background: #666666;
+}
+
+/* =========================================================
+   12. MAIN CONTENT
+========================================================= */
+
+.survival-content {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 26px 30px 60px;
+}
+
+.survival-heading {
+  position: relative;
+  margin-bottom: 22px;
+  padding: 12px 0 16px;
+}
+
+.survival-heading small {
+  color: var(--survival-muted);
+  font-size: 12px;
+}
+
+.survival-heading h1 {
+  margin: 6px 0;
+  font-size: 30px;
+}
+
+.survival-heading p {
+  margin: 0;
+  color: var(--survival-muted);
+}
+
+/* =========================================================
+   13. DASHBOARD GRID
+========================================================= */
+
+.survival-home {
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(300px, 1fr);
+  gap: 16px;
+  align-items: stretch;
+}
+
+.survival-card {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--survival-border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 2px 6px #00000014;
+}
+
+.survival-card-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #dddddd;
+}
+
+.survival-card-title > div {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.survival-card-title strong {
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.survival-card-title span {
+  color: #777777;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.survival-card-link {
+  padding: 4px 8px;
+  background: transparent;
+  color: var(--survival-ink);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.survival-card-link:hover:not(:disabled) {
+  background: #f3eeee;
+  color: var(--survival-red);
+}
+
+/* =========================================================
+   14. SURVIVOR PROFILE
+========================================================= */
+
+.survival-profile-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(180px, 1fr);
+  align-items: center;
+  gap: 20px;
+}
+
+.survival-identity {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+}
+
+.survival-avatar {
+  width: 116px;
+  height: 132px;
+  flex-shrink: 0;
+  border: 1px solid #cccccc;
+  border-radius: 7px;
+  background: #dddddd;
+  object-fit: cover;
+}
+
+.survival-identity-info {
+  min-width: 0;
+}
+
+.survival-identity-name {
+  font-size: 24px;
+  font-weight: 850;
+  word-break: keep-all;
+}
+
+.survival-role-badge {
+  display: inline-block;
+  margin-top: 5px;
+  padding: 2px 9px;
+  border: 1px solid var(--survival-red);
+  border-radius: 20px;
+  color: var(--survival-red);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.survival-identity-info p {
+  margin: 8px 0 0;
+  font-size: 13px;
+}
+
+.survival-identity-info p b {
+  color: var(--survival-red);
+}
+
+.survival-divider {
+  margin: 0 6px;
+  color: #bbbbbb;
+}
+
+.survival-resource {
+  margin-bottom: 12px;
+}
+
+.survival-resource-label {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 5px;
+  font-size: 12px;
+}
+
+.survival-resource progress {
+  display: block;
+  width: 100%;
+  height: 9px;
+  accent-color: var(--survival-red);
+}
+
+/* =========================================================
+   15. TODAY STATUS
+========================================================= */
+
+.survival-today-body {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+
+.survival-calendar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 96px;
+  height: 112px;
+  flex-shrink: 0;
+  border: 1px solid #bbbbbb;
+  border-top: 12px solid var(--survival-red);
+  border-radius: 8px;
+  background: #f8f8f8;
+  box-shadow: 0 3px 5px #00000016;
+}
+
+.survival-calendar span {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.survival-calendar strong {
+  font-size: 43px;
+  line-height: 1.2;
+}
+
+.survival-today-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.survival-today-details > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid #e3e3e3;
+  font-size: 12px;
+}
+
+.survival-today-details > div:last-child {
+  border-bottom: 0;
+}
+
+.survival-today-details strong {
+  text-align: right;
+}
+
+/* =========================================================
+   16. QUICK ACCESS
+========================================================= */
+
+.survival-quick {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.survival-quick button {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 126px;
+  padding: 14px 8px;
+  border: 1px solid #d6d6d6;
+  border-radius: 9px;
+  background: #fafafa;
+  color: var(--survival-ink);
+  text-align: center;
+}
+
+.survival-quick button::after {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 0;
+  height: 0;
+  border-top: 16px solid var(--survival-red);
+  border-left: 16px solid transparent;
+  content: '';
+}
+
+.survival-quick button:hover:not(:disabled) {
+  border-color: var(--survival-red);
+  background: #f7eeee;
+}
+
+.survival-quick-icon {
+  color: var(--survival-red);
+  font-size: 30px;
+  line-height: 1;
+}
+
+.survival-quick button b {
+  font-size: 14px;
+}
+
+.survival-quick button small {
+  color: var(--survival-muted);
+  font-size: 10px;
+  line-height: 1.5;
+  word-break: keep-all;
+}
+
+/* =========================================================
+   17. ACTIVITY / EVENT / NOTICE
+========================================================= */
+
+.survival-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 130px;
+  padding: 20px;
+  color: var(--survival-muted);
+  text-align: center;
+}
+
+.survival-empty span {
+  color: var(--survival-red);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+}
+
+.survival-empty p {
+  margin: 10px 0 0;
+  font-size: 13px;
+}
+
+.survival-event-banner {
+  position: relative;
+  height: 170px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #2c2528;
+}
+
+.survival-event-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.survival-event-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 20px;
+  background: linear-gradient(90deg, #000000b8, #00000030);
+  color: var(--survival-white);
+  text-align: center;
+  text-shadow: 0 1px 4px #00000080;
+}
+
+.survival-event-overlay span {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 2px;
+}
+
+.survival-event-overlay strong {
+  font-size: 21px;
+}
+
+.survival-event-overlay small {
+  font-size: 12px;
+}
+
+/* =========================================================
+   18. MOBILE BOTTOM NAVIGATION
+========================================================= */
+
+.survival-bottom-nav {
+  display: none;
+}
+
+/* =========================================================
+   19. TABLET / MOBILE
+========================================================= */
+
+@media (max-width: 1100px) {
+  .survival-home {
+    grid-template-columns: minmax(0, 1fr) minmax(270px, 0.85fr);
+  }
+
+  .survival-profile-body {
+    grid-template-columns: 1fr;
+  }
+
+  .survival-quick button small {
+    display: none;
+  }
+
+  .survival-quick button {
+    min-height: 95px;
+  }
+}
+
+@media (max-width: 900px) {
+  .survival-app {
+    grid-template-columns: 1fr;
+  }
+
+  .survival-sidebar {
+    position: fixed;
+    z-index: 30;
+    width: min(280px, 85vw);
+    transform: translateX(-100%);
+    transition: transform 0.2s;
+    box-shadow: 4px 0 15px #00000033;
+  }
+
+  .survival-sidebar.is-open {
+    transform: translateX(0);
+  }
+
+  .survival-menu-toggle {
+    display: block;
+    padding: 6px;
+    background: transparent;
+    color: var(--survival-ink);
+    font-size: 22px;
+  }
+
+  .survival-menu-toggle:hover:not(:disabled) {
+    background: #e5e5e5;
+  }
+
+  .survival-topbar .survival-mobile-logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 1 132px;
+    width: 132px;
+    height: 48px;
+    padding: 3px 6px;
+    background: transparent;
+  }
+
+  .survival-topbar .survival-mobile-logo img {
+    max-width: 120px;
+    max-height: 42px;
+  }
+
+  .survival-top-caption {
+    display: none;
+  }
+
+  .survival-topbar {
+    padding: 0 16px;
+  }
+
+  .survival-content {
+    padding: 20px 16px 100px;
+  }
+
+  .survival-home {
+    grid-template-columns: 1fr;
+  }
+
+  .survival-profile-body {
+    grid-template-columns: minmax(0, 1fr) minmax(180px, 1fr);
+  }
+
+  .survival-bottom-nav {
+    position: fixed;
+    z-index: 20;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    padding: 8px 4px max(8px, env(safe-area-inset-bottom));
+    border-top: 1px solid #dddddd;
+    background: var(--survival-white);
+  }
+
+  .survival-bottom-nav button {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 4px 0;
+    background: transparent;
+    color: var(--survival-muted);
+    font-size: 11px;
+  }
+
+  .survival-bottom-nav button:hover:not(:disabled) {
+    background: #f5eded;
+  }
+
+  .survival-bottom-nav button span {
+    font-size: 23px;
+  }
+
+  .survival-bottom-nav button.is-active {
+    color: var(--survival-red);
+  }
+}
+
+@media (max-width: 600px) {
+  .admin-form {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-panel {
+    padding: 16px;
+  }
+
+  .survival-heading h1 {
+    font-size: 23px;
+  }
+
+  .survival-card {
+    padding: 14px;
+  }
+
+  .survival-profile-body {
+    grid-template-columns: 1fr;
+  }
+
+  .survival-identity {
+    gap: 12px;
+  }
+
+  .survival-avatar {
+    width: 84px;
+    height: 100px;
+  }
+
+  .survival-identity-name {
+    font-size: 20px;
+  }
+
+  .survival-quick {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .survival-quick button {
+    min-height: 80px;
+    flex-direction: row;
+    gap: 10px;
+    padding: 12px 8px;
+  }
+
+  .survival-quick-icon {
+    font-size: 24px;
+  }
+
+  .survival-today-body {
+    gap: 14px;
+  }
+
+  .survival-calendar {
+    width: 76px;
+    height: 96px;
+  }
+
+  .survival-calendar strong {
+    font-size: 34px;
+  }
+
+  .survival-page > section,
+  .survival-page > div > section,
+  .survival-auth > section {
+    padding: 16px;
+  }
+
+  form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .care-states {
+    grid-template-columns: 1fr;
+  }
+
+  .dev-row input[type="number"] {
+    flex: none;
+    width: 100%;
+  }
+}
