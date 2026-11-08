@@ -15,9 +15,12 @@
     "dev:frontend": "npm start --workspace frontend",
     "test": "npm test --workspace server",
     "build": "npm run build --workspace frontend",
-    "db:check": "npm run db:check --workspace server"
+    "db:check": "npm run db:check --workspace server",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d frontend/build"
   },
   "devDependencies": {
-    "concurrently": "^9.2.1"
+    "concurrently": "^9.2.1",
+    "gh-pages": "^6.3.0"
   }
 }
