@@ -3,6 +3,15 @@ import assert from 'node:assert/strict';
 import {proxy} from './worker.mjs';
 const base='https://api.survivalbob.site/functions/v1/api';
 const env={EDGE_PROXY_SECRET:'s'.repeat(64)};
+test('temporary origin must match exactly and cannot change upstream or inject verification token',async()=>{
+    const origin='https://sangjonbap-api-proxy.fixture.workers.dev';
+    let calls=0;
+    const fetcher=async(url,options)=>{calls++;assert.equal(url,'https://grkohfxvafbquhmgnvwj.supabase.co/functions/v1/api/auth/config');assert.equal(options.headers.get('x-edge-verification-key'),null);return new Response('{}',{status:401});};
+    assert.equal((await proxy(new Request(origin+'/functions/v1/api/auth/config'),{...env,PUBLIC_PROXY_ORIGIN:origin},fetcher)).status,401);
+    assert.equal((await proxy(new Request('https://other.fixture.workers.dev/functions/v1/api'),{...env,PUBLIC_PROXY_ORIGIN:origin},fetcher)).status,404);
+    assert.equal(calls,1);
+    assert.equal((await proxy(new Request(origin),{...env,PUBLIC_PROXY_ORIGIN:'https://evil.example'},fetcher)).status,503);
+});
 test('proxy preserves body, query, origin, cookies; overwrites spoofed secret; no redirect following',async()=>{
     let calls=0;
     const r=await proxy(new Request(base+'/auth/mastodon/callback?code=test&state=test',{method:'POST',headers:{Cookie:'session=test',Origin:'https://survivalbob.site','x-sangjonbap-proxy':'forged'},body:'payload'}),env,async(url,opts)=>{

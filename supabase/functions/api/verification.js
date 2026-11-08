@@ -13,6 +13,9 @@ export function createVerificationApi(env, options = {}) {
     // OAuth routes are never reachable. No real OAuth credentials are needed or registered.
     const runtime = createEdgeApi({...env, MASTODON_CLIENT_ID:'VERIFICATION_DISABLED',
         MASTODON_CLIENT_SECRET:'VERIFICATION_DISABLED'}, options);
+    const verificationOrigin = env.VERIFICATION_FRONTEND_ORIGIN;
+    if (verificationOrigin && verificationOrigin !== 'https://lumia-sh.github.io')
+        throw new Error('Invalid verification frontend origin');
     const app = express();
     app.set('env', 'production');
     app.disable('x-powered-by');
@@ -22,7 +25,7 @@ export function createVerificationApi(env, options = {}) {
         res.set('Cache-Control', 'no-store');
         res.vary('Origin');
         const origin = req.headers.origin;
-        if (origin && origin !== runtime.config.origin) throw new AppError(403, 'ORIGIN_DENIED', '허용되지 않은 출처입니다.');
+        if (origin && origin !== runtime.config.origin && origin !== verificationOrigin) throw new AppError(403, 'ORIGIN_DENIED', '허용되지 않은 출처입니다.');
         if (origin) {
             res.set('Access-Control-Allow-Origin', origin);
             res.set('Access-Control-Allow-Credentials', 'true');

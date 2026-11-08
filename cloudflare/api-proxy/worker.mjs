@@ -4,7 +4,10 @@ const prefix = '/functions/v1/api';
 
 export async function proxy(request, env, fetchImpl = fetch) {
     const url = new URL(request.url);
-    if (url.origin !== publicOrigin || !(url.pathname === prefix || url.pathname.startsWith(prefix + '/')))
+    const allowedOrigin = env.PUBLIC_PROXY_ORIGIN || publicOrigin;
+    if (allowedOrigin !== publicOrigin && !/^https:\/\/[a-z0-9-]+\.[a-z0-9-]+\.workers\.dev$/.test(allowedOrigin))
+        return new Response('Proxy unavailable', {status:503, headers:{'Cache-Control':'no-store'}});
+    if (url.origin !== allowedOrigin || !(url.pathname === prefix || url.pathname.startsWith(prefix + '/')))
         return new Response('Not found', {status:404, headers:{'Cache-Control':'no-store'}});
     if (typeof env.EDGE_PROXY_SECRET !== 'string' || env.EDGE_PROXY_SECRET.length < 32)
         return new Response('Proxy unavailable', {status:503, headers:{'Cache-Control':'no-store'}});

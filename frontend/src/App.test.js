@@ -6,6 +6,22 @@ jest.mock('./api/client',()=>({...jest.requireActual('./api/client'),api:jest.fn
 let root,div;
 beforeEach(()=>{global.IS_REACT_ACT_ENVIRONMENT=true;api.mockReset();setToken.mockReset();div=document.createElement('div');root=createRoot(div);});
 afterEach(async()=>{await act(async()=>root.unmount());});
+test('initial connection failure leaves loading state and retry restores provider',async()=>{
+  api.mockRejectedValueOnce(Object.assign(new Error('연결 실패'),{code:'API_CONNECTION_FAILED'}));
+  await act(async()=>root.render(<App/>));
+  expect(div.textContent).not.toContain('인증 방식 확인 중');
+  expect(div.textContent).toContain('연결 실패');
+  expect(div.querySelector('input[type=password]')).toBeNull();
+  api.mockResolvedValueOnce({provider:'dev'});
+  await act(async()=>[...div.querySelectorAll('button')].find(b=>b.textContent==='연결 다시 시도').click());
+  expect(div.querySelector('input[type=password]')).not.toBeNull();
+});
+test('verification denial never offers a bypass login',async()=>{
+  api.mockRejectedValueOnce(Object.assign(new Error('key required'),{code:'VERIFICATION_KEY_REQUIRED',status:401}));
+  await act(async()=>root.render(<App/>));
+  expect(div.textContent).toContain('검증 제한 중');
+  expect(div.querySelector('input[type=password]')).toBeNull();
+});
 test('OAuth guest gets fixed login link and no DEV key input',async()=>{
   api.mockResolvedValueOnce({provider:'mastodon'}).mockRejectedValueOnce(Object.assign(new Error('로그인 필요'),{status:401}));
   await act(async()=>root.render(<App/>));

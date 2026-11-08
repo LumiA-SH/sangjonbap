@@ -1,7 +1,8 @@
 import React from 'react';
 import './HomeDecor.css';
+import {publicAsset} from './publicAsset';
 
-const asset = name => `/assets/decor/${name}.svg`;
+const asset = name => publicAsset(`assets/decor/${name}.svg`);
 
 export function HomeHeaderDecor() {
     return (

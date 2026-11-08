@@ -47,6 +47,13 @@ export function mastodonRoutes(config,repository,sessions,{fetchImpl=fetch}={}) 
         const session=await sessions.issue(user);
         res.cookie(sessionCookie,session.token,{...secureCookie,maxAge:session.expiresIn*1000});
         res.redirect(303,config.origin+'/');
+    },(error,req,res,next)=>{
+        // Only callback failures use this fixed destination; never forward query or error text.
+        if(res.headersSent)return next(error);
+        const allowed=new Set(['OAUTH_STATE_INVALID','OAUTH_DENIED','OAUTH_CODE_INVALID','OAUTH_EXCHANGE_FAILED','USER_UNAVAILABLE','OAUTH_IDENTITY_CONFLICT']);
+        const code=allowed.has(error?.code)?error.code:'OAUTH_LOGIN_FAILED';
+        res.set({'Cache-Control':'no-store','Referrer-Policy':'no-referrer'});
+        res.redirect(303,'https://survivalbob.site/#oauth_error='+code);
     });
     return router;
 }

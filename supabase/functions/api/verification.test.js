@@ -40,6 +40,20 @@ test('verification guard isolates all gameplay, preserves auth and uses read-onl
     assert.equal(queries[0],'BEGIN READ ONLY');assert.equal(queries.at(-2),'ROLLBACK');assert.equal(queries.at(-1),'release');
 });
 test('missing verification key fails closed before creating app',()=>assert.throws(()=>createVerificationApi({...env,EDGE_VERIFICATION_TOKEN:''})));
+test('optional Pages CORS supports error inspection without bypassing either guard',async t=>{
+    const origin='https://lumia-sh.github.io';
+    const runtime=createVerificationApi({...env,VERIFICATION_FRONTEND_ORIGIN:origin},{poolFactory:()=>({query(){throw new Error('DB forbidden');}})});
+    const server=runtime.app.listen(0,'127.0.0.1');await new Promise(r=>server.once('listening',r));t.after(()=>new Promise(r=>server.close(r)));
+    const url=`http://127.0.0.1:${server.address().port}/api/auth/config`;
+    const headers={Origin:origin,'x-sangjonbap-proxy':env.EDGE_PROXY_SECRET};
+    const r=await fetch(url,{headers});assert.equal(r.status,401);assert.equal(r.headers.get('access-control-allow-origin'),origin);
+    assert.equal((await r.json()).error.code,'VERIFICATION_KEY_REQUIRED');
+    assert.equal((await fetch(url,{method:'OPTIONS',headers:{...headers,'Access-Control-Request-Method':'GET'}})).status,204);
+    assert.equal((await fetch(url,{headers:{Origin:origin}})).status,403);
+    assert.equal((await fetch(url,{headers:{...headers,'x-sangjonbap-proxy':'wrong'}})).status,403);
+    assert.equal((await fetch(url,{headers:{...headers,'x-edge-verification-key':env.EDGE_VERIFICATION_TOKEN}})).status,403);
+    assert.equal((await fetch(url,{method:'POST',headers:{...headers,'x-edge-verification-key':env.EDGE_VERIFICATION_TOKEN}})).status,403);
+});
 
 
 test('proxy and Edge guards compose without executing gameplay', async t => {

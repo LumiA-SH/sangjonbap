@@ -9,11 +9,11 @@ const config={provider:'mastodon',nodeEnv:'production',mode:'supabase',origin:'h
     oauthRedirect:'https://survivalbob.site/api/auth/mastodon/callback',oauthClientId:'fixture-client',oauthClientSecret:'fixture-secret'};
 async function fixture(t) {
     const states=new Map(),sessions=new Map(),user={id:'1',role:'USER',is_active:true,character_id:null};
-    let fail=false,exchangeCount=0;
+    let fail=false,exchangeCount=0,resolveFail=false;
     const repo={
         async saveOAuthState(hash,browser){states.set(hash,browser);},
         async consumeOAuthState(hash,browser){if(states.get(hash)!==browser)return false;states.delete(hash);return true;},
-        async resolveOAuthUser(instance,id){assert.equal(instance,'survival-bob.site');assert.equal(id,'123');return {...user};},
+        async resolveOAuthUser(instance,id){if(resolveFail)throw new Error('private-db-error');assert.equal(instance,'survival-bob.site');assert.equal(id,'123');return {...user};},
         async saveOAuthSession(hash){sessions.set(hash,true);},async revokeOAuthSession(hash){sessions.delete(hash);},
         async getOAuthSession(hash){return sessions.has(hash)&&user.is_active?{...user}:null;},
         async listAdminRecords(){return [];},async getAdminRecord(){return {};},async saveAdminRecord(){return {};}
@@ -41,7 +41,7 @@ async function fixture(t) {
         const cookie=r.headers.get('set-cookie').split(';')[0],verifier=cookie.split('=')[1];
         assert.equal(url.searchParams.get('code_challenge'),createHash('sha256').update(verifier).digest('base64url'));
         return {cookie,path:'/auth/mastodon/callback?code=fixture-code&state='+url.searchParams.get('state')};}
-    return {request,begin,user,states,sessions,setFail:v=>{fail=v;},count:()=>exchangeCount};
+    return {request,begin,user,states,sessions,setFail:v=>{fail=v;},count:()=>exchangeCount,setResolveFail:()=>{resolveFail=true;}};
 }
 test('OAuth binds browser/state/PKCE, rotates session, respects role and logs out',async t=>{
     const f=await fixture(t),first=await f.begin();
@@ -69,14 +69,14 @@ test('OAuth binds browser/state/PKCE, rotates session, respects role and logs ou
 });
 test('state mismatch, cookie mismatch, expired state, callback replay and exchange errors fail closed',async t=>{
     const f=await fixture(t),a=await f.begin(),b=await f.begin();
-    assert.equal((await f.request(a.path,{headers:{Cookie:b.cookie}})).status,400);assert.equal(f.count(),0);
+    assertCallbackError(await f.request(a.path,{headers:{Cookie:b.cookie}}),'OAUTH_STATE_INVALID');assert.equal(f.count(),0);
     const results=await Promise.all([f.request(a.path,{headers:{Cookie:a.cookie}}),f.request(a.path,{headers:{Cookie:a.cookie}})]);
-    assert.deepEqual(results.map(r=>r.status).sort(),[303,400]);assert.equal(f.count(),1);
-    f.states.clear();assert.equal((await f.request(b.path,{headers:{Cookie:b.cookie}})).status,400);
+    assert.deepEqual(results.map(r=>r.headers.get('location')).sort(),['https://survivalbob.site/','https://survivalbob.site/#oauth_error=OAUTH_STATE_INVALID']);assert.equal(f.count(),1);
+    f.states.clear();assertCallbackError(await f.request(b.path,{headers:{Cookie:b.cookie}}),'OAUTH_STATE_INVALID');
     const c=await f.begin();f.setFail(true);const failed=await f.request(c.path,{headers:{Cookie:c.cookie}});
-    assert.equal(failed.status,502);assert.ok(!(await failed.text()).includes('fixture-secret'));
-    assert.equal((await f.request(c.path,{headers:{Cookie:c.cookie}})).status,400);
-    const d=await f.begin();assert.equal((await f.request(d.path.replace('code=fixture-code','error=access_denied'),{headers:{Cookie:d.cookie}})).status,400);
+    assertCallbackError(failed,'OAUTH_EXCHANGE_FAILED');assert.ok(!(await failed.text()).includes('fixture-secret'));
+    assertCallbackError(await f.request(c.path,{headers:{Cookie:c.cookie}}),'OAUTH_STATE_INVALID');
+    const d=await f.begin();assertCallbackError(await f.request(d.path.replace('code=fixture-code','error=access_denied&error_description=private-value'),{headers:{Cookie:d.cookie}}),'OAUTH_DENIED');
     assert.equal((await f.request('/auth/mastodon/login?returnTo=https://evil.example')).status,400);
     assert.equal((await f.request('/auth/dev/login',{method:'POST',headers:{Origin:config.origin,'Content-Type':'application/json'},body:'{}'})).status,403);
     assert.equal((await f.request('/characters',{method:'POST',headers:{Origin:config.origin}})).status,401);
@@ -90,4 +90,20 @@ test('OAuth configuration exact HTTPS callback and server credentials required',
 test('first-admin CLI guard rejects absent OAuth proof without promoting accounts',async()=>{
     for(const rows of [[],[{oauth_verified_at:null}]])await assert.rejects(requireOAuthVerifiedAccount({query:async()=>({rows})},'1'),/OAuth/);
     await requireOAuthVerifiedAccount({query:async()=>({rows:[{oauth_verified_at:new Date()}]})},'1');
+});
+
+function assertCallbackError(response,code){
+ assert.equal(response.status,303);
+ assert.equal(response.headers.get('location'),'https://survivalbob.site/#oauth_error='+code);
+ assert.equal(response.headers.get('referrer-policy'),'no-referrer');
+ assert.equal(response.headers.get('cache-control'),'no-store');
+ assert.ok(!response.headers.get('set-cookie').includes('__Host-sangjonbap-session='));
+}
+test('unexpected callback errors and malformed codes redirect without leaking request or internal details',async t=>{
+ const f=await fixture(t),a=await f.begin();
+ assertCallbackError(await f.request(a.path.replace('code=fixture-code','returnTo=https://evil.example'),{headers:{Cookie:a.cookie}}),'OAUTH_CODE_INVALID');
+ const b=await f.begin();f.setResolveFail();
+ const response=await f.request(b.path+'&returnTo=https://evil.example',{headers:{Cookie:b.cookie}});
+ assertCallbackError(response,'OAUTH_LOGIN_FAILED');
+ assert.ok(!(await response.text()).includes('private-db-error'));assert.equal(f.sessions.size,0);
 });

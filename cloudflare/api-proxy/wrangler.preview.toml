@@ -1,0 +1,13 @@
+# Verification-only workers.dev deployment; no Custom Domain or DNS route.
+name = "sangjonbap-api-proxy"
+main = "worker.mjs"
+compatibility_date = "2026-11-08"
+workers_dev = true
+preview_urls = false
+routes = []
+
+[vars]
+PUBLIC_PROXY_ORIGIN = "https://sangjonbap-api-proxy.lumia1592.workers.dev"
+
+[observability]
+enabled = false

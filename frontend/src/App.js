@@ -1,4 +1,6 @@
 import MobileLoginHelp from './MobileLoginHelp';
+import {publicAsset} from './publicAsset';
+import OAuthErrorNotice from './OAuthErrorNotice';
 import { useEffect, useRef, useState } from 'react';
 import CharacterCreationPanel from './dev/CharacterCreationPanel';
 import { api, apiUrl, setToken } from './api/client';
@@ -16,10 +18,10 @@ import RecordsPanel from './dev/RecordsPanel';
 import BattlePanel from './dev/BattlePanel';
 import { HomeHeaderDecor } from './HomeDecor';
 
-const FALLBACK_IMAGE = '/test.png';
+const FALLBACK_IMAGE = publicAsset('test.png');
 
 function NavIcon({ name, className = '' }) {
-    return <img src={`/assets/decor/icon-${name}.svg`} alt="" aria-hidden="true" className={className} />;
+    return <img src={publicAsset(`assets/decor/icon-${name}.svg`)} alt="" aria-hidden="true" className={className} />;
 }
 
 function GameImage({ src, alt, className }) {
@@ -74,6 +76,8 @@ export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [loggedIn, setLoggedIn] = useState(false);
   const [provider, setProvider] = useState(null);
+  const [authError, setAuthError] = useState(null);
+  const [authAttempt, setAuthAttempt] = useState(0);
   const [user, setUser] = useState(null);
   const [adminOpen, setAdminOpen] = useState(false);
   const [character, setCharacter] = useState(null);
@@ -100,11 +104,13 @@ export default function App() {
 
   useEffect(() => {
     let live = true;
+    setAuthError(null);
 
     api('/auth/config')
         .then(async config => {
           if (!live) return;
 
+          if (!['mastodon','dev'].includes(config.provider)) throw new Error('지원하지 않는 인증 설정입니다.');
           setProvider(config.provider);
 
           if (config.provider === 'mastodon') {
@@ -127,7 +133,7 @@ export default function App() {
           }
         })
         .catch(error => {
-          if (live) setMessage(error.message);
+          if (live) setAuthError(error);
         });
 
     return () => {
@@ -135,7 +141,7 @@ export default function App() {
     };
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [authAttempt]);
 
   async function run(task) {
     if (running.current) return;
@@ -291,7 +297,7 @@ export default function App() {
       <div className="survival-app">
         <aside className={`survival-sidebar ${menuOpen ? 'is-open' : ''}`}>
           <button type="button" className="survival-logo survival-logo-link" onClick={() => navigate('home')} aria-label="생존밥 홈으로 이동">
-            <img src="/saengjonbap_logo.png" alt="생존밥" />
+            <img src={publicAsset('saengjonbap_logo.png')} alt="생존밥" />
           </button>
 
           <nav aria-label="주 메뉴">
@@ -304,7 +310,7 @@ export default function App() {
           </nav>
 
           <div className="survival-sidebar-foot">
-            <img className="survival-sidebar-cutlery" src="/assets/decor/side-cutlery.svg" alt="" aria-hidden="true" />
+            <img className="survival-sidebar-cutlery" src={publicAsset('assets/decor/side-cutlery.svg')} alt="" aria-hidden="true" />
             REVIVAL COMPLETE
             <br />
             OF THE CORPSE
@@ -317,7 +323,7 @@ export default function App() {
             <button className="survival-menu-toggle" type="button" onClick={() => setMenuOpen(!menuOpen)} aria-label="전체 메뉴" aria-expanded={menuOpen}>☰</button>
 
             <button type="button" className="survival-mobile-logo survival-logo-link" onClick={() => navigate('home')} aria-label="생존밥 홈으로 이동">
-              <img src="/saengjonbap_logo.png" alt="생존밥" />
+              <img src={publicAsset('saengjonbap_logo.png')} alt="생존밥" />
             </button>
 
             <span className="survival-top-caption">SURVIVAL COOKING SYSTEM</span>
@@ -420,7 +426,8 @@ export default function App() {
 
             <div className="survival-auth" style={{ display: loggedIn && view !== 'home' ? 'none' : 'block' }}>
               <section aria-labelledby="login-title">
-                <h2 id="login-title">{provider === 'mastodon' ? 'Mastodon 로그인' : '개발 로그인'}</h2>
+                <OAuthErrorNotice />
+                <h2 id="login-title">{provider === 'mastodon' ? 'Mastodon 로그인' : provider === 'dev' ? '개발 로그인' : '로그인 연결'}</h2>
 
                 {provider === 'dev' && (
                     <p>서버의 DEV_LOGIN_KEY를 입력하세요. 토큰은 메모리에만 보관되며 새로고침하면 다시 로그인해야 합니다.</p>
@@ -439,7 +446,11 @@ export default function App() {
                           <button disabled={busy}>로그인</button>
                         </form>
                     ) : (
-                        <p>인증 방식 확인 중…</p>
+                        authError ? <div role="alert">
+                          <p>{authError.code?.startsWith('VERIFICATION_') ? 'API는 연결되었지만 현재 검증 제한 중입니다. 로그인은 아직 공개되지 않았습니다.' : authError.message}</p>
+                          <p>{authError.code}{authError.status ? ` (HTTP ${authError.status})` : ''}</p>
+                          <button onClick={() => setAuthAttempt(value => value + 1)}>연결 다시 시도</button>
+                        </div> : <p>인증 방식 확인 중…</p>
                     )
                 ) : (
                     <div className="actions">
