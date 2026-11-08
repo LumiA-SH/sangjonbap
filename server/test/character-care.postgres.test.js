@@ -1,8 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
-import {loadConfig} from '../src/config/env.js';
-import {createPool} from '../src/db/pool.js';
+import {createIsolatedPool as createPool} from './isolated-pool.js';
 import {createPostgresRepository} from '../src/modules/character/repository.js';
 import {createCharacterCareRepository} from '../src/modules/character/care-repository.js';
 import {createCharacterCareService} from '../src/modules/character/care-service.js';
@@ -14,7 +13,7 @@ import {createInvestigationRepository} from '../src/modules/investigation/reposi
 test('PostgreSQL character care, rollback and concurrency', {
     skip: process.env.RUN_CHARACTER_DB_TESTS !== '1'
 }, async t => {
-    const pool = createPool(loadConfig());
+    const pool = createPool();
     const core = createPostgresRepository(pool);
     const service = createCharacterCareService(createCharacterCareRepository(pool));
     const inventory = createInventoryRepository(pool);
@@ -202,7 +201,7 @@ test('PostgreSQL character care, rollback and concurrency', {
             await dead(1);
             const result = await revive();
             assert.equal(result.provider.blood, 70);
-            assert.deepEqual(result.target, {id: ids[1], hp: 100, blood: 100, status: 'ALIVE', death_count: 1, revive_count: 1});
+            assert.deepEqual(result.target, {id: ids[1], hp: 100, blood: 50, status: 'ALIVE', death_count: 1, revive_count: 1});
             assert.equal((await logs('REVIVE')).length, 1);
             assert.equal((await logs('DEATH')).length, 0);
         });
@@ -311,7 +310,7 @@ test('PostgreSQL character care, rollback and concurrency', {
             await dead(1);
             await rejects(inventory.deposit(users[1], itemId, 1, randomUUID()), 'CHARACTER_DEAD');
             await rejects(inventory.withdraw(users[1], itemId, 1, randomUUID()), 'CHARACTER_DEAD');
-            await rejects(investigation.getInvestigationAreas(users[1]), 'CHARACTER_DEAD');
+            assert.ok(Array.isArray(await investigation.getInvestigationAreas(users[1]))); // v0.2 permits information reads while DEAD.
             await revive();
             assert.ok(Array.isArray(await investigation.getInvestigationAreas(users[1])));
             assert.equal((await inventory.deposit(users[1], itemId, 1, randomUUID())).type, 'OK');

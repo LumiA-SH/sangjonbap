@@ -1,3 +1,4 @@
+import {beginGameTransaction, commitGameTransaction, rollbackGameTransaction} from '../../shared/daily-gate.js';
 import {isBloodPack,validateBloodPack} from '../inventory/blood-pack.js';
 import {currentKstDay, requireNoActiveBattle, requireActionCharacter} from '../../shared/actions.js';
 import {AppError} from '../../shared/http.js';
@@ -47,7 +48,7 @@ when s.daily_limit is null then null else greatest(0,s.daily_limit-coalesce(t.da
         async buyProduct(userId, productId, quantity, requestKey) {
             const client = await pool.connect();
             try {
-                await client.query('begin');
+                await beginGameTransaction(client);
                 await rejectDuplicate(client, requestKey);
                 // All shop mutations: product -> ownership/character -> item -> inventory.
                 const product = (await client.query('select * from public.shop_product where id=$1 for update', [productId])).rows[0];
@@ -59,7 +60,7 @@ when s.daily_limit is null then null else greatest(0,s.daily_limit-coalesce(t.da
                 await requireNoActiveBattle(client,before);
                 if(product.recipe_id!=null) {
                     const result=await buyRecipeProduct(client,before,product,quantity,requestKey,await currentKstDay(client));
-                    await client.query('commit');
+                    await commitGameTransaction(client);
                     return result;
                 }
                 const item = (await client.query('select * from public.item where id=$1 for update', [product.item_id])).rows[0];
@@ -110,10 +111,10 @@ when s.daily_limit is null then null else greatest(0,s.daily_limit-coalesce(t.da
                     description: `${item.name} ${quantity}개를 구매했습니다.`, requestKey,
                     detail: {...result, currency_before: Number(before.currency), inventory_before: inventory.before}
                 });
-                await client.query('commit');
+                await commitGameTransaction(client);
                 return result;
             } catch (error) {
-                await client.query('rollback');
+                await rollbackGameTransaction(client);
                 if (error.code === '23505' && ['action_log_request_key_key', 'shop_purchase_request_key_key'].includes(error.constraint)) {
                     throw new AppError(409, 'DUPLICATE_REQUEST', '이미 사용된 requestKey입니다.');
                 }

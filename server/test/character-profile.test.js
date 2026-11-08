@@ -4,8 +4,7 @@ import {randomUUID} from 'node:crypto';
 import {createApp} from '../src/app.js';
 import {createMemoryRepository} from '../src/db/memory.js';
 import {createPostgresRepository} from '../src/modules/character/repository.js';
-import {loadConfig} from '../src/config/env.js';
-import {createPool} from '../src/db/pool.js';
+import {createIsolatedPool as createPool} from './isolated-pool.js';
 
 test('search HTTP auth, query validation, safe shape, nullable profile and edit HOLD',async t=>{
     const repo=createMemoryRepository('1');
@@ -29,7 +28,7 @@ test('search HTTP auth, query validation, safe shape, nullable profile and edit 
 });
 
 test('PostgreSQL profile compatibility and duplicate-name literal substring search', {skip:process.env.RUN_PROFILE_DB_TESTS!=='1'},async()=>{
-    const pool=createPool(loadConfig());const c=await pool.connect();
+    const pool=createPool();const c=await pool.connect();
     try {
         await c.query('begin');const ids=[],users=[];const name=`DEV profile ${randomUUID()}`;
         for(let i=0;i<4;i++) {

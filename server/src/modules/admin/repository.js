@@ -1,3 +1,4 @@
+import {beginGameTransaction, commitGameTransaction, rollbackGameTransaction} from '../../shared/daily-gate.js';
 import {AppError} from '../../shared/http.js';
 import {writeActionLog} from '../../shared/game.js';
 import {createAdminMasterRepository} from './master-repository.js';
@@ -36,7 +37,7 @@ export function createAdminRepository(pool) {
         async saveAdminRecord(userId,kind,id,patch,requestKey) {
             const c=await pool.connect();
             try {
-                await c.query('begin');
+                await beginGameTransaction(c);
                 // Product first, matching purchase -> auth/character -> item order.
                 let before=null;
                 if (id && kind==='products') {
@@ -75,9 +76,9 @@ export function createAdminRepository(pool) {
                 const after=(await c.query(sql,id?[...values,id]:values)).rows[0];
                 await writeActionLog(c,{adminUserId:userId,category:'ADMIN',actionType:`${kind==='items'?'ITEM':'SHOP_PRODUCT'}_${id?'UPDATE':'CREATE'}`,
                     targetType:kind==='items'?'ITEM':'SHOP_PRODUCT',targetId:after.id,description:'관리자 데이터 변경',detail:{before,after},requestKey});
-                await c.query('commit');return after;
+                await commitGameTransaction(c);return after;
             } catch(e) {
-                await c.query('rollback');
+                await rollbackGameTransaction(c);
                 if (e.code==='23505' && e.constraint==='action_log_request_key_key') fail('DUPLICATE_REQUEST','이미 처리된 요청입니다.');
                 throw e;
             } finally {c.release();}

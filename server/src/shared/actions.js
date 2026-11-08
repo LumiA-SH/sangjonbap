@@ -1,3 +1,4 @@
+import {beginGameTransaction, commitGameTransaction, rollbackGameTransaction} from './daily-gate.js';
 import {AppError} from './http.js';
 
 // Call only after locking the character. Battle writers use character -> battle too.
@@ -19,7 +20,7 @@ export async function rejectActionDuplicate(client,key) {
 }
 export async function actionTransaction(pool,work) {
     const c=await pool.connect();
-    try {await c.query('begin');const result=await work(c);await c.query('commit');return result;}
-    catch(e){await c.query('rollback');if(e.code==='23505'&&e.constraint==='action_log_request_key_key')throw new AppError(409,'DUPLICATE_REQUEST','이미 처리된 요청입니다.');throw e;}
+    try {await beginGameTransaction(c);const result=await work(c);await commitGameTransaction(c);return result;}
+    catch(e){await rollbackGameTransaction(c);if(e.code==='23505'&&e.constraint==='action_log_request_key_key')throw new AppError(409,'DUPLICATE_REQUEST','이미 처리된 요청입니다.');throw e;}
     finally{c.release();}
 }

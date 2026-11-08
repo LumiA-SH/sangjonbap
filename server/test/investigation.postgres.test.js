@@ -1,8 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
-import {loadConfig} from '../src/config/env.js';
-import {createPool} from '../src/db/pool.js';
+import {createIsolatedPool as createPool} from './isolated-pool.js';
 import {createInvestigationRepository} from '../src/modules/investigation/repository.js';
 
 // Opt-in: fixture rows stay inside an outer transaction and are rolled back.
@@ -10,7 +9,7 @@ import {createInvestigationRepository} from '../src/modules/investigation/reposi
 test('PostgreSQL investigation integration (all fixture rows rolled back)', {
   skip: process.env.RUN_INVESTIGATION_DB_TESTS !== '1'
 }, async t => {
-  const pool = createPool(loadConfig());
+  const pool = createPool();
   const client = await pool.connect();
   try {
     await client.query('begin');

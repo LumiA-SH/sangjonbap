@@ -1,3 +1,4 @@
+import {beginGameTransaction, commitGameTransaction, rollbackGameTransaction} from '../../shared/daily-gate.js';
 import {requireNoActiveBattle} from '../../shared/actions.js';
 import {transferInventoryItem} from './transfer.js';
 import {AppError} from '../../shared/http.js';
@@ -95,11 +96,11 @@ export function createInventoryRepository(pool) {
             const client = await pool.connect();
 
             try {
-                await client.query('begin');
+                await beginGameTransaction(client);
 
                 const character = await lockCharacterByUser(client, userId);
                 if (!character) {
-                    await client.query('rollback');
+                    await rollbackGameTransaction(client);
                     return {type:'CHARACTER_NOT_FOUND'};
                 }
 
@@ -107,18 +108,18 @@ export function createInventoryRepository(pool) {
                 await requireNoActiveBattle(client,character);
                 const item = await lockItem(client, itemId);
                 if (!item) {
-                    await client.query('rollback');
+                    await rollbackGameTransaction(client);
                     return {type:'ITEM_NOT_FOUND'};
                 }
 
                 if (!item.transferable) {
-                    await client.query('rollback');
+                    await rollbackGameTransaction(client);
                     return {type:'NOT_TRANSFERABLE'};
                 }
 
                 const inventory = await changeInventoryQuantity(client, character.id, itemId, -quantity);
                 if (!inventory.ok) {
-                    await client.query('rollback');
+                    await rollbackGameTransaction(client);
                     return {type:'NOT_ENOUGH_INVENTORY'};
                 }
 
@@ -143,7 +144,7 @@ export function createInventoryRepository(pool) {
                     requestKey
                 });
 
-                await client.query('commit');
+                await commitGameTransaction(client);
 
                 return {
                     type:'OK',
@@ -153,7 +154,7 @@ export function createInventoryRepository(pool) {
                     storageQuantity:storage.after
                 };
             } catch (err) {
-                await client.query('rollback');
+                await rollbackGameTransaction(client);
                 if (isDuplicateRequest(err)) return {type:'DUPLICATE_REQUEST'};
                 throw err;
             } finally {
@@ -165,11 +166,11 @@ export function createInventoryRepository(pool) {
             const client = await pool.connect();
 
             try {
-                await client.query('begin');
+                await beginGameTransaction(client);
 
                 const character = await lockCharacterByUser(client, userId);
                 if (!character) {
-                    await client.query('rollback');
+                    await rollbackGameTransaction(client);
                     return {type:'CHARACTER_NOT_FOUND'};
                 }
 
@@ -177,18 +178,18 @@ export function createInventoryRepository(pool) {
                 await requireNoActiveBattle(client,character);
                 const item = await lockItem(client, itemId);
                 if (!item) {
-                    await client.query('rollback');
+                    await rollbackGameTransaction(client);
                     return {type:'ITEM_NOT_FOUND'};
                 }
 
                 if (!item.transferable) {
-                    await client.query('rollback');
+                    await rollbackGameTransaction(client);
                     return {type:'NOT_TRANSFERABLE'};
                 }
 
                 const storage = await changeStorageQuantity(client, itemId, -quantity);
                 if (!storage.ok) {
-                    await client.query('rollback');
+                    await rollbackGameTransaction(client);
                     return {type:'NOT_ENOUGH_STORAGE'};
                 }
 
@@ -213,7 +214,7 @@ export function createInventoryRepository(pool) {
                     requestKey
                 });
 
-                await client.query('commit');
+                await commitGameTransaction(client);
 
                 return {
                     type:'OK',
@@ -223,7 +224,7 @@ export function createInventoryRepository(pool) {
                     storageQuantity:storage.after
                 };
             } catch (err) {
-                await client.query('rollback');
+                await rollbackGameTransaction(client);
                 if (isDuplicateRequest(err)) return {type:'DUPLICATE_REQUEST'};
                 throw err;
             } finally {

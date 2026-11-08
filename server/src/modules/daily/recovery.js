@@ -4,15 +4,33 @@ import {readNumberSettings, resourceNumber} from '../../shared/settings.js';
 import {nextPendingDate} from './date.js';
 
 // Without a complete lifecycle ledger, death/revival counters can prove only
-// the never-dead case. Do not infer historical state from updated_at (now()
-// uses the transaction start time) or apply today's state to each missed day.
-export function recoveryDecayReason(character, boundary, previous) {
-    if (new Date(character.created_at).getTime() >= new Date(boundary).getTime()) return 'CREATED_AFTER_BOUNDARY';
-    if (character.status !== 'ALIVE' || Number(character.hp) <= 0) return 'NOT_ALIVE';
-    const unchangedSinceReset=previous?.status==='ALIVE' &&
-        Number(previous.death_count)===Number(character.death_count) &&
-        Number(previous.revive_count)===Number(character.revive_count);
-    if (!unchangedSinceReset && (Number(character.death_count)!==0 || Number(character.revive_count)!==0)) return 'LIFECYCLE_HISTORY_INCOMPLETE';
+// the never-dead case. Do not infer historical state from updated_at.
+export function recoveryDecayReason(character, boundary, previous, lifecycleAtBoundary = null) {
+    if (new Date(character.created_at).getTime() >= new Date(boundary).getTime()) {
+        return 'CREATED_AFTER_BOUNDARY';
+    }
+
+    if (character.status !== 'ALIVE' || Number(character.hp) <= 0) {
+        return 'NOT_ALIVE';
+    }
+
+    // A dated revival ledger can establish the boundary state even when counters
+    // changed since yesterday. Merely having one pending date proves nothing.
+    if (lifecycleAtBoundary?.status === 'ALIVE' &&
+        Number(lifecycleAtBoundary.death_count) === Number(character.death_count) &&
+        Number(lifecycleAtBoundary.revive_count) === Number(character.revive_count)) {
+        return null;
+    }
+
+    const unchangedSinceReset = previous?.status === 'ALIVE' &&
+        Number(previous.death_count) === Number(character.death_count) &&
+        Number(previous.revive_count) === Number(character.revive_count);
+
+    if (!unchangedSinceReset &&
+        (Number(character.death_count) !== 0 || Number(character.revive_count) !== 0)) {
+        return 'LIFECYCLE_HISTORY_INCOMPLETE';
+    }
+
     return null;
 }
 
@@ -21,6 +39,7 @@ export function createDailyRecovery(pool) {
         const client=await pool.connect();
         try {
             await client.query('begin');
+            await client.query("set local lock_timeout = '5s'");
             const state=(await client.query(`select start_date::text,last_completed_date::text
                 from public.daily_reset_state where singleton=true for update`)).rows[0];
             if(!state) throw new AppError(500,'DAILY_RESET_STATE_MISSING','일일 초기화 상태가 없습니다.');
@@ -37,6 +56,13 @@ export function createDailyRecovery(pool) {
                 character_id,detail->'after' as state from public.action_log
                 where action_type='DAILY_RESET' and detail->>'to'=$1
                 order by character_id,id desc`,[state.last_completed_date])).rows.map(r=>[String(r.character_id),r.state]));
+            // Only a single boundary can use a pre-boundary revival as evidence.
+            // Multi-day recovery retains the conservative counter-history policy.
+            const lifecycle = new Map(first === today ? (await client.query(`select distinct on (target_id)
+                target_id,detail->'after'->'target' as state from public.action_log
+                where action_type='REVIVE' and target_type='CHARACTER' and created_at < $1
+                  and detail->>'dailyTransactionDay'=(created_at at time zone 'Asia/Seoul')::date::text
+                order by target_id,created_at desc,id desc`,[boundary])).rows.map(r=>[String(r.target_id),r.state]) : []);
             // Older servers/direct clients may already have processed today's
             // actions. Never erase their meals/AP/flags by a late reset.
             const activity=await client.query(`select 1 from public.action_log l
@@ -50,7 +76,7 @@ export function createDailyRecovery(pool) {
             for(const before of characters) {
                 // A new character must not receive resets for dates before birth.
                 if(new Date(before.created_at).getTime()>=new Date(boundary).getTime()) continue;
-                const reason=recoveryDecayReason(before,boundary,previous.get(String(before.id)));
+                const reason = recoveryDecayReason(before,boundary,previous.get(String(before.id)),lifecycle.get(String(before.id)));
                 const after=await changeCharacterResources(client,before,{
                     ap:Number(before.max_ap)-Number(before.ap),
                     blood:before.status==='NEAR_DEATH'?-Number(before.blood):reason?0:-settings.daily_blood_decay

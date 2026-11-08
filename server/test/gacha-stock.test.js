@@ -1,3 +1,4 @@
+import {dailyGateFixture} from './daily-gate-fixture.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
@@ -10,7 +11,7 @@ const rp={id:'8',name:'RP 물품',description:'추억을 적는 물품',is_activ
 function fixture({stock=1,currency=2,failLog=false,item=rp,food=false}={}) {
     let state={character:{id:'1',hp:100,max_hp:100,blood:100,max_blood:100,ap:10,max_ap:10,currency,status:'ALIVE',death_count:0},stock,inventory:0,logs:[]};
     let snapshot;const calls=[];const rows=values=>({rows:values,rowCount:values.length});
-    const client={release(){},async query(raw,p=[]) {
+    const client={release(){},async query(raw,p=[]) {const dailyGateResult=dailyGateFixture(raw);if(dailyGateResult)return dailyGateResult;
         const sql=raw.replace(/\s+/g,' ').trim();calls.push(sql);
         if(sql==='begin'){snapshot=structuredClone(state);return rows([]);}
         if(sql==='commit')return rows([]);if(sql==='rollback'){state=snapshot;return rows([]);}
@@ -69,7 +70,7 @@ test('stock edit preserves already awarded count and rejects stale administrator
 });
 test('admin stock update preserves reward IDs; legacy history blocks inferred stock',async()=>{
     const calls=[];let historical=false;
-    const c={async query(sql,p){calls.push({sql,p});if(sql.includes('public.action_log'))return {rowCount:historical?1:0,rows:[]};if(sql.startsWith('select * from public.item'))return {rows:[rp]};return {rows:[],rowCount:0};}};
+    const c={async query(sql,p){const dailyGateResult=dailyGateFixture(sql);if(dailyGateResult)return dailyGateResult;calls.push({sql,p});if(sql.includes('public.action_log'))return {rowCount:historical?1:0,rows:[]};if(sql.startsWith('select * from public.item'))return {rows:[rp]};return {rows:[],rowCount:0};}};
     await saveGachaStock(c,'4',{rewards:[{id:'7',item_id:'8',max_stock:4,remaining_stock:2}]},[{item_id:'8',max_stock:5,remaining_stock:3}]);
     assert(calls.some(c=>c.sql.includes('on conflict(gacha_id,item_id) do update')));assert(!calls.some(c=>c.sql.startsWith('delete')));
     historical=true;
@@ -77,7 +78,7 @@ test('admin stock update preserves reward IDs; legacy history blocks inferred st
 });
 test('inactive new reward still requires RP item; legacy inactive record can remain unresolved',async()=>{
     const calls=[];
-    const c={async query(sql,p){calls.push(sql);return sql.startsWith('select * from public.item')?{rows:[{...rp,usable:true}]}:{rows:[],rowCount:0};}};
+    const c={async query(sql,p){const dailyGateResult=dailyGateFixture(sql);if(dailyGateResult)return dailyGateResult;calls.push(sql);return sql.startsWith('select * from public.item')?{rows:[{...rp,usable:true}]}:{rows:[],rowCount:0};}};
     await assert.rejects(saveGachaStock(c,'4',null,[{item_id:'8',max_stock:1,remaining_stock:1,is_active:false}]),e=>e.code==='GACHA_RP_ITEM_REQUIRED');
     assert.equal(calls.some(sql=>sql.startsWith('insert')),false);
     await saveGachaStock(c,'4',{rewards:[{id:'7',item_id:'8',max_stock:null,remaining_stock:null}]},[{item_id:'8',max_stock:null,remaining_stock:null,is_active:false}]);

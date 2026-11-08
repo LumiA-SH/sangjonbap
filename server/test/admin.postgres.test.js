@@ -1,13 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
-import {loadConfig} from '../src/config/env.js';
-import {createPool} from '../src/db/pool.js';
+import {createIsolatedPool as createPool} from './isolated-pool.js';
 import {createAdminRepository} from '../src/modules/admin/repository.js';
 import {createShopRepository} from '../src/modules/shop/repository.js';
 
 test('PostgreSQL admin writes, audit rollback and purchase concurrency', {skip:process.env.RUN_ADMIN_DB_TESTS!=='1'},async t=>{
-    const pool=createPool(loadConfig());let admin,user,character,ready=false;
+    const pool=createPool();let admin,user,character,ready=false;
     const itemIds=[],productIds=[];const c=await pool.connect();
     try {
         await c.query('begin');admin=(await c.query("insert into public.auth_user(role) values ('ADMIN') returning id")).rows[0].id;

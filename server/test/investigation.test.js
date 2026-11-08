@@ -1,3 +1,4 @@
+import {dailyGateFixture} from './daily-gate-fixture.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createInvestigationRepository} from '../src/modules/investigation/repository.js';
@@ -25,7 +26,7 @@ function fixture(overrides = {}, {random = () => 0, failAt, duplicateAtLog = fal
   let released = 0;
   const calls = [];
   const client = {
-    async query(source, params = []) {
+    async query(source, params = []) {const dailyGateResult=dailyGateFixture(source);if(dailyGateResult)return dailyGateResult;
       const sql = source.replace(/\s+/g, ' ').trim();
       calls.push({sql, params});
       if (failAt && sql.startsWith(failAt)) throw new Error('injected failure');
@@ -155,7 +156,7 @@ test('normal investigation deducts exactly one AP, returns/logs rewards and lock
   assert.equal(f.state().inventory['3'], 2);
   assert.deepEqual(f.state().logs[0], {characterId: '10', category: 'INVESTIGATION', actionType: 'INVESTIGATE',
     targetType: 'AREA', targetId: '1', requestKey: key,
-    detail: {area_id: '1', result_id: '2', rewards: result.rewards, clue_id: null,
+    detail: {dailyTransactionDay:'2026-11-08',area_id: '1', result_id: '2', rewards: result.rewards, clue_id: null,
       first_discovery: false, investigation_rate_before: 0, investigation_rate_after: 0, ap_before: 3, ap_after: 2}});
   const locks = f.calls.filter(call => /for update/.test(call.sql)).map(call => call.sql);
   assert.match(locks[0], /public.area/); assert.match(locks[1], /public.game_character/);
@@ -258,7 +259,7 @@ test('weighted selection and reward thresholds are deterministic and validate RN
 
 test('area listing filters using DB time and active ownership; keeps bigint ids as strings', async () => {
   const areas = [{id: '9007199254740993', is_open: true, investigation_rate: 15}];
-  const repository = createInvestigationRepository({async query(sql, params) {
+  const repository = createInvestigationRepository({async query(sql, params) {const dailyGateResult=dailyGateFixture(sql);if(dailyGateResult)return dailyGateResult;
     assert.match(sql, /u.is_active and c.is_active/); assert.match(sql, /a.is_open/);
     assert.match(sql, /a.unlock_at<=statement_timestamp\(\)/); assert.match(sql, /a.id::text/);
     assert.deepEqual(params, ['7']); return rows([{character_id: '10', status: 'ALIVE', areas}]);

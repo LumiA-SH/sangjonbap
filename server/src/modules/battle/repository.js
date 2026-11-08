@@ -160,9 +160,10 @@ export function createBattleRepository(pool, {random=randomUnit}={}) {
                 return {battle:battleView(after),character,rewards,currencyReward,resolved};
             });
         },
-        async expireBattles() {
+        async expireBattles({limit=100}={}) {
+            if(!Number.isInteger(limit)||limit<1||limit>100)fail('INVALID_EXPIRY_LIMIT','전투 만료 처리 한도를 확인하세요.',400);
             const due=(await pool.query(`select id,character_id from public.battle where battle_status='ACTIVE'
-                and coalesce(last_command_at,started_at)<=clock_timestamp()-interval '24 hours' order by character_id limit 100`)).rows;
+                and coalesce(last_command_at,started_at)<=clock_timestamp()-interval '24 hours' order by character_id limit $1`,[limit])).rows;
             for (const row of due) await actionTransaction(pool,async client=>{
                 await lockCharacter(client,row.character_id);
                 const battle=(await client.query('select * from public.battle where id=$1 for update',[row.id])).rows[0];

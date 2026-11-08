@@ -1,3 +1,4 @@
+import {dailyGateFixture} from './daily-gate-fixture.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
@@ -9,7 +10,7 @@ function fixture({failLog=false,expired=false,monsterHp=1,random=()=>.9}={}) {
         battle:{id:'3',character_id:'1',battle_status:'ACTIVE',turn_no:1,monster_hp:monsterHp,monster_atk:200,monster_def:0,monster_agi:0,
             declaration:{name:'공격',action_type:'ATTACK',multiplier:1},snapshot:{drops:[drop],actions:[],abilities:{},monster:{name:'스냅샷 마물'}}},inventory:0,logs:[],battleLogs:[]};
     let snapshot;const rows=r=>({rows:r,rowCount:r.length});const calls=[];
-    const c={release(){},async query(raw,p=[]){const sql=raw.replace(/\s+/g,' ').trim();calls.push(sql);
+    const c={release(){},async query(raw,p=[]){const dailyGateResult=dailyGateFixture(raw);if(dailyGateResult)return dailyGateResult;const sql=raw.replace(/\s+/g,' ').trim();calls.push(sql);
         if(sql==='begin'){snapshot=structuredClone(state);return rows([]);}if(sql==='rollback'){state=snapshot;return rows([]);}if(sql==='commit')return rows([]);
         if(sql.startsWith('select c.*'))return rows([{...state.character}]);
         if(sql.startsWith('select id from public.action_log'))return rows(state.logs.filter(l=>l.key===p[0]));

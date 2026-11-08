@@ -1,8 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
-import {loadConfig} from '../src/config/env.js';
-import {createPool} from '../src/db/pool.js';
+import {createIsolatedPool as createPool} from './isolated-pool.js';
 import {createDailyResetRepository, catchUpDailyResets} from '../src/modules/daily/repository.js';
 import {changeCharacterResources, writeActionLog} from '../src/shared/game.js';
 import {kstDate} from '../src/modules/daily/date.js';
@@ -10,7 +9,7 @@ import {kstDate} from '../src/modules/daily/date.js';
 test('daily transaction engine: real PostgreSQL isolated history and fixture-only mutations', {
     skip: process.env.RUN_DAILY_DB_TESTS !== '1'
 }, async t => {
-    const pool = createPool(loadConfig());
+    const pool = createPool();
     const schema = 'dev_daily_' + randomUUID().replaceAll('-', '');
     const ids = [];
     let created = false;

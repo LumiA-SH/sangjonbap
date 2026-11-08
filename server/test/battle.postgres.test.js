@@ -2,8 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
 import {readFileSync} from 'node:fs';
-import {loadConfig} from '../src/config/env.js';
-import {createPool} from '../src/db/pool.js';
+import {createIsolatedPool as createPool} from './isolated-pool.js';
 import {createDailyRecovery} from '../src/modules/daily/recovery.js';
 import {createBattleRepository} from '../src/modules/battle/repository.js';
 import {createAdminRepository} from '../src/modules/admin/repository.js';
@@ -19,8 +18,8 @@ import {createTrainingRepository} from '../src/modules/training/repository.js';
 
 const rejects=(p,code)=>assert.rejects(p,e=>e.code===code);
 test('PVE PostgreSQL transactions, snapshots, registration and concurrency', {skip:process.env.RUN_BATTLE_DB_TESTS!=='1'},async t=>{
-    const raw=createPool(loadConfig()),schema=`test_pve_${randomUUID().replaceAll('-','')}`;
-    const tables=['auth_user','game_character','item','inventory','action_log','system_config','battle','battle_log','area',
+    const raw=createPool(),schema=`test_pve_${randomUUID().replaceAll('-','')}`;
+    const tables=['auth_user','game_character','food_config','item','inventory','action_log','system_config','battle','battle_log','area',
         'daily_reset_state','daily_reset_run','monster','monster_action','monster_drop','area_monster','investigation_result','investigation_reward','unique_discovery','clue',
         'recipe','character_recipe','shop_product','shop_purchase','blood_pack_purchase_day','storage','gacha','gacha_reward'];
     const migrated=(await raw.query("select to_regclass('public.recipe_discovery') is not null as ready")).rows[0].ready;
@@ -33,6 +32,7 @@ test('PVE PostgreSQL transactions, snapshots, registration and concurrency', {sk
     await raw.query(`create schema ${schema}`);
     try {
         for(const table of tables)await raw.query(`create table ${schema}.${table} (like public.${table} including all)`);
+        await pool.query('insert into public.daily_reset_state(singleton) values(true) on conflict do nothing');
         // LIKE copies checks/indexes, not foreign keys. Restore all in-scope references.
         const constraints=(await raw.query(`select conrelid::regclass::text tbl,confrelid::regclass::text ref,
             conname,pg_get_constraintdef(oid) def from pg_constraint where contype='f' and connamespace='public'::regnamespace`)).rows;
@@ -88,7 +88,7 @@ test('PVE PostgreSQL transactions, snapshots, registration and concurrency', {sk
             const read=await repo.getBattle(user.id,b.id);assert.deepEqual(read.battle,b);assert.equal(read.battle.last_command_at,null);
             await rejects(investigation.investigate(user.id,area.id,randomUUID()),'BATTLE_ACTIVE');
             await rejects(repo.getBattle(other.id,b.id),'CHARACTER_NOT_FOUND');
-            await rejects(createCookingRepository(pool).eatFood(user.id,item.id,randomUUID()),'BATTLE_ITEM_COMMAND_REQUIRED');
+            await rejects(createCookingRepository(pool).eatFood(user.id,item.id,randomUUID()),'BATTLE_ACTIVE');
         });
         await t.test('same UUID and different UUID concurrent turn consumes resources once',async()=>{
             let b=await start(),key=randomUUID();
@@ -99,7 +99,7 @@ test('PVE PostgreSQL transactions, snapshots, registration and concurrency', {sk
         });
         await t.test('admin changes do not change active monster/actions/drops snapshots',async()=>{
             const b=await start();
-            await masters.saveAdminMonster(admin.id,monster.id,{...monsterBody,atk:100,actions:[{...monsterBody.actions[0],action_type:'FLEE'}],drops:[],requestKey:randomUUID()});
+            await masters.saveAdminMonster(admin.id,monster.id,{...monsterBody,atk:100,actions:[{...monsterBody.actions[0],action_type:'FLEE'}],drops:[{...monsterBody.drops[0],min_quantity:3,max_quantity:3}],requestKey:randomUUID()});
             const r=await command(b);assert.equal(r.resolved.enemyDamage,11);assert.equal(r.battle.declaration.action_type,'ATTACK');
             monster=await masters.saveAdminMonster(admin.id,monster.id,{...monsterBody,requestKey:randomUUID()});
         });
@@ -207,7 +207,8 @@ test('PVE PostgreSQL transactions, snapshots, registration and concurrency', {sk
             assert.equal(healed.blood,10);assert.equal(healed.status,'ALIVE');
             const g=(await pool.query("insert into public.gacha(name) values('isolated hidden rewards') returning *")).rows[0];
             assert.equal(g.price,1);
-            await pool.query('insert into public.gacha_reward(gacha_id,item_id,quantity,weight) values($1,$2,1,17)',[g.id,pack.id]);
+            const rp=(await pool.query("insert into public.item(name,category,transferable,usable,battle_usable,use_target) values('RP','ETC',true,false,false,'NONE') returning id")).rows[0];
+            await pool.query('insert into public.gacha_reward(gacha_id,item_id,quantity,weight,max_stock,remaining_stock) values($1,$2,1,17,2,2)',[g.id,rp.id]);
             const catalog=(await gacha.getGachaCatalog(other.id)).gachas;
             assert.equal('rewards' in catalog[0],false);
             await pool.query('update public.game_character set currency=10 where id=$1',[target]);
@@ -231,13 +232,14 @@ test('PVE PostgreSQL transactions, snapshots, registration and concurrency', {sk
             await assert.rejects(createDailyRecovery(pool)(),/injected log failure/);
             failLog=false;
             assert.equal((await current()).blood,5);
-            assert.equal((await repo.getBattle(user.id,b.id)).battle.battle_status,'ACTIVE');
+            await rejects(repo.getBattle(user.id,b.id),'DAILY_RESET_REQUIRED');
+            assert.equal((await pool.query('select battle_status from public.battle where id=$1',[b.id])).rows[0].battle_status,'ACTIVE');
             assert.equal((await pool.query("select 1 from public.battle_log where battle_id=$1 and action_type='MIDNIGHT_DEFEAT'",[b.id])).rowCount,0);
 
             let locked,release,attempted;
             const lockedPromise=new Promise(r=>locked=r),gate=new Promise(r=>release=r),attempt=new Promise(r=>attempted=r);
             const gated=(reset)=>({...pool,async connect(){const c=await pool.connect();return {release:()=>c.release(),async query(q,p){
-                if(!reset&&q.includes('for update of u,c'))attempted();
+                if(!reset&&q.includes('from public.daily_reset_state'))attempted();
                 const result=await c.query(q,p);
                 if(reset&&q.includes('select * from public.game_character order by id for update')){locked();await gate;}
                 return result;

@@ -1,3 +1,4 @@
+import {sessionLifetimeSeconds} from './oauth-session.js';
 import {AppError} from '../../shared/http.js';
 
 export function createOAuthRepository(pool) {
@@ -32,7 +33,7 @@ export function createOAuthRepository(pool) {
         async saveOAuthSession(hash,userId) {
             await pool.query('delete from public.auth_session where expires_at<=clock_timestamp()');
             await pool.query(`insert into public.auth_session(token_hash,user_id,expires_at)
-                values($1,$2,clock_timestamp()+interval '1 hour')`,[hash,userId]);
+                values($1,$2,clock_timestamp()+$3 * interval '1 second')`,[hash,userId,sessionLifetimeSeconds]);
         },
         async getOAuthSession(hash) {
             return (await pool.query(`select u.id,u.character_id,u.role,u.is_active from public.auth_session s

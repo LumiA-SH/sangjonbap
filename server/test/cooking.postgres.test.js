@@ -1,12 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
-import {loadConfig} from '../src/config/env.js';
-import {createPool} from '../src/db/pool.js';
+import {createIsolatedPool as createPool} from './isolated-pool.js';
 import {createCookingRepository} from '../src/modules/cooking/repository.js';
 
 test('PostgreSQL cooking and meals with isolated fixtures', {skip: process.env.RUN_COOKING_DB_TESTS !== '1'}, async t => {
-    const pool = createPool(loadConfig());
+    const pool = createPool();
     const items = [], characters = [], users = [];
     let recipeId, setupDone = false;
     const setup = await pool.connect();
@@ -20,8 +19,10 @@ test('PostgreSQL cooking and meals with isolated fixtures', {skip: process.env.R
         for (let n = 0; n < 4; n++) items.push((await setup.query("insert into public.item(name,category) values ($1,'ETC') returning id", [`DEV cooking item ${randomUUID()}`])).rows[0].id);
         await setup.query("insert into public.food_config(item_id,blood_recovery,stat_growth_enabled,stat_growth_rate,stat_growth_target,stat_growth_value) values ($1,30,true,100,'ATK',3)", [items[2]]);
         await setup.query('insert into public.food_config(item_id,blood_recovery) values ($1,5)', [items[3]]);
-        recipeId = (await setup.query('insert into public.recipe(name,learn_cost,success_rate,result_item_id,failure_item_id) values ($1,10,100,$2,$3) returning id', [`DEV cooking recipe ${randomUUID()}`, items[2], items[3]])).rows[0].id;
+        recipeId = (await setup.query(`insert into public.recipe(name,discovery_grade,learn_cost,success_rate,result_item_id,failure_item_id) values ($1,'COMMON',10,100,$2,$3) returning id`, [`DEV cooking recipe ${randomUUID()}`, items[2], items[3]])).rows[0].id;
         await setup.query('insert into public.recipe_ingredient(recipe_id,item_id,quantity) values ($1,$2,3),($1,$3,1)', [recipeId,items[0],items[1]]);
+        await setup.query("insert into public.recipe_discovery(recipe_id,character_id,source_type,source_id) values($1,$2,'INVESTIGATION',1)",[recipeId,characters[1]]);
+        await setup.query('insert into public.shop_product(recipe_id,price,purchase_limit) values($1,1,1)',[recipeId]);
         await setup.query('commit');
         setupDone = true;
     } catch (e) { await setup.query('rollback'); throw e; }
@@ -39,10 +40,11 @@ test('PostgreSQL cooking and meals with isolated fixtures', {skip: process.env.R
     async function scenario(name, fn) {
         await t.test(name, async () => {
             await pool.query('delete from public.action_log where character_id=any($1::bigint[])',[characters]);
+            await pool.query('delete from public.shop_purchase where character_id=any($1::bigint[])',[characters]);
             await pool.query('delete from public.character_recipe where character_id=any($1::bigint[])',[characters]);
             await pool.query('delete from public.inventory where character_id=any($1::bigint[])',[characters]);
             await pool.query("update public.game_character set currency=100,ap=10,hp=100,blood=50,status='ALIVE',daily_meal_count=0,atk=5,def=5,agi=5 where id=any($1::bigint[])",[characters]);
-            await pool.query('update public.recipe set success_rate=100,result_quantity=4,failure_item_id=$2,is_active=true where id=$1',[recipeId,items[3]]);
+            await pool.query('update public.recipe set success_rate=100,result_quantity=3,failure_item_id=$2,is_active=true where id=$1',[recipeId,items[3]]);
             await pool.query("update public.food_config set blood_recovery=30,stat_growth_enabled=true,stat_growth_rate=100,stat_growth_target='ATK',stat_growth_value=3 where item_id=$1",[items[2]]);
             for (const c of characters) await pool.query('insert into public.inventory(character_id,item_id,quantity) select $1,unnest($2::bigint[]),10',[c,items]);
             await fn();
@@ -50,19 +52,19 @@ test('PostgreSQL cooking and meals with isolated fixtures', {skip: process.env.R
     }
     try {
         await scenario('learn charges once and catalog shows learning; repeated learning/key rejected', async () => {
-            const key = randomUUID(); assert.equal((await learn(key)).currency,90);
+            const key = randomUUID(); assert.equal((await learn(key)).currency,99);
             await rejects(learn(key),'DUPLICATE_REQUEST'); await rejects(learn(),'RECIPE_ALREADY_LEARNED');
             assert.equal((await repo.getCookingCatalog(users[0])).recipes.find(r=>r.id===recipeId).learned,true);
-            assert.equal((await get()).currency,90);
+            assert.equal((await get()).currency,99);
         });
-        await scenario('success consumes all materials and one AP, produces four', async () => {
+        await scenario('success consumes all materials and one AP, produces three', async () => {
             await learn(); const r = await cook();
-            assert.equal(r.succeeded,true); assert.equal(r.ap,9); assert.equal(r.output.quantity,4);
-            assert.deepEqual(r.consumed.map(x=>x.quantity),[3,1]); assert.equal(r.output.inventoryQuantity,14);
+            assert.equal(r.succeeded,true); assert.equal(r.ap,9); assert.equal(r.output.quantity,3);
+            assert.deepEqual(r.consumed.map(x=>x.quantity),[3,1]); assert.equal(r.output.inventoryQuantity,13);
         });
         await scenario('failure floors each ingredient including quantity one, produces one', async () => {
             await learn(); await pool.query('update public.recipe set success_rate=0 where id=$1',[recipeId]);
-            const r = await cook(); assert.equal(r.succeeded,false); assert.deepEqual(r.consumed.map(x=>x.quantity),[1,0]);
+            const r = await cook(); assert.equal(r.succeeded,false); assert.deepEqual(r.consumed.map(x=>x.quantity),[1,1]);
             assert.equal(r.output.itemId,items[3]); assert.equal(r.output.quantity,1); assert.equal(r.ap,9);
         });
         await scenario('cooking probability boundary uses injected RNG', async () => {
@@ -77,8 +79,8 @@ test('PostgreSQL cooking and meals with isolated fixtures', {skip: process.env.R
             await pool.query('update public.inventory set quantity=2 where character_id=$1 and item_id=$2',[characters[0],items[0]]);
             const before = await snapshot(); await rejects(cook(),'NOT_ENOUGH_INGREDIENTS'); assert.deepEqual(await snapshot(),before);
             await pool.query('update public.game_character set ap=0 where id=$1',[characters[0]]); await rejects(cook(),'NOT_ENOUGH_AP');
-            await pool.query('update public.recipe set result_quantity=1 where id=$1',[recipeId]); await rejects(cook(),'RECIPE_CONFIG_INVALID');
-            await pool.query('update public.recipe set result_quantity=4,success_rate=50,failure_item_id=null where id=$1',[recipeId]); await rejects(cook(),'RECIPE_CONFIG_INVALID');
+            await pool.query('update public.game_character set ap=10 where id=$1',[characters[0]]);
+            await pool.query('update public.recipe set result_quantity=3,success_rate=50,failure_item_id=null where id=$1',[recipeId]); await rejects(cook(),'RECIPE_CONFIG_INVALID');
         });
         await scenario('blood clamps, fixed ATK growth clamps and never changes another stat at cap', async () => {
             await pool.query('update public.game_character set blood=90,atk=39 where id=$1',[characters[0]]);
@@ -117,14 +119,15 @@ test('PostgreSQL cooking and meals with isolated fixtures', {skip: process.env.R
         await scenario('DEAD/NEAR_DEATH all actions; absent food rejected', async () => {
             for (const [status,code] of [['DEAD','CHARACTER_DEAD'],['NEAR_DEATH','CHARACTER_NEAR_DEATH']]) {
                 await pool.query('update public.game_character set status=$1 where id=$2',[status,characters[0]]);
-                await rejects(learn(),code); await rejects(cook(),code); await rejects(eat(),code);
+                await rejects(learn(),code); await rejects(cook(),code);
+                if(status==='DEAD')await rejects(eat(),code);else assert.equal((await eat()).dailyMealCount,1);
             }
             await pool.query("update public.game_character set status='ALIVE' where id=$1",[characters[0]]);
             await pool.query('update public.inventory set quantity=0 where character_id=$1 and item_id=$2',[characters[0],items[2]]); await rejects(eat(),'NOT_ENOUGH_FOOD');
             await rejects(eat(randomUUID(),0,items[0]),'FOOD_NOT_FOUND');
         });
         await scenario('log failure rolls back learn, cook and eat entirely', async () => {
-            const faulty = createCookingRepository({async connect() {
+            const faulty = createCookingRepository({query:(q,p)=>pool.query(q,p),async connect() {
                 const c = await pool.connect(); return {release:()=>c.release(), query(sql,args) {
                     if (sql.includes('insert into public.action_log')) throw new Error('injected log failure');
                     return c.query(sql,args);
@@ -136,7 +139,7 @@ test('PostgreSQL cooking and meals with isolated fixtures', {skip: process.env.R
         });
         await scenario('transaction-isolated settings: cost/cap changes and missing/invalid values', async () => {
             const c = await pool.connect(); await c.query('begin');
-            const isolated = createCookingRepository({async connect() { return {release(){}, async query(sql,args) {
+            const isolated = createCookingRepository({query:(q,p)=>c.query(q,p),async connect() { return {release(){}, async query(sql,args) {
                 if (sql==='begin') return c.query('savepoint cooking_action');
                 if (sql==='commit') return c.query('release savepoint cooking_action');
                 if (sql==='rollback') return c.query('rollback to savepoint cooking_action');
@@ -160,6 +163,9 @@ test('PostgreSQL cooking and meals with isolated fixtures', {skip: process.env.R
         try {
             await c.query('begin'); await c.query('delete from public.action_log where character_id=any($1::bigint[])',[characters]);
             await c.query('delete from public.character_recipe where character_id=any($1::bigint[])',[characters]);
+            await c.query('delete from public.shop_purchase where character_id=any($1::bigint[])',[characters]);
+            await c.query('delete from public.shop_product where recipe_id=$1',[recipeId]);
+            await c.query('delete from public.recipe_discovery where recipe_id=$1',[recipeId]);
             await c.query('delete from public.recipe_ingredient where recipe_id=$1',[recipeId]); await c.query('delete from public.recipe where id=$1',[recipeId]);
             await c.query('delete from public.inventory where character_id=any($1::bigint[])',[characters]); await c.query('delete from public.food_config where item_id=any($1::bigint[])',[items]);
             await c.query('delete from public.item where id=any($1::bigint[])',[items]); await c.query('delete from public.auth_user where id=any($1::bigint[])',[users]);

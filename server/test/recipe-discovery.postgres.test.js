@@ -2,8 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
 import {readFileSync} from 'node:fs';
-import {createPool} from '../src/db/pool.js';
-import {loadConfig} from '../src/config/env.js';
+import {createIsolatedPool as createPool} from './isolated-pool.js';
 import {createInvestigationRepository} from '../src/modules/investigation/repository.js';
 import {createBattleRepository} from '../src/modules/battle/repository.js';
 import {createShopRepository} from '../src/modules/shop/repository.js';
@@ -11,7 +10,7 @@ import {createCookingRepository} from '../src/modules/cooking/repository.js';
 import {lockCharacterByUser} from '../src/shared/game.js';
 
 test('recipe discovery isolated PostgreSQL: global uniqueness, integration and rollback', {skip:process.env.RUN_RECIPE_DB_TESTS!=='1'},async t=>{
-    const raw=createPool(loadConfig()),schema='test_recipe_'+randomUUID().replaceAll('-','');
+    const raw=createPool(),schema='test_recipe_'+randomUUID().replaceAll('-','');
     assert.match(schema,/^test_recipe_[a-f0-9]{32}$/);
     const rewrite=q=>q.replaceAll('public.',schema+'.');
     let fail=false;
@@ -19,7 +18,7 @@ test('recipe discovery isolated PostgreSQL: global uniqueness, integration and r
         if(fail&&q.includes('insert into public.action_log')&&p?.[3]===fail)throw Error('injected final log failure');
         return c.query(rewrite(q),p);
     }};}};
-    const tables=['auth_user','game_character','item','inventory','action_log','system_config','recipe','recipe_ingredient','character_recipe','food_config',
+    const tables=['daily_reset_state','auth_user','game_character','item','inventory','action_log','system_config','recipe','recipe_ingredient','character_recipe','food_config',
         'shop_product','shop_purchase','blood_pack_purchase_day','area','investigation_result','investigation_reward','unique_discovery','clue',
         'monster','monster_action','monster_drop','area_monster','battle','battle_log','gacha'];
     const migrated=(await raw.query("select to_regclass('public.recipe_discovery') is not null as ready")).rows[0].ready;
@@ -27,6 +26,7 @@ test('recipe discovery isolated PostgreSQL: global uniqueness, integration and r
     await raw.query(`create schema ${schema}`);
     try {
         for(const name of tables)await raw.query(`create table ${schema}.${name} (like public.${name} including all)`);
+        await pool.query('insert into public.daily_reset_state(singleton) values(true)');
         const constraints=(await raw.query("select conrelid::regclass::text tbl,confrelid::regclass::text ref,conname,pg_get_constraintdef(oid) def from pg_constraint where contype='f' and connamespace='public'::regnamespace")).rows;
         const ddl=await raw.connect();
         try {
@@ -93,7 +93,7 @@ test('recipe discovery isolated PostgreSQL: global uniqueness, integration and r
         await t.test('concurrent discoveries in different areas elect exactly one and register once',async()=>{
             const r=await recipe(),a=await source(r),b=await source(r);
             const results=await Promise.all([inv.investigate(users[0].u.id,a.id,randomUUID()),inv.investigate(users[1].u.id,b.id,randomUUID())]);
-            assert.equal(results.flatMap(x=>x.rewards).length,1);
+            assert.equal(results.flatMap(x=>x.rewards).filter(x=>x.recipeId).length,1);
             assert.equal((await pool.query('select 1 from public.recipe_discovery where recipe_id=$1',[r.id])).rowCount,1);
             assert.equal((await pool.query('select 1 from public.shop_product where recipe_id=$1',[r.id])).rowCount,1);
             assert.equal((await pool.query('select 1 from public.character_recipe where recipe_id=$1',[r.id])).rowCount,1);
@@ -135,11 +135,13 @@ test('recipe discovery isolated PostgreSQL: global uniqueness, integration and r
             await pool.query("update public.game_character set status='DEAD',hp=0 where id=$1",[u.c.id]);
             await rejects(shop.buyProduct(u.u.id,p.id,1,key),'CHARACTER_DEAD');
             await pool.query("update public.game_character set status='NEAR_DEATH',hp=100,blood=0,currency=0 where id=$1",[u.c.id]);
+            await rejects(shop.buyProduct(u.u.id,p.id,1,key),'CHARACTER_NEAR_DEATH');
+            await pool.query("update public.game_character set status='ALIVE',blood=100 where id=$1",[u.c.id]);
             await rejects(shop.buyProduct(u.u.id,p.id,1,key),'NOT_ENOUGH_CURRENCY');
             await pool.query('update public.game_character set currency=10 where id=$1',[u.c.id]);
             const results=await Promise.allSettled([shop.buyProduct(u.u.id,p.id,1,key),shop.buyProduct(u.u.id,p.id,1,randomUUID())]);
             assert.equal(results.filter(x=>x.status==='fulfilled').length,1);
-            assert.equal((await inspect(u.c.id)).currency,9);assert.equal((await inspect(u.c.id)).status,'NEAR_DEATH');
+            assert.equal((await inspect(u.c.id)).currency,9);assert.equal((await inspect(u.c.id)).status,'ALIVE');
             await pool.query("update public.game_character set status='ALIVE',blood=100 where id=$1",[u.c.id]);
         });
         await t.test('ordinary shop and single cooking success/failure remain unchanged',async()=>{
@@ -164,6 +166,7 @@ test('recipe discovery isolated PostgreSQL: global uniqueness, integration and r
             await pool.query('insert into public.area_monster(area_id,monster_id,weight) values($1,$2,1)',[a.id,m.id]);
             await pool.query("insert into public.monster_action(monster_id,name,action_type,probability,multiplier) values($1,'attack','ATTACK',100,1)",[m.id]);
             await pool.query('insert into public.monster_drop(monster_id,recipe_id,drop_rate) values($1,$2,100)',[m.id,r.id]);
+            await pool.query('insert into public.monster_drop(monster_id,item_id,drop_rate,is_ingredient) values($1,$2,100,true)',[m.id,item.id]);
             const start=async user=>{
                 const c=await pool.connect();try {await c.query('begin');const pc=await lockCharacterByUser(c,user.u.id);
                     const b=await battle.encounter(c,a,pc);await c.query('commit');return b;
@@ -172,11 +175,11 @@ test('recipe discovery isolated PostgreSQL: global uniqueness, integration and r
             const b1=await start(users[0]),b2=await start(users[1]);
             const command=(u,b)=>battle.commandBattle(u.u.id,b.id,{requestKey:randomUUID(),turnNo:1,action:'ATTACK'});
             const results=await Promise.all([command(users[0],b1),command(users[1],b2)]);
-            assert.equal(results.flatMap(x=>x.rewards).length,1);
+            assert.equal(results.flatMap(x=>x.rewards).filter(x=>x.recipeId).length,1);
             assert.ok(results.every(x=>x.battle.battle_status==='VICTORY'));
             const next=await start(users[2]);
             const snap=(await pool.query('select snapshot from public.battle where id=$1',[next.id])).rows[0].snapshot;
-            assert.equal(snap.drops.length,0);
+            assert.equal(snap.drops.filter(x=>x.recipe_id).length,0);
             await rejects(shop.buyProduct(users[2].u.id,(await pool.query('select id from public.shop_product where recipe_id=$1',[r.id])).rows[0].id,1,randomUUID()),'BATTLE_ACTIVE');
             const cross=await recipe();
             await pool.query('insert into public.monster_drop(monster_id,recipe_id,drop_rate) values($1,$2,100)',[m.id,cross.id]);

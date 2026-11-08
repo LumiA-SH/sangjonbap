@@ -1,3 +1,4 @@
+import {beginGameTransaction, commitGameTransaction, rollbackGameTransaction} from '../../shared/daily-gate.js';
 import {requireNoActiveBattle} from '../../shared/actions.js';
 import {AppError} from '../../shared/http.js';
 import {lockCharacterByUser, changeCharacterResources, changeInventoryQuantity, writeActionLog} from '../../shared/game.js';
@@ -24,7 +25,7 @@ export function createGachaRepository(pool,{random}={}) {
         async drawGacha(userId,gachaId,requestKey) {
             const client = await pool.connect();
             try {
-                await client.query('begin');
+                await beginGameTransaction(client);
                 await duplicate(client,requestKey);
                 // Character before all items, like inventory/cooking/shop. All item IDs ascending.
                 const before = await lockCharacterByUser(client,userId);
@@ -63,10 +64,10 @@ export function createGachaRepository(pool,{random}={}) {
                     reward:{id:selected.id,itemId:selected.item_id,name:item.name,description:item.description,quantity:1},inventoryBefore:inventory.before,inventoryQuantity:inventory.after};
                 await writeActionLog(client,{characterId:before.id,category:'GACHA',actionType:'GACHA_DRAW',targetType:'GACHA',targetId:gachaId,
                     description:`${gacha.name} 1회 추첨`,detail:result,requestKey});
-                await client.query('commit');
+                await commitGameTransaction(client);
                 return result;
             } catch(error) {
-                await client.query('rollback');
+                await rollbackGameTransaction(client);
                 if (error.code==='23505' && error.constraint==='action_log_request_key_key') fail('DUPLICATE_REQUEST','이미 사용된 requestKey입니다.');
                 throw error;
             } finally {client.release();}

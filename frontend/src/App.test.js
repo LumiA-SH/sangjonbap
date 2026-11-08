@@ -2,7 +2,7 @@ import React,{act} from 'react';
 import {createRoot} from 'react-dom/client';
 import App from './App';
 import {api,setToken} from './api/client';
-jest.mock('./api/client',()=>({api:jest.fn(),setToken:jest.fn()}));
+jest.mock('./api/client',()=>({...jest.requireActual('./api/client'),api:jest.fn(),setToken:jest.fn()}));
 let root,div;
 beforeEach(()=>{global.IS_REACT_ACT_ENVIRONMENT=true;api.mockReset();setToken.mockReset();div=document.createElement('div');root=createRoot(div);});
 afterEach(async()=>{await act(async()=>root.unmount());});

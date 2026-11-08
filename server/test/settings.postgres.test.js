@@ -1,8 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
-import {loadConfig} from '../src/config/env.js';
-import {createPool} from '../src/db/pool.js';
+import {createIsolatedPool as createPool} from './isolated-pool.js';
 import {readNumberSettings, resourceNumber} from '../src/shared/settings.js';
 import {createCharacterCareRepository} from '../src/modules/character/care-repository.js';
 import {createCharacterCareService} from '../src/modules/character/care-service.js';
@@ -12,7 +11,7 @@ import {createInvestigationService} from '../src/modules/investigation/service.j
 test('PostgreSQL configuration changes are transaction-isolated and drive game results', {
     skip: process.env.RUN_SETTINGS_DB_TESTS !== '1'
 }, async t => {
-    const pool = createPool(loadConfig());
+    const pool = createPool();
     const client = await pool.connect();
     const baseline = (await client.query('select config_key,config_value from public.system_config order by config_key')).rows;
     let configReads = 0;

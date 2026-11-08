@@ -1,3 +1,4 @@
+import {dailyGateFixture} from './daily-gate-fixture.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {planBatch,validateQuantity} from '../src/modules/cooking/batch.js';
@@ -58,7 +59,7 @@ function fixture({status='ALIVE',ap=10,active=false,failLog=false,foodCount=0,at
     let snapshot;
     const calls=[];
     const rows=a=>({rows:a,rowCount:a.length});
-    const client={release(){},async query(raw,p=[]) {
+    const client={release(){},async query(raw,p=[]) {const dailyGateResult=dailyGateFixture(raw);if(dailyGateResult)return dailyGateResult;
         const sql=raw.replace(/\s+/g,' ').trim();calls.push(sql);
         if(sql==='begin'){snapshot=structuredClone(state);return rows([]);}
         if(sql==='rollback'){state=snapshot;return rows([]);}

@@ -1,12 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
-import {loadConfig} from '../src/config/env.js';
-import {createPool} from '../src/db/pool.js';
+import {createIsolatedPool as createPool} from './isolated-pool.js';
 import {createShopRepository} from '../src/modules/shop/repository.js';
 
 test('PostgreSQL shop isolated purchases and concurrency', {skip: process.env.RUN_SHOP_DB_TESTS !== '1'}, async t => {
-    const pool = createPool(loadConfig());
+    const pool = createPool();
     const ids = [], users = [], products = [];
     let itemId;
     let setupDone = false;

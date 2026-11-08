@@ -1,3 +1,4 @@
+import {beginGameTransaction, commitGameTransaction, rollbackGameTransaction} from '../../shared/daily-gate.js';
 import {AppError} from '../../shared/http.js';
 import {requireActionCharacter,requireNoActiveBattle} from '../../shared/actions.js';
 import {lockCharacterByUser, changeCharacterResources, changeInventoryQuantity, writeActionLog} from '../../shared/game.js';
@@ -47,7 +48,7 @@ export function createInvestigationRepository(pool, {random = randomUnit, battle
     async investigate(userId, areaId, requestKey) {
       const client = await pool.connect();
       try {
-        await client.query('begin');
+        await beginGameTransaction(client);
         await rejectDuplicate(client, requestKey);
 
         // Every investigation locks area -> character -> items (ascending id).
@@ -151,10 +152,10 @@ export function createInvestigationRepository(pool, {random = randomUnit, battle
             investigation_rate_after: Number(area.investigation_rate), ap_before: Number(before.ap), ap_after: result.ap},
           requestKey
         });
-        await client.query('commit');
+        await commitGameTransaction(client);
         return result;
       } catch (err) {
-        await client.query('rollback');
+        await rollbackGameTransaction(client);
         if (err?.code === '23505' && err?.constraint === 'action_log_request_key_key') throw duplicateRequest();
         throw err;
       } finally {

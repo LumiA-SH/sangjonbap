@@ -1,3 +1,4 @@
+import {dailyGateFixture} from './daily-gate-fixture.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {validateInitialStats} from '../src/modules/character/initial-stats.js';
@@ -21,7 +22,7 @@ test('blood pack uses explicit effect, daily limit separate from lifetime and KS
 test('combat blood-pack use stays HOLD until the own-turn contract can be enforced',async()=>{
     for(const status of ['ALIVE','NEAR_DEATH']) {
         const statements=[];
-        const client={release(){},async query(sql){
+        const client={release(){},async query(sql){const dailyGateResult=dailyGateFixture(sql);if(dailyGateResult)return dailyGateResult;
             statements.push(sql);
             if(sql.includes('join public.auth_user'))return {rows:[{id:'1',status,hp:100,blood:status==='ALIVE'?30:0}],rowCount:1};
             if(sql.includes('public.battle'))return {rows:[{id:'2'}],rowCount:1};

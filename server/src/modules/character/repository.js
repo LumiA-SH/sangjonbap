@@ -1,3 +1,4 @@
+import {beginGameTransaction, commitGameTransaction, rollbackGameTransaction} from '../../shared/daily-gate.js';
 import {lockCharacterByUser, changeCharacterResources, writeActionLog} from '../../shared/game.js';
 import {requireActionCharacter, requireNoActiveBattle} from '../../shared/actions.js';
 
@@ -38,12 +39,12 @@ export function createPostgresRepository(pool) {
       const client = await pool.connect();
 
       try {
-        await client.query('begin');
+        await beginGameTransaction(client);
 
         const own = await lockCharacterByUser(client, id);
 
         if (!own) {
-          await client.query('rollback');
+          await rollbackGameTransaction(client);
           return null;
         }
 
@@ -54,10 +55,10 @@ export function createPostgresRepository(pool) {
             [patch.name, own.id]
         );
 
-        await client.query('commit');
+        await commitGameTransaction(client);
         return r.rows[0];
       } catch (err) {
-        await client.query('rollback');
+        await rollbackGameTransaction(client);
         throw err;
       } finally {
         client.release();
@@ -68,12 +69,12 @@ export function createPostgresRepository(pool) {
       const client = await pool.connect();
 
       try {
-        await client.query('begin');
+        await beginGameTransaction(client);
 
         const own = await lockCharacterByUser(client, userId);
 
         if (!own) {
-          await client.query('rollback');
+          await rollbackGameTransaction(client);
           return null;
         }
 
@@ -114,10 +115,10 @@ export function createPostgresRepository(pool) {
           }
         });
 
-        await client.query('commit');
+        await commitGameTransaction(client);
         return character;
       } catch (err) {
-        await client.query('rollback');
+        await rollbackGameTransaction(client);
         throw err;
       } finally {
         client.release();

@@ -1,3 +1,4 @@
+import {dailyGateFixture} from './daily-gate-fixture.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
@@ -6,7 +7,7 @@ import {chooseResult,winsReward} from '../src/modules/investigation/random.js';
 function fixture({failLog=false,discovered=false}={}) {
     let state={result:{id:'2',area_id:'1',result_grade:'NORMAL',result_text:'원본',weight:1,is_unique:true,investigation_rate_value:10,clue_id:null,is_active:true},rewards:[{item_id:'3',recipe_id:null,quantity:1,probability:20}]},saved;
     const rows=r=>({rows:r,rowCount:r.length}),calls=[];
-    const c={release(){},async query(sql,p=[]){calls.push(sql);
+    const c={release(){},async query(sql,p=[]){const dailyGateResult=dailyGateFixture(sql);if(dailyGateResult)return dailyGateResult;calls.push(sql);
         if(sql==='begin'){saved=structuredClone(state);return rows([]);}if(sql==='rollback'){state=saved;return rows([]);}if(sql==='commit')return rows([]);
         if(sql.startsWith('select id from public.action_log'))return rows([]);
         if(sql.startsWith('select id from public.'))return rows([{id:p[0]}]);

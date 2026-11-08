@@ -1,4 +1,5 @@
 import {bloodLimit} from './balance.js';
+import {gameTransactionDay} from './daily-gate.js';
 
 export async function lockCharacterByUser(client, userId) {
     const r = await client.query(
@@ -133,8 +134,8 @@ export async function writeActionLog(client, {
 }) {
     await client.query(
         `insert into public.action_log
-     (character_id,admin_user_id,category,action_type,target_type,target_id,description,detail,request_key)
-     values ($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9)`,
+     (character_id,admin_user_id,category,action_type,target_type,target_id,description,detail,request_key,created_at)
+     values ($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9,clock_timestamp())`,
         [
             characterId,
             adminUserId,
@@ -143,7 +144,7 @@ export async function writeActionLog(client, {
             targetType,
             targetId,
             description,
-            JSON.stringify(detail),
+            JSON.stringify(gameTransactionDay(client) ? {...detail,dailyTransactionDay:gameTransactionDay(client)} : detail),
             requestKey
         ]
     );

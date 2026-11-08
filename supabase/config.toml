@@ -1,0 +1,12 @@
+# Probe-only configuration. Deployment requires separate approval.
+[functions.express-pg-compat]
+verify_jwt = false
+entrypoint = "./functions/express-pg-compat/index.ts"
+import_map = "./functions/express-pg-compat/deno.json"
+
+# PREPARED ONLY. Deploying the game API requires separate explicit approval.
+# Existing AUTH_USER/auth_session middleware authenticates every protected route.
+[functions.api]
+verify_jwt = false
+entrypoint = "./functions/api/index.ts"
+import_map = "./functions/api/deno.json"

@@ -1,3 +1,4 @@
+import {beginGameTransaction, commitGameTransaction, rollbackGameTransaction} from '../../shared/daily-gate.js';
 import {AppError} from '../../shared/http.js';
 import {lockCharacterByUser, changeCharacterResources, changeInventoryQuantity, writeActionLog} from '../../shared/game.js';
 import {readNumberSettings, resourceNumber} from '../../shared/settings.js';
@@ -43,7 +44,7 @@ export function createCookingRepository(pool, {random = randomUnit} = {}) {
     async function transact(userId, requestKey, action, work) {
         const client = await pool.connect();
         try {
-            await client.query('begin');
+            await beginGameTransaction(client);
             await duplicate(client, requestKey);
             const character = await lockCharacterByUser(client, userId);
             await duplicate(client, requestKey);
@@ -54,10 +55,10 @@ export function createCookingRepository(pool, {random = randomUnit} = {}) {
                 targetType: action === 'EAT' ? 'ITEM' : 'RECIPE', targetId: result.itemId || result.recipeId,
                 description: {LEARN_RECIPE:'레시피를 습득했습니다.',COOK:'요리를 시도했습니다.',EAT:'음식을 먹었습니다.'}[action],
                 detail: result, requestKey});
-            await client.query('commit');
+            await commitGameTransaction(client);
             return result;
         } catch (error) {
-            await client.query('rollback');
+            await rollbackGameTransaction(client);
             if (error.code === '23505' && error.constraint === 'action_log_request_key_key') fail('DUPLICATE_REQUEST', '이미 사용된 requestKey입니다.');
             throw error;
         } finally { client.release(); }

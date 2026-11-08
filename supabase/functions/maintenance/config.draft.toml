@@ -1,0 +1,5 @@
+# DRAFT ONLY: not merged into supabase/config.toml, not deployed.
+[functions.maintenance]
+verify_jwt = false
+entrypoint = "./functions/maintenance/index.ts"
+import_map = "./functions/maintenance/deno.json"

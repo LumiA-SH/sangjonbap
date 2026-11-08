@@ -1,3 +1,4 @@
+import {beginGameTransaction, commitGameTransaction, rollbackGameTransaction} from '../../shared/daily-gate.js';
 import {AppError} from '../../shared/http.js';
 import {lockCharacterPairByUser, changeCharacterResources, characterState, writeActionLog} from '../../shared/game.js';
 
@@ -15,7 +16,7 @@ export function createCharacterCareRepository(pool) {
         async performCharacterCare(userId, targetId, requestKey, action, validateLocked) {
             const client = await pool.connect();
             try {
-                await client.query('begin');
+                await beginGameTransaction(client);
                 await rejectDuplicate(client, requestKey);
                 const {provider, target} = await lockCharacterPairByUser(client, userId, targetId);
                 await rejectDuplicate(client, requestKey);
@@ -71,10 +72,10 @@ export function createCharacterCareRepository(pool) {
                     },
                     requestKey
                 });
-                await client.query('commit');
+                await commitGameTransaction(client);
                 return result;
             } catch (error) {
-                await client.query('rollback');
+                await rollbackGameTransaction(client);
                 if (error?.code === '23505' && error?.constraint === 'action_log_request_key_key') throw duplicateRequest();
                 throw error;
             } finally {

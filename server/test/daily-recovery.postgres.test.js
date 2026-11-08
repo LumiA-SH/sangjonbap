@@ -1,12 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
-import {loadConfig} from '../src/config/env.js';
-import {createPool} from '../src/db/pool.js';
+import {createIsolatedPool as createPool} from './isolated-pool.js';
 import {createDailyRecovery} from '../src/modules/daily/recovery.js';
 
 test('coalesced daily recovery isolated PostgreSQL', {skip:process.env.RUN_DAILY_DB_TESTS!=='1'},async t=>{
-    const raw=createPool(loadConfig()),schema='test_reset_'+randomUUID().replaceAll('-','');
+    const raw=createPool(),schema='test_reset_'+randomUUID().replaceAll('-','');
     const rewrite=q=>q.replaceAll('public.',schema+'.');
     let fail=false;
     const pool={query:(q,p)=>raw.query(rewrite(q),p),async connect(){const c=await raw.connect();return {

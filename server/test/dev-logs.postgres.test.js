@@ -1,14 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
-import {loadConfig} from '../src/config/env.js';
-import {createPool} from '../src/db/pool.js';
+import {createIsolatedPool as createPool} from './isolated-pool.js';
 import {createDevRepository} from '../src/modules/dev/repository.js';
 
 test('DEV logs SQL returns own latest 30 with stable sorting and exact request filter', {
     skip: process.env.RUN_DEV_LOGS_DB_TESTS !== '1'
 }, async () => {
-    const pool = createPool(loadConfig());
+    const pool = createPool();
     const client = await pool.connect();
     try {
         await client.query('begin');

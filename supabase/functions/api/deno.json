@@ -1,0 +1,7 @@
+{
+  "nodeModulesDir": "none",
+  "imports": {
+    "express": "npm:express@5.2.1",
+    "pg": "npm:pg@8.16.3"
+  }
+}

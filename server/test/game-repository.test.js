@@ -1,3 +1,4 @@
+import {dailyGateFixture} from './daily-gate-fixture.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {changeCharacterResources} from '../src/shared/game.js';
@@ -16,7 +17,7 @@ const rows = values => ({rowCount: values.length, rows: values});
 function fixture(steps) {
   let released = false;
   const client = {
-    async query(sql, params) {
+    async query(sql, params) {const dailyGateResult=dailyGateFixture(sql);if(dailyGateResult)return dailyGateResult;
       if(sql.includes('from public.battle'))return rows([]);
       const step = steps.shift();
       assert.ok(step, `Unexpected query: ${sql}`);
@@ -87,7 +88,7 @@ for (const scenario of [
         assert.deepEqual(logRecord(params), {
           characterId: character.id, adminUserId: null, category: 'CHARACTER', actionType: 'RESOURCE_CHANGE',
           targetType: null, targetId: null, description: '검증', requestKey: null,
-          detail: {reason: '검증', requested: changes, before: snapshot(before), after: snapshot(after)}
+          detail: {dailyTransactionDay:'2026-11-08',reason: '검증', requested: changes, before: snapshot(before), after: snapshot(after)}
         });
       }}, end('commit')
     ]);
@@ -146,7 +147,7 @@ for (const method of ['deposit', 'withdraw']) {
             characterId: character.id, adminUserId: null, category: 'INVENTORY',
             actionType: deposit ? 'STORAGE_DEPOSIT' : 'STORAGE_WITHDRAW', targetType: 'ITEM', targetId: '8',
             description: deposit ? '식량 2개를 공용창고에 보관했습니다.' : '식량 2개를 공용창고에서 가져왔습니다.',
-            detail: {item_id: '8', item_name: '식량', quantity: 2,
+            detail: {dailyTransactionDay:'2026-11-08',item_id: '8', item_name: '식량', quantity: 2,
               inventory_before: deposit ? 2 : destinationBefore, inventory_after: inventoryQuantity,
               storage_before: deposit ? destinationBefore : 2, storage_after: storageQuantity}, requestKey: 'request-123'
           });

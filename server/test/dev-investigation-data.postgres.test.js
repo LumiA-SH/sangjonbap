@@ -1,13 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {loadConfig} from '../src/config/env.js';
-import {createPool} from '../src/db/pool.js';
+import {createIsolatedPool as createPool} from './isolated-pool.js';
 import {manageDevInvestigationData} from '../scripts/dev-investigation-data.js';
 
 test('DEV seed is idempotent; cleanup is scoped and can be rolled back', {
   skip: process.env.RUN_INVESTIGATION_DB_TESTS !== '1'
 }, async () => {
-  const pool = createPool(loadConfig());
+  const pool = createPool();
   const client = await pool.connect();
   try {
     await client.query('begin');

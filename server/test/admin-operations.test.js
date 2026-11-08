@@ -1,3 +1,4 @@
+import {dailyGateFixture} from './daily-gate-fixture.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
@@ -11,7 +12,7 @@ import {createCharacterCareService} from '../src/modules/character/care-service.
 function deletion({admin=true,reference=false,history=false,snapshotReference=false,failLog=false}={}) {
     let state={parent:true,children:3,logs:[]},saved;const calls=[];
     const rows=r=>({rows:r,rowCount:r.length});
-    const c={release(){},async query(sql,p=[]){calls.push(sql);
+    const c={release(){},async query(sql,p=[]){const dailyGateResult=dailyGateFixture(sql);if(dailyGateResult)return dailyGateResult;calls.push(sql);
         if(sql==='begin'){saved=structuredClone(state);return rows([]);}if(sql==='rollback'){state=saved;return rows([]);}if(sql==='commit')return rows([]);
         if(sql.startsWith('select id from public.area'))return rows([]);
         if(sql.startsWith('select id from public.auth_user'))return rows(admin?[{id:'1'}]:[]);
@@ -42,7 +43,7 @@ test('deletion audit failure restores parent and owned children; revoked adminis
 test('balance save uses numeric values, preserves other keys and rolls back all changes on log failure',async()=>{
     for(const failLog of [false,true]){
         let state=Object.fromEntries(Object.keys(balanceRequirements).map(k=>[k,1])),saved;
-        const c={release(){},async query(sql,p=[]){
+        const c={release(){},async query(sql,p=[]){const dailyGateResult=dailyGateFixture(sql);if(dailyGateResult)return dailyGateResult;
             const rows=r=>({rows:r,rowCount:r.length});
             if(sql==='begin'){saved={...state};return rows([]);}if(sql==='rollback'){state=saved;return rows([]);}if(sql==='commit')return rows([]);
             if(sql.startsWith('select id from public.auth_user'))return rows([{}]);if(sql.startsWith('select id from public.action_log'))return rows([]);
@@ -72,7 +73,7 @@ test('character resource edits use shared death transition and rollback on audit
     for(const failLog of [false,true]){
         let character={id:'2',hp:10,max_hp:100,blood:20,max_blood:100,ap:3,max_ap:10,currency:3,status:'ALIVE',death_count:0},saved;
         const rows=r=>({rows:r,rowCount:r.length});
-        const c={release(){},async query(raw,p=[]){const sql=raw.replace(/\s+/g,' ').trim();
+        const c={release(){},async query(raw,p=[]){const dailyGateResult=dailyGateFixture(raw);if(dailyGateResult)return dailyGateResult;const sql=raw.replace(/\s+/g,' ').trim();
             if(sql==='begin'){saved={...character};return rows([]);}if(sql==='rollback'){character=saved;return rows([]);}if(sql==='commit')return rows([]);
             if(sql.startsWith('select id from public.auth_user'))return rows([{}]);if(sql.startsWith('select id from public.action_log')||sql.startsWith('select id from public.battle'))return rows([]);
             if(sql.startsWith('select * from public.game_character'))return rows([{...character}]);if(sql.startsWith('select i.item_id'))return rows([]);

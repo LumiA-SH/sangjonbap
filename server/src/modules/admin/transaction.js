@@ -1,3 +1,4 @@
+import {beginGameTransaction, commitGameTransaction, rollbackGameTransaction} from '../../shared/daily-gate.js';
 import {AppError} from '../../shared/http.js';
 
 export const fail = (code,message,status=409) => {throw new AppError(status,code,message);};
@@ -11,12 +12,12 @@ export async function checkDuplicate(client,key) {
 export async function adminTransaction(pool,work) {
     const client=await pool.connect();
     try {
-        await client.query('begin');
+        await beginGameTransaction(client);
         const result=await work(client);
-        await client.query('commit');
+        await commitGameTransaction(client);
         return result;
     } catch(error) {
-        await client.query('rollback');
+        await rollbackGameTransaction(client);
         if (error.code==='23505') fail('DUPLICATE_REQUEST','이미 등록되거나 처리된 요청입니다.');
         if (['23503','23514','22003','22007','22008'].includes(error.code)) fail('INVALID_ADMIN_INPUT','참조 대상 또는 DB 제약조건을 확인하세요.',400);
         throw error;

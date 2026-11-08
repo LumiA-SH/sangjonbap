@@ -1,8 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
-import {loadConfig} from '../src/config/env.js';
-import {createPool} from '../src/db/pool.js';
+import {createIsolatedPool as createPool} from './isolated-pool.js';
 import {createAdminRepository} from '../src/modules/admin/repository.js';
 import {createCookingRepository} from '../src/modules/cooking/repository.js';
 import {createGachaRepository} from '../src/modules/gacha/repository.js';
@@ -15,8 +14,8 @@ const rejects=(promise,code)=>assert.rejects(promise,e=>e.code===code);
 const deferred=()=>{let resolve;const promise=new Promise(r=>{resolve=r;});return {promise,resolve};};
 
 test('admin phase 2 PostgreSQL isolated schema: masters, roles, scripts, concurrency', {skip:process.env.RUN_ADMIN_DB_TESTS!=='1'},async t=>{
-    const raw=createPool(loadConfig()),schema=`test_admin2_${randomUUID().replaceAll('-','')}`;
-    const tables=['auth_user','game_character','item','food_config','recipe','recipe_ingredient','character_recipe','gacha','gacha_reward','inventory','action_log','system_config','shop_product','shop_purchase','blood_pack_purchase_day','battle'];
+    const raw=createPool(),schema=`test_admin2_${randomUUID().replaceAll('-','')}`;
+    const tables=['daily_reset_state','auth_user','game_character','item','food_config','recipe','recipe_ingredient','character_recipe','gacha','gacha_reward','inventory','action_log','system_config','shop_product','shop_purchase','blood_pack_purchase_day','battle'];
     const sql=s=>s.replaceAll('public.',`${schema}.`);
     function scoped(hook,onIssued) {
         return {query:(q,p)=>raw.query(sql(q),p),async connect(){const c=await raw.connect();return {
@@ -28,6 +27,7 @@ test('admin phase 2 PostgreSQL isolated schema: masters, roles, scripts, concurr
     try {
         // No public rows or roles are changed. Clone actual CHECK/default/identity definitions.
         for(const table of tables)await raw.query(`create table ${schema}.${table} (like public.${table} including all)`);
+        await pool.query('insert into public.daily_reset_state(singleton) values(true)');
         const constraints=(await raw.query(`select c.conrelid::regclass::text as tbl,c.conname,pg_get_constraintdef(c.oid) as def,
             c.confrelid::regclass::text as ref from pg_constraint c where c.contype='f' and c.connamespace='public'::regnamespace`)).rows;
         const c=await raw.connect();

@@ -25,6 +25,7 @@ export function createApp(config, repository, authDependencies={}) {
   app.locals.developmentErrors = config.nodeEnv === 'development';
 
   app.disable('x-powered-by');
+  if (config.nodeEnv === 'production') app.set('env', 'production');
 
   app.use((req, res, next) => {
     res.locals.requestId = randomUUID();
@@ -46,6 +47,24 @@ export function createApp(config, repository, authDependencies={}) {
       );
     }
 
+    if (config.cors) {
+      res.vary('Origin');
+      if (req.headers.origin === config.origin) {
+        res.set({
+          'Access-Control-Allow-Origin': config.origin,
+          'Access-Control-Allow-Credentials': 'true',
+          'Access-Control-Expose-Headers': 'X-Request-Id'
+        });
+      }
+      if (req.method === 'OPTIONS') {
+        if (req.headers.origin !== config.origin) throw new AppError(403, 'ORIGIN_DENIED', '허용되지 않은 출처입니다.');
+        res.set({
+          'Access-Control-Allow-Methods': 'GET,HEAD,POST,PATCH,PUT,DELETE,OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type,Authorization'
+        });
+        return res.status(204).end();
+      }
+    }
     next();
   });
 

@@ -37,6 +37,7 @@ async function fixture(t) {
     const request=(path,opts={})=>fetch(base+path,{redirect:'manual',...opts});
     async function begin(){const r=await request('/auth/mastodon/login');const url=new URL(r.headers.get('location'));
         assert.equal(url.origin,'https://survival-bob.site');assert.equal(url.searchParams.get('scope'),'profile');
+        assert.match(r.headers.get('set-cookie'),/Max-Age=300/);
         const cookie=r.headers.get('set-cookie').split(';')[0],verifier=cookie.split('=')[1];
         assert.equal(url.searchParams.get('code_challenge'),createHash('sha256').update(verifier).digest('base64url'));
         return {cookie,path:'/auth/mastodon/callback?code=fixture-code&state='+url.searchParams.get('state')};}
@@ -46,7 +47,7 @@ test('OAuth binds browser/state/PKCE, rotates session, respects role and logs ou
     const f=await fixture(t),first=await f.begin();
     const success=await f.request(first.path,{headers:{Cookie:first.cookie}});
     assert.equal(success.status,303);assert.equal(success.headers.get('location'),'https://survivalbob.site/');
-    const raw=success.headers.get('set-cookie');assert.match(raw,/HttpOnly/);assert.match(raw,/Secure/);assert.match(raw,/SameSite=Lax/);
+    const raw=success.headers.get('set-cookie');assert.match(raw,/Max-Age=604800/);assert.match(raw,/HttpOnly/);assert.match(raw,/Secure/);assert.match(raw,/SameSite=Lax/);
     const cookie=raw.match(/__Host-sangjonbap-session=[a-f0-9]{64}/)[0];
     const me=await f.request('/auth/me',{headers:{Cookie:cookie}});const body=await me.json();
     assert.equal(body.data.user.role,'USER');assert.ok(!JSON.stringify(body).includes('token'));

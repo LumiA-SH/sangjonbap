@@ -1,6 +1,7 @@
+import MobileLoginHelp from './MobileLoginHelp';
 import { useEffect, useRef, useState } from 'react';
 import CharacterCreationPanel from './dev/CharacterCreationPanel';
-import { api, setToken } from './api/client';
+import { api, apiUrl, setToken } from './api/client';
 import AdminPanel from './admin/AdminPanel';
 import TrainingBloodPanel from './dev/TrainingBloodPanel';
 import CharacterCarePanel from './dev/CharacterCarePanel';
@@ -427,7 +428,10 @@ export default function App() {
 
                 {!loggedIn ? (
                     provider === 'mastodon' ? (
-                        <a href="/api/auth/mastodon/login">Mastodon으로 로그인</a>
+                        <>
+                        <a href={apiUrl('/auth/mastodon/login')}>Mastodon으로 로그인</a>
+                        <MobileLoginHelp />
+                        </>
                     ) : provider === 'dev' ? (
                         <form onSubmit={login}>
                           <label htmlFor="key">개발 로그인 키</label>

@@ -1,15 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
-import pg from 'pg';
+import {createIsolatedPool} from './isolated-pool.js';
 import {createGachaRepository} from '../src/modules/gacha/repository.js';
 import {transferInventoryItem} from '../src/modules/inventory/transfer.js';
 
-test('PostgreSQL gacha isolated transaction and concurrency', {skip:process.env.RUN_GACHA_DB_TESTS!=='1'||!process.env.GACHA_TEST_DATABASE_URL}, async t=>{
-    const url=new URL(process.env.GACHA_TEST_DATABASE_URL);
-    assert(['localhost','127.0.0.1','[::1]'].includes(url.hostname),'Only dedicated local PostgreSQL is allowed');
-    assert(/test/i.test(url.pathname),'Dedicated test database name is required');
-    const pool=new pg.Pool({connectionString:url.href}), characters=[], users=[], items=[], gachas=[];
+test('PostgreSQL gacha isolated transaction and concurrency', {skip:process.env.RUN_GACHA_DB_TESTS!=='1'||!process.env.ISOLATED_PG_CONFIG}, async t=>{
+    const pool=createIsolatedPool(), characters=[], users=[], items=[], gachas=[];
     let ready=false;
     const setup=await pool.connect();
     try {

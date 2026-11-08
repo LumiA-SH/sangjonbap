@@ -1,3 +1,4 @@
+import {dailyGateFixture} from './daily-gate-fixture.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
@@ -7,7 +8,7 @@ function fixture({admin = true, failLog = false} = {}) {
     let area = {id: '3', name: '지역', encounter_rate: 40, investigation_rate: 75, is_open: true, unlock_at: null};
     const calls = [], logs = [];
     let snapshot;
-    const client = {release() {}, async query(sql, params = []) {
+    const client = {release() {}, async query(sql, params = []) {const dailyGateResult=dailyGateFixture(sql);if(dailyGateResult)return dailyGateResult;
         sql = sql.replace(/\s+/g, ' ').trim(); calls.push({sql, params});
         const result = values => ({rows: values, rowCount: values.length});
         if (sql === 'begin') {snapshot = structuredClone(area); return result([]);}
