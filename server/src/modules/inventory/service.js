@@ -27,6 +27,7 @@ function validateBody(body) {
 
     validatePositiveId(body.itemId, 'itemId');
     validatePositiveId(body.quantity, 'quantity');
+    if (body.quantity > 2147483647) throw new AppError(400, 'INVALID_INVENTORY_REQUEST', '수량 저장 범위를 초과합니다.');
     validateRequestKey(body.requestKey);
 
     return {

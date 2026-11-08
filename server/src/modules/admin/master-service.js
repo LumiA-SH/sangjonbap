@@ -4,7 +4,8 @@ import {validateStockChange} from '../gacha/rules.js';
 
 export const masterFields = {
     areas: ['name','description','image_url','sort_order','investigation_rate','encounter_rate','is_open','unlock_at'],
-    foods: ['item_id','blood_recovery','stat_growth_enabled','stat_growth_rate','stat_growth_target','stat_growth_value','rp_effect_text'],
+    'food-grades': ['name','blood_recovery','is_active'],
+    foods: ['grade_id','is_failure','item_id','blood_recovery','stat_growth_enabled','stat_growth_rate','stat_growth_target','stat_growth_value','rp_effect_text'],
     recipes: ['name','description','discovery_grade','learn_cost','success_rate','result_quantity','result_item_id','failure_item_id','is_active','ingredients'],
     gachas: ['name','price','is_active','start_at','end_at','rewards']
 };
@@ -22,13 +23,14 @@ export function validateMasterInput(kind,body,create) {
     const key=requestKey(body);
     const patch=Object.fromEntries(fields.filter(k=>Object.hasOwn(body,k)).map(k=>[k,body[k]]));
     if (!Object.keys(patch).length) invalid('변경할 값이 없습니다.');
-    const required={areas:['name','is_open','encounter_rate'],foods:['item_id'],recipes:['name','success_rate','result_item_id','ingredients'],gachas:['name','price','rewards']}[kind];
+    const required={'food-grades':['name','blood_recovery'],areas:['name','is_open','encounter_rate'],foods:['item_id'],recipes:['name','success_rate','result_item_id','ingredients'],gachas:['name','price','rewards']}[kind];
     if (create && required.some(k=>!Object.hasOwn(patch,k))) invalid('필수 필드가 없습니다.');
     if (!create && 'item_id' in patch) invalid('음식의 연결 아이템은 변경할 수 없습니다.');
     if ('name' in patch && (typeof patch.name!=='string'||!patch.name.trim()||[...patch.name].length>100)) invalid('이름은 1~100자입니다.');
     if ('discovery_grade' in patch && patch.discovery_grade!==null && !['COMMON','RARE','SPECIAL'].includes(patch.discovery_grade)) invalid('발견 등급은 COMMON/RARE/SPECIAL 또는 미확정 NULL입니다.');
     for (const k of ['description','rp_effect_text','image_url']) if (k in patch && patch[k]!==null && typeof patch[k]!=='string') invalid(`${k}: 문자열 또는 NULL이 필요합니다.`);
-    for (const k of ['stat_growth_enabled','is_active','is_open']) if (k in patch && typeof patch[k]!=='boolean') invalid(`${k}: boolean이 필요합니다.`);
+    for (const k of ['stat_growth_enabled','is_active','is_open','is_failure']) if (k in patch && typeof patch[k]!=='boolean') invalid(`${k}: boolean이 필요합니다.`);
+    if ('grade_id' in patch && patch.grade_id!==null && !validId(patch.grade_id)) invalid('음식 등급 ID를 확인하세요.');
     for (const k of ['item_id','result_item_id','failure_item_id']) if (k in patch && !(k==='failure_item_id'&&patch[k]===null) && !validId(patch[k])) invalid(`${k}: 올바른 ID가 필요합니다.`);
     for (const k of ['blood_recovery','stat_growth_value','learn_cost','price']) if (k in patch) integer(patch[k],0,k);
     if(kind==='gachas'&&'price' in patch&&patch.price!==1)invalid('가챠 비용은 코인 1개입니다.');

@@ -16,6 +16,18 @@ export function createMaintenanceApp(repository,{secret='',executionReady=false}
         if(req.headers.origin)throw new AppError(403,'MAINTENANCE_BROWSER_DENIED','브라우저 요청은 허용하지 않습니다.');
         next();
     });
+    app.get('/maintenance/diagnostics/db',async(req,res)=>{
+        if(!repository.diagnoseDatabase)throw new AppError(503,'MAINTENANCE_DIAGNOSTICS_UNAVAILABLE','진단 기능이 준비되지 않았습니다.');
+        ok(res,await repository.diagnoseDatabase());
+    });
+    app.post('/maintenance/daily-reset',async(req,res)=>{
+        if(!executionReady)throw new AppError(503,'MAINTENANCE_CONCURRENCY_HOLD','동시성 검증 및 활성화 승인이 필요합니다.');
+        ok(res,{reset:await repository.recoverDailyReset()});
+    });
+    app.post('/maintenance/battle-expiry',async(req,res)=>{
+        if(!executionReady)throw new AppError(503,'MAINTENANCE_CONCURRENCY_HOLD','동시성 검증 및 활성화 승인이 필요합니다.');
+        ok(res,{expired:await repository.expireBattles({limit:10})});
+    });
     app.post('/maintenance',async(req,res)=>{
         if(!executionReady)throw new AppError(503,'MAINTENANCE_CONCURRENCY_HOLD','동시성 검증 및 활성화 승인이 필요합니다.');
         const reset=await repository.recoverDailyReset();

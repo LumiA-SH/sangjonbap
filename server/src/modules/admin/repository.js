@@ -8,11 +8,13 @@ import {createAdminSettingsRepository} from './settings-repository.js';
 import {createAdminDeleteRepository} from './delete-repository.js';
 import {createAdminCharacterOperations} from './character-operations.js';
 import {createAdminInvestigationOperations} from './investigation-operations.js';
+import {createAdminDiagnostics} from './diagnostics.js';
 const tables={items:'item',products:'shop_product'};
 const fail=(code,message,status=409)=>{throw new AppError(status,code,message);};
 
 export function createAdminRepository(pool) {
     return {
+        ...createAdminDiagnostics(pool),
         ...createAdminSettingsRepository(pool),
         ...createAdminDeleteRepository(pool),
         ...createAdminCharacterOperations(pool),

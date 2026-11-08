@@ -62,6 +62,7 @@ test('all phase 2 routes authenticate and require ADMIN; roles revoked immediate
     repo.listAdminMasters=async()=>[];repo.getAdminMaster=async()=>({id:'1'});repo.saveAdminMaster=async()=>({id:'1'});
     repo.searchAdminUsers=async()=>[];repo.changeAdminRole=async()=>({id:'2',role:'ADMIN'});
     repo.searchAdminCharacters=async()=>[];repo.getAdminCharacter=async()=>({character:{id:'1'},inventory:[]});
+    repo.getAdminDiagnostics=async()=>({});
     repo.getAdminInvestigation=async()=>({results:[],clues:[]});repo.getAdminBalanceSettings=async()=>({});
     const config={nodeEnv:'development',provider:'dev',userId:'1',loginKey:'dev-test-only-key',origin:'http://localhost:3000'};
     const server=createApp(config,repo).listen(0,'127.0.0.1');await new Promise(r=>server.once('listening',r));
@@ -71,7 +72,7 @@ test('all phase 2 routes authenticate and require ADMIN; roles revoked immediate
         const payload=await login.json();
         const token=payload.data?.token;
         assert.ok(token);
-        const paths=['foods','recipes','gachas','areas','users','characters','characters/1','areas/1/results','balance'];
+        const paths=['diagnostics','food-grades','foods','recipes','gachas','areas','users','characters','characters/1','areas/1/results','balance'];
         for(const path of paths){
             assert.equal((await fetch(`${base}/admin/${path}`)).status,401);
             assert.equal((await fetch(`${base}/admin/${path}`,{headers:{Authorization:`Bearer ${token}`}})).status,403);

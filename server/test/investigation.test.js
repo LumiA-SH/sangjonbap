@@ -46,7 +46,7 @@ function fixture(overrides = {}, {random = () => 0, failAt, duplicateAtLog = fal
         return rows(state.character ? [clone(state.character)] : []);
       }
       if (sql.startsWith('select * from public.investigation_result')) {
-        assert.match(sql, /where area_id=\$1 and is_active order by id for share$/);
+        assert.match(sql, /where area_id=\$1 and is_active and \(not is_failure or failure_selectable\) order by id for share$/);
         return rows(clone(state.results));
       }
       if (sql.startsWith('update public.game_character')) {
@@ -156,7 +156,7 @@ test('normal investigation deducts exactly one AP, returns/logs rewards and lock
   assert.equal(f.state().inventory['3'], 2);
   assert.deepEqual(f.state().logs[0], {characterId: '10', category: 'INVESTIGATION', actionType: 'INVESTIGATE',
     targetType: 'AREA', targetId: '1', requestKey: key,
-    detail: {dailyTransactionDay:'2026-11-08',area_id: '1', result_id: '2', rewards: result.rewards, clue_id: null,
+    detail: {dailyTransactionDay:'2026-11-08',area_id: '1', result_id: '2', is_failure:false, rewards: result.rewards, clue_id: null,
       first_discovery: false, investigation_rate_before: 0, investigation_rate_after: 0, ap_before: 3, ap_after: 2}});
   const locks = f.calls.filter(call => /for update/.test(call.sql)).map(call => call.sql);
   assert.match(locks[0], /public.area/); assert.match(locks[1], /public.game_character/);

@@ -37,6 +37,7 @@ async function changeStorageQuantity(client, itemId, delta) {
 
     const before = current.rowCount ? Number(current.rows[0].quantity) : 0;
     const after = before + delta;
+    if (!Number.isSafeInteger(delta) || !Number.isSafeInteger(after) || after > 2147483647) throw new AppError(409, 'STORAGE_LIMIT_CONFLICT', '창고 수량 저장 범위를 초과합니다.');
 
     if (after < 0) return {ok:false, before, after};
 

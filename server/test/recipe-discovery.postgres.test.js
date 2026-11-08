@@ -18,7 +18,7 @@ test('recipe discovery isolated PostgreSQL: global uniqueness, integration and r
         if(fail&&q.includes('insert into public.action_log')&&p?.[3]===fail)throw Error('injected final log failure');
         return c.query(rewrite(q),p);
     }};}};
-    const tables=['daily_reset_state','auth_user','game_character','item','inventory','action_log','system_config','recipe','recipe_ingredient','character_recipe','food_config',
+    const tables=['food_grade','daily_reset_state','auth_user','game_character','item','inventory','action_log','system_config','recipe','recipe_ingredient','character_recipe','food_config',
         'shop_product','shop_purchase','blood_pack_purchase_day','area','investigation_result','investigation_reward','unique_discovery','clue',
         'monster','monster_action','monster_drop','area_monster','battle','battle_log','gacha'];
     const migrated=(await raw.query("select to_regclass('public.recipe_discovery') is not null as ready")).rows[0].ready;
@@ -157,7 +157,8 @@ test('recipe discovery isolated PostgreSQL: global uniqueness, integration and r
                 values($1,10,false,0,null,0)`,[food.id]);
             await pool.query('update public.game_character set blood=20 where id=$1',[users[3].c.id]);
             const eaten=await cook.eatFood(users[3].u.id,food.id,randomUUID());
-            assert.equal(eaten.blood,30);assert.equal(eaten.dailyMealCount,1);assert.equal(eaten.growth,null);
+            // This fixture shares success/failure item: latest RP policy overrides configured recovery.
+            assert.equal(eaten.isFailure,true);assert.equal(eaten.blood,20);assert.equal(eaten.dailyMealCount,1);assert.equal(eaten.growth,null);
         });
         await t.test('PVE snapshots exclude discovered recipes and settlement rechecks live state',async()=>{
             const r=await recipe('SPECIAL');

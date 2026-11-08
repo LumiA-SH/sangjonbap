@@ -1,5 +1,6 @@
 import {useEffect, useRef, useState} from 'react';
 import {api} from '../api/client';
+import DiagnosticsPanel from './DiagnosticsPanel';
 import MasterPanel from './MasterPanel';
 import RolePanel from './RolePanel';
 import RecordsPanel from '../dev/RecordsPanel';
@@ -72,11 +73,12 @@ export default function AdminPanel({onBack}) {
     <p>서버 ADMIN 권한 검증 영역입니다. 인증 방식: {authentication||'확인 중'}</p>
     <button onClick={onBack}>DEV 콘솔로 돌아가기</button><p role="alert">{message}</p>
     {allowed&&<>
+      <button disabled={busy} onClick={()=>setKind('diagnostics')}>데이터 진단</button>
       <button disabled={busy} onClick={()=>setKind('balance')}>공통 밸런스</button>
       <button disabled={busy} onClick={()=>setKind('characters')}>캐릭터 운영 관리</button>
       <button disabled={busy} onClick={()=>setKind('investigation')}>조사 결과·보상</button>
-      <nav className="actions">{[['items','아이템'],['products','상점 상품'],['foods','음식 설정'],['recipes','레시피'],['gachas','가챠'],['areas','지역 공개·조우'],['users','관리자 권한'],['battle','PVE·캐릭터 등록'],['logs','전체 행동 로그']].map(([type,label])=><button key={type} disabled={busy} onClick={()=>{setKind(type);setSelected(null);setEditorKey(v=>v+1);if(['items','products'].includes(type))load(type);}}>{label}</button>)}</nav>
-      {kind==='investigation'?<InvestigationAdminPanel onDenied={denied}/>:kind==='characters'?<CharacterOperationsPanel onDenied={denied}/>:kind==='balance'?<BalancePanel onDenied={denied}/>:kind==='logs'?<RecordsPanel admin onDenied={denied}/>:kind==='battle'?<BattleAdminPanel onDenied={denied}/>:kind==='users'?<RolePanel onDenied={denied}/>:['foods','recipes','gachas','areas'].includes(kind)?<MasterPanel key={kind} kind={kind} onDenied={denied}/>:<>
+      <nav className="actions">{[['items','아이템'],['products','상점 상품'],['foods','음식 설정'],['food-grades','음식 등급'],['recipes','레시피'],['gachas','가챠'],['areas','지역 공개·조우'],['users','관리자 권한'],['battle','PVE·캐릭터 등록'],['logs','전체 행동 로그']].map(([type,label])=><button key={type} disabled={busy} onClick={()=>{setKind(type);setSelected(null);setEditorKey(v=>v+1);if(['items','products'].includes(type))load(type);}}>{label}</button>)}</nav>
+      {kind==='diagnostics'?<DiagnosticsPanel onDenied={denied}/>:kind==='investigation'?<InvestigationAdminPanel onDenied={denied}/>:kind==='characters'?<CharacterOperationsPanel onDenied={denied}/>:kind==='balance'?<BalancePanel onDenied={denied}/>:kind==='logs'?<RecordsPanel admin onDenied={denied}/>:kind==='battle'?<BattleAdminPanel onDenied={denied}/>:kind==='users'?<RolePanel onDenied={denied}/>:['foods','food-grades','recipes','gachas','areas'].includes(kind)?<MasterPanel key={kind} kind={kind} onDenied={denied}/>:<>
       <p>혈액팩은 명시적 효과로 지정하며 무료 상품의 일일 한도는 1입니다. 영구 삭제는 참조가 없는 아이템만 가능하며 기록은 보존합니다.</p>
       {kind==='items'&&selected&&<button disabled={busy} onClick={async()=>{
         if(!window.confirm(`아이템 ${selected.name} (ID ${selected.id})을 영구 삭제합니까? 참조가 있으면 거부됩니다.`))return;

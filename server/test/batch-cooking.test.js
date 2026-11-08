@@ -72,7 +72,7 @@ function fixture({status='ALIVE',ap=10,active=false,failLog=false,foodCount=0,at
         if(sql.startsWith('select config_key,config_value'))return rows(p[0].map(config_key=>({config_key,config_value:config_key==='cooking_ap_cost'?2:40})));
         if(sql.startsWith('select * from public.recipe_ingredient'))return rows(ingredients);
         if(sql.startsWith('select * from public.item'))return rows([{id:p[0],is_active:true}]);
-        if(sql.startsWith('select * from public.food_config'))return rows([{blood_recovery:10,stat_growth_enabled:true,stat_growth_target:'ATK',stat_growth_value:1,stat_growth_rate:20,...food}]);
+        if(sql.startsWith('select f.*,g.blood_recovery'))return rows([{blood_recovery:10,stat_growth_enabled:true,stat_growth_target:'ATK',stat_growth_value:1,stat_growth_rate:20,...food}]);
         if(sql.startsWith('select item_id,quantity from public.inventory'))return rows(p[1].filter(id=>state.inventory[id]!=null).map(id=>({item_id:id,quantity:state.inventory[id]})));
         if(sql.startsWith('select id,quantity from public.inventory'))return rows(state.inventory[p[1]]==null?[]:[{id:p[1],quantity:state.inventory[p[1]]}]);
         if(sql.startsWith('insert into public.inventory')){state.inventory[p[1]]=p[2];return rows([]);}

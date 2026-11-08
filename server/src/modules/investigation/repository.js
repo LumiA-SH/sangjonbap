@@ -73,7 +73,7 @@ export function createInvestigationRepository(pool, {random = randomUnit, battle
 
         const candidates = await client.query(
           `select * from public.investigation_result
-           where area_id=$1 and is_active order by id for share`, [areaId]
+           where area_id=$1 and is_active and (not is_failure or failure_selectable) order by id for share`, [areaId]
         );
         const selected = chooseResult(candidates.rows, random);
         if (!selected) throw new AppError(409, 'NO_INVESTIGATION_RESULT', '등록된 조사 결과가 없습니다.');
@@ -139,7 +139,7 @@ export function createInvestigationRepository(pool, {random = randomUnit, battle
           clue = clueResult.rows[0] || null;
         }
         const result = {
-          result: {id: selected.id, result_grade: selected.result_grade, result_text: selected.result_text,
+          result: {id: selected.id, is_failure:!!selected.is_failure, result_grade: selected.result_grade, result_text: selected.result_text,
             is_unique: selected.is_unique, investigation_rate_value: Number(selected.investigation_rate_value)},
           rewards, clue, firstDiscovery, area: areaView(area), ap: Number(character.ap)
         };
@@ -147,7 +147,7 @@ export function createInvestigationRepository(pool, {random = randomUnit, battle
         await writeActionLog(client, {
           characterId: before.id, category: 'INVESTIGATION', actionType: 'INVESTIGATE',
           targetType: 'AREA', targetId: areaId, description: selected.result_text,
-          detail: {area_id: areaId, result_id: selected.id, rewards, clue_id: selected.clue_id,
+          detail: {area_id: areaId, result_id: selected.id, is_failure:!!selected.is_failure, rewards, clue_id: selected.clue_id,
             first_discovery: firstDiscovery, investigation_rate_before: rateBefore,
             investigation_rate_after: Number(area.investigation_rate), ap_before: Number(before.ap), ap_after: result.ap},
           requestKey

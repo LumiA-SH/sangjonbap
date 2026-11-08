@@ -4,6 +4,7 @@ import {adminTransaction,requireAdminRow,checkDuplicate,fail} from './transactio
 import {saveGachaStock} from './gacha-stock.js';
 
 const definitions={
+    'food-grades':{table:'food_grade',pk:'id',target:'FOOD_GRADE'},
     areas:{table:'area',pk:'id',target:'AREA'},
     foods:{table:'food_config',pk:'item_id',target:'FOOD_CONFIG'},
     recipes:{table:'recipe',pk:'id',target:'RECIPE',child:'recipe_ingredient',foreign:'recipe_id',rows:'ingredients'},
@@ -14,7 +15,7 @@ async function records(client,kind,id,after='0') {
     const d=definitions[kind];
     const nested=d.child?`,coalesce((select jsonb_agg(jsonb_build_object('item_id',x.item_id::text,'quantity',x.quantity${kind==='gachas'?",'id',x.id::text,'weight',x.weight,'is_active',x.is_active,'max_stock',x.max_stock,'remaining_stock',x.remaining_stock,'name',(select name from public.item where id=x.item_id)":''}) order by x.${kind==='gachas'?'id':'item_id'}) from public.${d.child} x where x.${d.foreign}=p.id),'[]'::jsonb) ${d.rows}`:'';
     const timestamps=kind==='gachas'?`,to_char(p.start_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') start_at,to_char(p.end_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') end_at`:'';
-    const rows=(await client.query(`select p.*,p.${d.pk} as id${nested}${timestamps} from public.${d.table} p where p.${d.pk}${id?'=':'>'}$1 order by p.${d.pk} limit 100`,[id||after])).rows;
+    const rows=(await client.query(`select p.*,p.${d.pk} as id${kind==='foods'?`,(p.is_failure or exists(select 1 from public.recipe r where r.failure_item_id=p.item_id)) as effective_failure`:''}${nested}${timestamps} from public.${d.table} p where p.${d.pk}${id?'=':'>'}$1 order by p.${d.pk} limit 100`,[id||after])).rows;
     return rows.map(row=>{
         for (const key of ['stat_growth_rate','success_rate','encounter_rate','investigation_rate']) if (key in row) row[key]=Number(row[key]);
         if (row.rewards) {
@@ -32,6 +33,17 @@ async function lockItems(client,ids) {
 }
 export function createAdminMasterRepository(pool) {
     return {
+        deleteFoodGrade(userId,id,key) {
+            return adminTransaction(pool,async c=>{
+                await requireAdminRow(c,userId);await checkDuplicate(c,key);
+                const before=(await c.query('select * from public.food_grade where id=$1 for update',[id])).rows[0];
+                if(!before)fail('ADMIN_RECORD_NOT_FOUND','등급이 없습니다.',404);
+                if((await c.query('select 1 from public.food_config where grade_id=$1 limit 1',[id])).rowCount)fail('FOOD_GRADE_IN_USE','사용 중인 등급은 삭제할 수 없습니다. 비활성화를 사용하세요.');
+                await c.query('delete from public.food_grade where id=$1',[id]);
+                await writeActionLog(c,{adminUserId:userId,category:'ADMIN',actionType:'FOOD_GRADE_DELETE',targetType:'FOOD_GRADE',targetId:id,description:'미참조 음식 등급 삭제',detail:{before,after:null},requestKey:key});
+                return {deleted:true};
+            });
+        },
         listAdminMasters:(kind,after)=>records(pool,kind,null,after),
         async getAdminMaster(kind,id) {
             const row=(await records(pool,kind,id))[0];
@@ -68,6 +80,7 @@ export function createAdminMasterRepository(pool) {
                     await lockItems(c,[merged.result_item_id,merged.failure_item_id,...(merged[d.rows]||[]).map(r=>r.item_id)]);
                     if (kind==='recipes'&&!merged[d.rows]?.length) fail('INVALID_ADMIN_INPUT','재료를 한 개 이상 등록하세요.',400);
                 }
+                if(kind==='foods' && merged.grade_id && !(await c.query('select id from public.food_grade where id=$1 and is_active',[merged.grade_id])).rowCount) fail('FOOD_GRADE_NOT_FOUND','활성 음식 등급을 선택하세요.',400);
                 const values=Object.fromEntries(Object.entries(patch).filter(([k])=>k!==d.rows));
                 const columns=Object.keys(values), params=Object.values(values);
                 let savedId=id;

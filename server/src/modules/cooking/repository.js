@@ -76,7 +76,12 @@ export function createCookingRepository(pool, {random = randomUnit} = {}) {
                 from public.recipe r left join public.recipe_discovery d on d.recipe_id=r.id
                 left join public.shop_product s on s.recipe_id=r.id and s.is_active
                 where r.is_active and (d.recipe_id is not null or exists(select 1 from public.character_recipe cr where cr.character_id=$1 and cr.recipe_id=r.id)) order by r.id`, [c.id])).rows;
-            const foods = (await pool.query(`select f.*,i.name,v.quantity from public.inventory v join public.item i on i.id=v.item_id
+            const foods = (await pool.query(`select f.*,i.name,v.quantity,
+                case when f.is_failure or exists(select 1 from public.recipe r where r.failure_item_id=f.item_id) then 0
+                  else coalesce((select blood_recovery from public.food_grade where id=f.grade_id),f.blood_recovery) end as blood_recovery,
+                (f.is_failure or exists(select 1 from public.recipe r where r.failure_item_id=f.item_id)) as effective_failure,
+                (f.stat_growth_enabled and not (f.is_failure or exists(select 1 from public.recipe r where r.failure_item_id=f.item_id))) as stat_growth_enabled
+                from public.inventory v join public.item i on i.id=v.item_id
                 join public.food_config f on f.item_id=i.id where v.character_id=$1 and v.quantity>0 and i.is_active order by i.id`, [c.id])).rows;
             return {recipes,foods,cookingApCost,dailyMealLimit: DAILY_MEAL_LIMIT,dailyMealCount:c.daily_meal_count,
                 successQuantity:SUCCESS_QUANTITY,failureQuantity:FAILURE_QUANTITY,successRate:SUCCESS_RATE,maxBatchQuantity:MAX_BATCH_QUANTITY};
@@ -125,7 +130,9 @@ export function createCookingRepository(pool, {random = randomUnit} = {}) {
             return transact(userId, requestKey, 'EAT', async (client, before) => {
                 if (before.daily_meal_count>=DAILY_MEAL_LIMIT) fail('DAILY_MEAL_LIMIT', '오늘 식사 횟수를 모두 사용했습니다.');
                 await lockItems(client,[itemId]);
-                const food = (await client.query('select * from public.food_config where item_id=$1 for share', [itemId])).rows[0];
+                const food = (await client.query(`select f.*,g.blood_recovery as grade_recovery,
+                    (f.is_failure or exists(select 1 from public.recipe r where r.failure_item_id=f.item_id)) as effective_failure
+                    from public.food_config f left join public.food_grade g on g.id=f.grade_id where f.item_id=$1 for share of f`, [itemId])).rows[0];
                 if (!food) fail('FOOD_NOT_FOUND', '음식 설정이 없는 아이템입니다.', 404);
                 const quantities = await inventoryQuantities(client,before.id,[itemId]);
                 if ((quantities.get(String(itemId))||0)<1) fail('NOT_ENOUGH_FOOD', '음식을 보유하고 있지 않습니다.');
@@ -133,7 +140,7 @@ export function createCookingRepository(pool, {random = randomUnit} = {}) {
                 const cap = Math.min(40,configuredCap);
                 const stats = {atk:before.atk,def:before.def,agi:before.agi};
                 let growth = null;
-                if (food.stat_growth_enabled) {
+                if (!food.effective_failure && food.stat_growth_enabled) {
                     const stat = {ATK:'atk',DEF:'def',AGI:'agi'}[food.stat_growth_target];
                     if (!stat) fail('FOOD_CONFIG_INVALID','음식 성장 대상 설정 오류입니다.',500);
                     if(!Number.isInteger(food.stat_growth_value)||food.stat_growth_value<1)fail('FOOD_CONFIG_INVALID','음식 성장량 설정 오류입니다.',500);
@@ -144,11 +151,11 @@ export function createCookingRepository(pool, {random = randomUnit} = {}) {
                     }
                 }
                 const inventory = await changeInventoryQuantity(client,before.id,itemId,-1);
-                const after = await changeCharacterResources(client,before,{blood:food.blood_recovery});
+                const after = await changeCharacterResources(client,before,{blood:food.effective_failure?0:(food.grade_recovery??food.blood_recovery)});
                 await client.query('update public.game_character set atk=$1,def=$2,agi=$3,daily_meal_count=$4 where id=$5',
                     [stats.atk,stats.def,stats.agi,before.daily_meal_count+1,before.id]);
                 return {itemId,inventoryQuantity:inventory.after,bloodBefore:before.blood,blood:after.blood,
-                    dailyMealCount:before.daily_meal_count+1,dailyMealLimit:DAILY_MEAL_LIMIT,growth,stats,permanentStatCap:cap,rpEffectText:food.rp_effect_text??null};
+                    isFailure:!!food.effective_failure,dailyMealCount:before.daily_meal_count+1,dailyMealLimit:DAILY_MEAL_LIMIT,growth,stats,permanentStatCap:cap,rpEffectText:food.rp_effect_text??null};
             });
         }
     };

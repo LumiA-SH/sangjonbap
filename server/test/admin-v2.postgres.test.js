@@ -15,7 +15,7 @@ const deferred=()=>{let resolve;const promise=new Promise(r=>{resolve=r;});retur
 
 test('admin phase 2 PostgreSQL isolated schema: masters, roles, scripts, concurrency', {skip:process.env.RUN_ADMIN_DB_TESTS!=='1'},async t=>{
     const raw=createPool(),schema=`test_admin2_${randomUUID().replaceAll('-','')}`;
-    const tables=['daily_reset_state','auth_user','game_character','item','food_config','recipe','recipe_ingredient','character_recipe','gacha','gacha_reward','inventory','action_log','system_config','shop_product','shop_purchase','blood_pack_purchase_day','battle'];
+    const tables=['food_grade','recipe_discovery','daily_reset_state','auth_user','game_character','item','food_config','recipe','recipe_ingredient','character_recipe','gacha','gacha_reward','inventory','action_log','system_config','shop_product','shop_purchase','blood_pack_purchase_day','battle'];
     const sql=s=>s.replaceAll('public.',`${schema}.`);
     function scoped(hook,onIssued) {
         return {query:(q,p)=>raw.query(sql(q),p),async connect(){const c=await raw.connect();return {
@@ -76,7 +76,11 @@ test('admin phase 2 PostgreSQL isolated schema: masters, roles, scripts, concurr
             const found=await repo.searchAdminItems('isolated');assert.ok(found.some(r=>r.id===material.id&&r.category==='MATERIAL'));
             assert.deepEqual(await repo.searchAdminItems('%'),[]);
         });
-        let recipe,gacha;
+        const rp=await repo.saveAdminRecord(a.id,'items',null,{name:'RP',category:'MATERIAL',transferable:true,usable:false,battle_usable:false,use_target:'NONE',effect_type:null,effect_value:null},key());
+        const rp2=await repo.saveAdminRecord(a.id,'items',null,{name:'RP2',category:'MATERIAL',transferable:true,usable:false,battle_usable:false,use_target:'NONE',effect_type:null,effect_value:null},key());
+        const stock=(id,n)=>({item_id:id,quantity:1,max_stock:n,remaining_stock:n});
+        let recipe=await save('recipes',null,{name:'DEV recipe',success_rate:100,result_item_id:food.id,failure_item_id:failure.id,ingredients:[{item_id:material.id,quantity:2}]}),
+            gacha=await save('gachas',null,{name:'DEV gacha',price:1,rewards:[stock(rp.id,100),stock(rp2.id,300)]});
         await t.test('food disabled/enabled constraints, partial updates, percentage and audit',async()=>{
             await rejects(save('foods',null,{item_id:food.id},u.id),'ADMIN_REQUIRED');
             let row=await save('foods',null,{item_id:food.id,blood_recovery:7});
@@ -91,13 +95,13 @@ test('admin phase 2 PostgreSQL isolated schema: masters, roles, scripts, concurr
             assert.equal(log.before.stat_growth_enabled,true);assert.equal(log.after.stat_growth_value,0);
         });
         await t.test('recipe ingredients + gacha rewards create/update/list/detail and probability',async()=>{
-            recipe=await save('recipes',null,{name:'DEV recipe',success_rate:100,result_item_id:food.id,failure_item_id:failure.id,ingredients:[{item_id:material.id,quantity:2}]});
-            assert.equal(recipe.result_quantity,4);
+            recipe=await repo.getAdminMaster('recipes',recipe.id);
+            assert.equal(recipe.result_quantity,3);
             recipe=await save('recipes',recipe.id,{learn_cost:1,ingredients:[{item_id:material.id,quantity:3}]});
             assert.equal(recipe.ingredients[0].quantity,3);
             await rejects(save('recipes',recipe.id,{ingredients:[{item_id:'9223372036854775807',quantity:1}]}),'ITEM_NOT_FOUND');
             assert.equal((await repo.getAdminMaster('recipes',recipe.id)).ingredients[0].quantity,3);
-            gacha=await save('gachas',null,{name:'DEV gacha',price:1,rewards:[{item_id:food.id,quantity:1,weight:1},{item_id:failure.id,quantity:2,weight:3}]});
+            gacha=await repo.getAdminMaster('gachas',gacha.id);
             assert.deepEqual(gacha.rewards.map(r=>r.probability),[25,75]);
             assert.equal((await repo.listAdminMasters('gachas'))[0].id,gacha.id);
             await rejects(save('gachas',gacha.id,{start_at:'2026-10-12T00:00:00Z',end_at:'2026-10-11T00:00:00Z'}),'INVALID_ADMIN_INPUT');
@@ -107,15 +111,15 @@ test('admin phase 2 PostgreSQL isolated schema: masters, roles, scripts, concurr
         });
         await t.test('audit failure rolls back parent, nested children, and role; duplicate writes rollback',async()=>{
             const fault=createAdminRepository(scoped(q=>{if(q.includes('insert into public.action_log'))throw new Error('injected audit failure');}));
-            for(const [kind,row,patch] of [['recipes',recipe,{name:'rollback',ingredients:[{item_id:material.id,quantity:9}]}],['gachas',gacha,{price:99,rewards:[{item_id:food.id,quantity:9,weight:1}]}]]){
+            for(const [kind,row,patch] of [['recipes',recipe,{name:'rollback',ingredients:[{item_id:material.id,quantity:9}]}],['gachas',gacha,{name:'rollback',rewards:[stock(rp.id,110)]}]]){
                 const before=await repo.getAdminMaster(kind,row.id);
                 await assert.rejects(fault.saveAdminMaster(a.id,kind,row.id,patch,key()),/injected/);
                 assert.deepEqual(await repo.getAdminMaster(kind,row.id),before);
             }
             await assert.rejects(fault.changeAdminRole(a.id,u.id,'ADMIN',key()),/injected/);
             assert.equal((await pool.query('select role from public.auth_user where id=$1',[u.id])).rows[0].role,'USER');
-            const k=key();await repo.saveAdminMaster(a.id,'gachas',gacha.id,{price:2},k);
-            await rejects(repo.saveAdminMaster(a.id,'gachas',gacha.id,{price:9},k),'DUPLICATE_REQUEST');
+            const k=key();await repo.saveAdminMaster(a.id,'gachas',gacha.id,{name:'renamed'},k);
+            await rejects(repo.saveAdminMaster(a.id,'gachas',gacha.id,{name:'duplicate'},k),'DUPLICATE_REQUEST');
         });
         const character=(await pool.query("insert into public.game_character(name,hunter_grade,atk,def,agi,currency) values ('DEV isolated','B',5,5,5,1000) returning *")).rows[0];
         await pool.query('update public.auth_user set character_id=$1 where id=$2',[character.id,u.id]);
@@ -129,28 +133,30 @@ test('admin phase 2 PostgreSQL isolated schema: masters, roles, scripts, concurr
             const edit=editor.saveAdminMaster(a.id,'recipes',recipe.id,{ingredients:[{item_id:material.id,quantity:7}]},key());
             await editing.promise;
             release.resolve();const [result,updated]=await Promise.all([play,edit]);
-            assert.equal(result.consumed[0].quantity,3);assert.equal(result.output.quantity,4);assert.equal(updated.ingredients[0].quantity,7);
+            assert.equal(result.consumed[0].quantity,3);assert.equal(result.output.quantity,3);assert.equal(updated.ingredients[0].quantity,7);
             assert.equal((await pool.query('select * from public.character_recipe where character_id=$1',[character.id])).rowCount,1);
         });
         await t.test('DRAW uses one price/reward snapshot while admin replaces composition, history preserved',async()=>{
             const locked=deferred(),release=deferred(),editing=deferred();
-            const draws=createGachaRepository(scoped(async q=>{if(q==='select * from public.gacha where id=$1 for share'){locked.resolve();await release.promise;}}),{random:()=>0});
+            const draws=createGachaRepository(scoped(async q=>{if(q==='select * from public.gacha where id=$1 for update'){locked.resolve();await release.promise;}}),{random:()=>0});
             const play=draws.drawGacha(u.id,gacha.id,key());await locked.promise;
             const editor=createAdminRepository(scoped(null,q=>{if(q==='select id from public.gacha where id=$1 for update')editing.resolve();}));
-            const edit=editor.saveAdminMaster(a.id,'gachas',gacha.id,{price:5,rewards:[{item_id:material.id,quantity:4,weight:1}]},key());
+            const edit=editor.saveAdminMaster(a.id,'gachas',gacha.id,{rewards:[stock(rp2.id,300)]},key());
             await editing.promise;
             release.resolve();const [result]=await Promise.all([play,edit]);
-            assert.equal(result.price,2);assert.equal(result.reward.itemId,food.id);
+            assert.equal(result.price,1);assert.equal(result.reward.itemId,rp.id);
             const next=await createGachaRepository(pool,{random:()=>0}).drawGacha(u.id,gacha.id,key());
-            assert.equal(next.price,5);assert.equal(next.reward.itemId,material.id);
+            assert.equal(next.price,1);assert.equal(next.reward.itemId,rp2.id);
             assert.equal((await pool.query("select * from public.action_log where action_type='GACHA_DRAW'")).rowCount,2);
         });
         await t.test('empty/nonpositive and inactive reward configurations cannot draw',async()=>{
-            await rejects(save('gachas',gacha.id,{rewards:[]}),'INVALID_ADMIN_INPUT');
+            await save('gachas',gacha.id,{rewards:[]});
+            await rejects(createGachaRepository(pool).drawGacha(u.id,gacha.id,key()),'GACHA_SOLD_OUT');
+            await save('gachas',gacha.id,{rewards:[{...stock(rp2.id,300),remaining_stock:299}]});
             await rejects(save('gachas',gacha.id,{rewards:[{item_id:food.id,quantity:1,weight:0}]}),'INVALID_ADMIN_INPUT');
-            await repo.saveAdminRecord(a.id,'items',material.id,{is_active:false},key());
-            await rejects(createGachaRepository(pool).drawGacha(u.id,gacha.id,key()),'GACHA_ITEM_UNAVAILABLE');
-            await repo.saveAdminRecord(a.id,'items',material.id,{is_active:true},key());
+            await repo.saveAdminRecord(a.id,'items',rp2.id,{is_active:false},key());
+            await rejects(createGachaRepository(pool).drawGacha(u.id,gacha.id,key()),'GACHA_RP_ITEM_REQUIRED');
+            await repo.saveAdminRecord(a.id,'items',rp2.id,{is_active:true},key());
         });
         await t.test('training: concurrent daily requests, great growth clamp, full cap reward, state and config rollback',async()=>{
             const training=createTrainingRepository(pool,{random:()=>0});
@@ -170,7 +176,7 @@ test('admin phase 2 PostgreSQL isolated schema: masters, roles, scripts, concurr
             assert.equal((await pool.query('select last_training_date from public.game_character where id=$1',[character.id])).rows[0].last_training_date,null);
             const normalKey=key(),normal=await createTrainingRepository(pool,{random:()=>0.9}).trainCharacter(u.id,normalKey);assert.equal(normal.growth.growth,1);assert.equal(normal.great,false);
             await rejects(training.trainCharacter(u.id,normalKey),'DUPLICATE_REQUEST');
-            for(const [grade,rate] of [['B',25],['A',15],['S',10]]) {
+            for(const [grade,rate] of [['B',25],['A',20],['S',15]]) {
                 for(const [roll,expected] of [[(rate-1)/100,true],[rate/100,false]]) {
                     await pool.query('update public.game_character set hunter_grade=$1,atk=10,def=40,agi=40,last_training_date=null where id=$2',[grade,character.id]);
                     const result=await createTrainingRepository(pool,{random:()=>roll}).trainCharacter(u.id,key());

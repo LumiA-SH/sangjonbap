@@ -37,3 +37,20 @@ test('battle expiry keeps default 100 and parameterizes bounded batch size',asyn
     for(const limit of [0,101,1.5,'10'])await assert.rejects(repo.expireBattles({limit}),{code:'INVALID_EXPIRY_LIMIT'});
     assert.equal(calls.length,2);
 });
+
+
+test('diagnostic authentication and independent execution endpoints preserve HOLD',async t=>{
+ let reads=0,writes=0;
+ const server=createMaintenanceApp({diagnoseDatabase:async()=>{reads++;return {connected:true,readOnly:true};},recoverDailyReset:async()=>{writes++;},expireBattles:async()=>{writes++;}},{secret}).listen(0,'127.0.0.1');
+ await new Promise(r=>server.once('listening',r));t.after(()=>new Promise(r=>server.close(r)));
+ const base='http://127.0.0.1:'+server.address().port;
+ const headers={'x-maintenance-secret':secret};
+ for(const h of [{},{'x-maintenance-secret':'wrong'},{...headers,Origin:'https://survivalbob.site'}])assert.notEqual((await fetch(base+'/maintenance/diagnostics/db',{headers:h})).status,200);
+ assert.equal(reads,0);
+ assert.equal((await fetch(base+'/maintenance/diagnostics/db',{headers})).status,200);
+ for(const path of ['daily-reset','battle-expiry']) {
+ const response=await fetch(base+'/maintenance/'+path,{method:'POST',headers});
+ assert.equal(response.status,503);assert.equal((await response.json()).error.code,'MAINTENANCE_CONCURRENCY_HOLD');
+ }
+ assert.equal(reads,1);assert.equal(writes,0);
+});

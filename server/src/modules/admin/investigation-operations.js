@@ -3,10 +3,11 @@ import {adminTransaction,requireAdminRow,checkDuplicate,fail} from './transactio
 import {requestKey,invalid} from './master-service.js';
 import {validId} from './service.js';
 
-const fields=['result_grade','result_text','weight','is_unique','investigation_rate_value','clue_id','is_active'];
+const fields=['is_failure','failure_selectable','result_grade','result_text','weight','is_unique','investigation_rate_value','clue_id','is_active'];
 const percent=n=>typeof n==='number'&&Number.isFinite(n)&&n>=0&&n<=100&&Number(n.toFixed(2))===n;
 export function validateInvestigationConfig(body) {
     const key=requestKey(body);
+    for(const k of ['is_failure','failure_selectable']) if(k in body && typeof body[k]!=='boolean')invalid('실패 분류와 선택 포함 여부는 boolean입니다.');
     if(Object.keys(body).some(k=>![...fields,'rewards','requestKey'].includes(k)))invalid('허용되지 않은 조사 설정 필드입니다.');
     if(typeof body.result_grade!=='string'||!body.result_grade.trim()||body.result_grade.length>30||typeof body.result_text!=='string'||!body.result_text.trim())invalid('결과 등급과 내용이 필요합니다.');
     if(!Number.isInteger(body.weight)||body.weight<1||body.weight>2147483647||!percent(body.investigation_rate_value))invalid('가중치 또는 조사율 상승값을 확인하세요.');
@@ -44,9 +45,9 @@ export function createAdminInvestigationOperations(pool) {
                 // Match investigation/battle discovery: recipe before item; never change discovery history.
                 for(const recipeId of sort(body.rewards.map(r=>r.recipe_id)))if(!(await c.query('select id from public.recipe where id=$1 for share',[recipeId])).rowCount)fail('RECIPE_NOT_FOUND','레시피가 없습니다.',404);
                 for(const itemId of sort(body.rewards.map(r=>r.item_id)))if(!(await c.query('select id from public.item where id=$1 for share',[itemId])).rowCount)fail('ITEM_NOT_FOUND','아이템이 없습니다.',404);
-                const values=fields.map(k=>body[k]);
-                const saved=(await c.query(id?`update public.investigation_result set ${fields.map((k,i)=>`${k}=$${i+1}`).join(',')} where id=$8 and area_id=$9 returning *`:
-                    `insert into public.investigation_result(${fields.join(',')},area_id) values(${values.map((_,i)=>`$${i+1}`).join(',')},$8) returning *`,id?[...values,id,areaId]:[...values,areaId])).rows[0];
+                const values=fields.map(k=>['is_failure','failure_selectable'].includes(k)?(body[k]??before?.[k]??(k==='failure_selectable')):body[k]);
+                const saved=(await c.query(id?`update public.investigation_result set ${fields.map((k,i)=>`${k}=$${i+1}`).join(',')} where id=$${fields.length+1} and area_id=$${fields.length+2} returning *`:
+                    `insert into public.investigation_result(${fields.join(',')},area_id) values(${values.map((_,i)=>`$${i+1}`).join(',')},$${fields.length+1}) returning *`,id?[...values,id,areaId]:[...values,areaId])).rows[0];
                 await c.query('delete from public.investigation_reward where investigation_result_id=$1',[saved.id]);
                 for(const r of body.rewards)await c.query('insert into public.investigation_reward(investigation_result_id,item_id,recipe_id,quantity,probability) values($1,$2,$3,$4,$5)',[saved.id,r.item_id??null,r.recipe_id??null,r.quantity,r.probability]);
                 const after=(await records(c,areaId)).find(r=>String(r.id)===String(saved.id));

@@ -1,6 +1,6 @@
 import {AppError,ok} from '../../shared/http.js';
 import {validId} from './service.js';
-import {validateMasterInput} from './master-service.js';
+import {validateMasterInput,requestKey} from './master-service.js';
 import {validateRoleInput} from './role-repository.js';
 import {recordsCursor,recordsPage} from '../records/routes.js';
 
@@ -12,6 +12,8 @@ function cursor(req,allowed=['after']) {
 }
 // Called only after existing authentication + ADMIN middleware.
 export function mountExtendedAdminRoutes(router,repo) {
+    router.delete('/food-grades/:id',async(req,res)=>{id(req.params.id);ok(res,await repo.deleteFoodGrade(req.auth.user.id,req.params.id,requestKey(req.body)));});
+    router.get('/diagnostics',async(req,res)=>ok(res,await repo.getAdminDiagnostics()));
     router.get('/areas/:areaId/results',async(req,res)=>{id(req.params.areaId);ok(res,await repo.getAdminInvestigation(req.params.areaId));});
     for(const method of ['post','patch'])router[method](`/areas/:areaId/results${method==='patch'?'/:id':''}`,async(req,res)=>{
         id(req.params.areaId);if(req.params.id)id(req.params.id);
@@ -48,7 +50,7 @@ export function mountExtendedAdminRoutes(router,repo) {
     router.post('/users/:id/character',async(req,res)=>{
         id(req.params.id);ok(res,{character:await repo.registerAdminCharacter(req.auth.user.id,req.params.id,req.body)},201);
     });
-    for (const kind of ['foods','recipes','gachas','areas']) {
+    for (const kind of ['foods','food-grades','recipes','gachas','areas']) {
         router.get(`/${kind}`,async(req,res)=>{
             const records=await repo.listAdminMasters(kind,cursor(req));
             ok(res,{records,nextAfter:records.length===100?records.at(-1).id:null});

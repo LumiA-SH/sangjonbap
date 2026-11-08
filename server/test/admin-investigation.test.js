@@ -12,7 +12,7 @@ function fixture({failLog=false,discovered=false}={}) {
         if(sql.startsWith('select id from public.action_log'))return rows([]);
         if(sql.startsWith('select id from public.'))return rows([{id:p[0]}]);
         if(sql.startsWith('select r.*'))return rows([{...state.result,rewards:structuredClone(state.rewards),discovery:discovered?{character_id:'9'}:null}]);
-        if(sql.startsWith('update public.investigation_result')){['result_grade','result_text','weight','is_unique','investigation_rate_value','clue_id','is_active'].forEach((k,i)=>state.result[k]=p[i]);return rows([{...state.result}]);}
+        if(sql.startsWith('update public.investigation_result')){['is_failure','failure_selectable','result_grade','result_text','weight','is_unique','investigation_rate_value','clue_id','is_active'].forEach((k,i)=>state.result[k]=p[i]);return rows([{...state.result}]);}
         if(sql.startsWith('delete from public.investigation_reward')){state.rewards=[];return rows([]);}
         if(sql.startsWith('insert into public.investigation_reward')){state.rewards.push({item_id:p[1],recipe_id:p[2],quantity:p[3],probability:p[4]});return rows([]);}
         if(sql.startsWith('insert into public.action_log')){if(failLog)throw Error('audit failed');return rows([]);}throw Error(sql);

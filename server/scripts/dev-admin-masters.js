@@ -46,7 +46,9 @@ export async function manageDevAdminMasters(c,config,adminId,{deactivate=false}=
     for(const [i,name] of names.entries())items.push((await repo.saveAdminRecord(adminId,'items',null,{name,category:i===0?'MATERIAL':'FOOD',description:marker},randomUUID())).id);
     for(const id of items.slice(1))await repo.saveAdminMaster(adminId,'foods',null,{item_id:id,blood_recovery:0,stat_growth_enabled:false,stat_growth_rate:0,stat_growth_target:null,stat_growth_value:0,rp_effect_text:'DEV 테스트 전용'},randomUUID());
     const recipe=await repo.saveAdminMaster(adminId,'recipes',null,{name:'[DEV ADMIN v1] 레시피',learn_cost:0,success_rate:50,result_item_id:items[1],failure_item_id:items[2],is_active:true,ingredients:[{item_id:items[0],quantity:2}]},randomUUID());
-    const gacha=await repo.saveAdminMaster(adminId,'gachas',null,{name:'[DEV ADMIN v1] 가챠',price:1,is_active:true,start_at:null,end_at:null,rewards:items.map(id=>({item_id:id,quantity:1,weight:1}))},randomUUID());
+    const rp=await repo.saveAdminRecord(adminId,'items',null,{name:'[DEV ADMIN v1] RP 소품',category:'MATERIAL',description:marker,transferable:true,usable:false,battle_usable:false,use_target:'NONE',effect_type:null,effect_value:null},randomUUID());
+    items.push(rp.id);
+    const gacha=await repo.saveAdminMaster(adminId,'gachas',null,{name:'[DEV ADMIN v1] 가챠',price:1,is_active:true,start_at:null,end_at:null,rewards:[{item_id:rp.id,quantity:1,max_stock:10,remaining_stock:10}]},randomUUID());
     const ids={items,recipe:recipe.id,gacha:gacha.id};
     await writeActionLog(c,{adminUserId:adminId,category:'ADMIN',actionType:'DEV_MASTER_CREATE',description:'DEV 마스터 생성',detail:{marker,ids},requestKey:randomUUID()});
     return {mode:'created',ids};

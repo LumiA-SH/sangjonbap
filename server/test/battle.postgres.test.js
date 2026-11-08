@@ -19,7 +19,7 @@ import {createTrainingRepository} from '../src/modules/training/repository.js';
 const rejects=(p,code)=>assert.rejects(p,e=>e.code===code);
 test('PVE PostgreSQL transactions, snapshots, registration and concurrency', {skip:process.env.RUN_BATTLE_DB_TESTS!=='1'},async t=>{
     const raw=createPool(),schema=`test_pve_${randomUUID().replaceAll('-','')}`;
-    const tables=['auth_user','game_character','food_config','item','inventory','action_log','system_config','battle','battle_log','area',
+    const tables=['food_grade','auth_user','game_character','food_config','item','inventory','action_log','system_config','battle','battle_log','area',
         'daily_reset_state','daily_reset_run','monster','monster_action','monster_drop','area_monster','investigation_result','investigation_reward','unique_discovery','clue',
         'recipe','character_recipe','shop_product','shop_purchase','blood_pack_purchase_day','storage','gacha','gacha_reward'];
     const migrated=(await raw.query("select to_regclass('public.recipe_discovery') is not null as ready")).rows[0].ready;

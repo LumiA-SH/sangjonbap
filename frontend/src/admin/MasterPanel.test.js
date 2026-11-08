@@ -13,7 +13,7 @@ async function change(label,value){await act(async()=>Simulate.change(input(labe
 beforeEach(()=>{
   global.IS_REACT_ACT_ENVIRONMENT=true;
   Object.defineProperty(global,'crypto',{configurable:true,value:{randomUUID:()=>uuid}});
-  api.mockReset();container=document.createElement('div');document.body.appendChild(container);root=createRoot(container);
+  api.mockReset();api.mockResolvedValue({records:[],nextAfter:null});container=document.createElement('div');document.body.appendChild(container);root=createRoot(container);
 });
 afterEach(async()=>{await act(async()=>root.unmount());container.remove();jest.restoreAllMocks();});
 async function mount(kind,onDenied=jest.fn()) {
@@ -34,7 +34,7 @@ test('area creation is available; encounter edit sends only changed fields to pr
 test('food client validation, save UUID, reload and DB detail',async()=>{
   await mount('foods');
   await act(async()=>Simulate.submit(container.querySelector('form')));
-  expect(container.textContent).toContain('양의 정수');expect(api).toHaveBeenCalledTimes(1);
+  expect(container.textContent).toContain('양의 정수');expect(api.mock.calls.filter(([url])=>url==='/admin/foods')).toHaveLength(1);
   await change('아이템 ID','42');await change('혈량 회복','7');
   api.mockResolvedValueOnce({record:{id:'42',item_id:'42',blood_recovery:7}}).mockResolvedValueOnce({records:[{id:'42',item_id:'42'}],nextAfter:null});
   await act(async()=>Simulate.submit(container.querySelector('form')));
@@ -102,4 +102,16 @@ test('role search distinguishes account IDs, confirms change and reloads, cancel
   await act(async()=>button('관리자 지정').click());
   expect(api).toHaveBeenCalledWith('/admin/users/2/role',{method:'PATCH',body:{role:'ADMIN',requestKey:uuid}});
   expect(container.textContent).toContain('권한 변경');
+});
+
+test('food grade editor saves configurable recovery through existing admin API',async()=>{
+ await mount('food-grades');await change('이름','일반');await change('혈량 회복',10);
+ api.mockResolvedValueOnce({record:{id:'1',name:'일반',blood_recovery:10,is_active:true}}).mockResolvedValueOnce({records:[],nextAfter:null});
+ await act(async()=>Simulate.submit(container.querySelector('form')));
+ expect(api).toHaveBeenCalledWith('/admin/food-grades',expect.objectContaining({body:expect.objectContaining({name:'일반',blood_recovery:10})}));
+ expect(container.textContent).toContain('변경 전후 확인');
+});
+test('food policy controls expose grade and failure with preserved individual recovery',async()=>{
+ await mount('foods');expect(container.textContent).toContain('개별 회복량 유지');expect(container.textContent).toContain('실패 RP 음식');
+ expect(validateDraft('foods',{...{item_id:'1',grade_id:null,is_failure:true,blood_recovery:7,stat_growth_enabled:false,stat_growth_target:null,stat_growth_value:0}})).toBe('');
 });
