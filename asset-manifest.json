@@ -1,16 +1,16 @@
 {
   "files": {
     "main.css": "/sangjonbap/static/css/main.3cbf5f11.css",
-    "main.js": "/sangjonbap/static/js/main.1eb8087b.js",
+    "main.js": "/sangjonbap/static/js/main.270dde40.js",
     "static/media/background-pattern.svg": "/sangjonbap/static/media/background-pattern.39a5ebd1b3ce594076c9.svg",
     "static/media/blood-splatter-logo.svg": "/sangjonbap/static/media/blood-splatter-logo.77817a91d051d402cb0a.svg",
     "index.html": "/sangjonbap/index.html",
     "static/media/warning-stripe.svg": "/sangjonbap/static/media/warning-stripe.dd1a6cb4eb855c6e8eca.svg",
     "main.3cbf5f11.css.map": "/sangjonbap/static/css/main.3cbf5f11.css.map",
-    "main.1eb8087b.js.map": "/sangjonbap/static/js/main.1eb8087b.js.map"
+    "main.270dde40.js.map": "/sangjonbap/static/js/main.270dde40.js.map"
   },
   "entrypoints": [
     "static/css/main.3cbf5f11.css",
-    "static/js/main.1eb8087b.js"
+    "static/js/main.270dde40.js"
   ]
 }
