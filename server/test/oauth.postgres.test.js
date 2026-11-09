@@ -37,6 +37,7 @@ test('OAuth shared PostgreSQL state, identity and sessions (isolated)',{skip:pro
             const user=await repo.resolveOAuthUser('survival-bob.site','3344',{username:'runner',display_name:'러너',avatar:'https://example.test/avatar.png'});
             const ops=createAdminCharacterOperations(pool);
             let before=(await ops.getAdminCharacter(user.character_id)).character;
+            const listing=(await ops.searchAdminCharacters('러너')).find(r=>r.id===user.character_id);assert.equal(listing.user_id,user.id);assert.equal(listing.user_role,'USER');assert.equal(listing.initial_setup_complete,false);assert.equal(listing.profile_image_url,'https://example.test/avatar.png');assert.equal('mastodon_account_id' in listing,false);
             assert.equal(before.name,'러너');assert.equal(before.profile_image_url,'https://example.test/avatar.png');
             assert.throws(()=>requireActionCharacter(before),{code:'CHARACTER_SETUP_REQUIRED'});
             const admin=(await pool.query("insert into public.auth_user(role) values('ADMIN') returning id")).rows[0].id;

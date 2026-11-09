@@ -47,7 +47,7 @@ export function createAdminCharacterOperations(pool) {
                 return after;
             });
         },
-        async searchAdminCharacters(query,after='0') {return (await pool.query('select id,name,status,is_active from public.game_character where id>$2 and strpos(lower(name),lower($1))>0 order by id limit 50',[query,after])).rows;},
+        async searchAdminCharacters(query,after='0') {return (await pool.query('select c.id,c.name,c.status,c.is_active,c.profile_image_url,c.hunter_grade,c.ability_grade,c.has_ability,c.initial_setup_complete, u.id as user_id,u.role as user_role from public.game_character c left join public.auth_user u on u.character_id=c.id where c.id>$2 and strpos(lower(c.name),lower($1))>0 order by c.id limit 50',[query,after])).rows;},
         getAdminCharacter:id=>read(pool,id),
         saveAdminCharacter(actor,id,body,inventory=false) {
             const {patch,key}=validateCharacterOperation(body,inventory);

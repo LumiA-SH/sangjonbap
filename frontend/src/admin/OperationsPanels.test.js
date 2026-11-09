@@ -12,8 +12,8 @@ beforeEach(()=>{global.IS_REACT_ACT_ENVIRONMENT=true;api.mockReset();Object.defi
 afterEach(async()=>{await act(async()=>root.unmount());container.remove();jest.restoreAllMocks();});
 test('character search selects exact ID and sends server mutation then reloads actual values',async()=>{
     await act(async()=>root.render(<CharacterOperationsPanel onDenied={()=>{}}/>));
-    api.mockResolvedValueOnce({records:[{id:'2',name:'같은 이름',is_active:true,status:'ALIVE'},{id:'3',name:'같은 이름',is_active:true,status:'ALIVE'}],nextAfter:null});
-    await act(async()=>Simulate.submit(container.querySelector('form')));expect(container.textContent).toContain('ID 2');expect(container.textContent).toContain('ID 3');
+    api.mockResolvedValueOnce({records:[{id:'2',name:'같은 이름',is_active:true,status:'ALIVE',user_id:'8',user_role:'ADMIN',initial_setup_complete:false,profile_image_url:'https://example.test/avatar.png'},{id:'3',name:'같은 이름',is_active:true,status:'ALIVE'}],nextAfter:null});
+    await act(async()=>Simulate.submit(container.querySelector('form')));expect(container.textContent).toContain('ID 2');expect(container.textContent).toContain('ID 3');expect(container.textContent).toContain('러너 계정 8 (관리자)');expect(container.textContent).toContain('초기 설정 미완료');expect(container.querySelector('img').src).toBe('https://example.test/avatar.png');
     const data={character:{id:'2',name:'같은 이름',hp:50,blood:30,ap:10,currency:4,atk:12,def:12,agi:12,status:'ALIVE'},inventory:[]};
     api.mockResolvedValueOnce(data);await act(async()=>button('선택').click());
     await act(async()=>Simulate.change(input('HP'),{target:{value:'70'}}));
