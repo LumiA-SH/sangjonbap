@@ -28,7 +28,7 @@ export default function CookingPanel({catalog, inventory = [], activeBattle, bat
     <button disabled={busy} onClick={() => run(refresh)}>레시피·음식 새로고침</button>
     {error && <p role="alert">조회 실패: {error} · 이전 값일 수 있습니다.</p>}
     {character?.status === 'DEAD' && <p>DEAD 행동 불가</p>}
-    {character?.status === 'NEAR_DEATH' && <p>빈사 상태에서는 식사가 가능하며 요리·레시피 습득은 불가합니다.</p>}
+    {character?.status === 'NEAR_DEATH' && <p>빈사 상태에서는 식사와 레시피 구매가 가능하며 요리는 불가합니다.</p>}
     <p>요리 AP {catalog?.cookingApCost ?? '조회 필요'} · 성공 수량은 레시피별 설정 · 실패 {catalog?.failureQuantity ?? '-'}개</p>
     <p>식사 {catalog?.dailyMealCount ?? '-'} / {catalog?.dailyMealLimit ?? '-'}회 · 일일 초기화 자동 실행은 현재 HOLD입니다.</p>
     {activeBattle && <p>전투 중에는 요리·식사·습득을 할 수 없습니다.</p>}
@@ -42,7 +42,7 @@ export default function CookingPanel({catalog, inventory = [], activeBattle, bat
       <p>상점 가격 {recipe.shop_price ?? '미등록'} · 성공률 {recipe.success_rate}% · 성공 {recipe.result_quantity}개 · {recipe.learned ? '습득 완료' : '미습득'}</p>
       <p>재료: {recipe.ingredients.map(row => `${row.name} × ${validQuantity ? row.quantity*quantity : '-'} (보유 ${inventory.find(i=>String(i.item_id ?? i.itemId)===String(row.itemId))?.quantity ?? 0})`).join(', ')}</p>
       <div className="actions">
-        <button disabled={craftBlocked || recipe.learned || !recipe.shop_product_id} onClick={() => perform(`/cooking/recipes/${recipe.id}/learn`, true)}>습득</button>
+        <button disabled={blocked || recipe.learned || !recipe.shop_product_id} onClick={() => perform(`/cooking/recipes/${recipe.id}/learn`)}>습득</button>
         <button disabled={craftBlocked || !validQuantity || !recipe.learned || Number(character?.ap)<catalog.cookingApCost*quantity}
           onClick={() => perform(`/cooking/recipes/${recipe.id}/cook`, true)}>요리</button>
       </div>

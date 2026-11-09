@@ -1,3 +1,8 @@
+import GuidePage from './public/GuidePage';
+import CharacterDirectory from './public/CharacterDirectory';
+import AnemiaNotice from './public/AnemiaNotice';
+import CoinTransferPanel from './dev/CoinTransferPanel';
+import PublicCharacterPanel from './dev/PublicCharacterPanel';
 import MobileLoginHelp from './MobileLoginHelp';
 import {publicAsset} from './publicAsset';
 import OAuthErrorNotice from './OAuthErrorNotice';
@@ -5,7 +10,9 @@ import { useEffect, useRef, useState } from 'react';
 import CharacterCreationPanel from './dev/CharacterCreationPanel';
 import { api, apiUrl, setToken } from './api/client';
 import AdminPanel from './admin/AdminPanel';
+import {useNavigation} from './admin/navigation';
 import TrainingBloodPanel from './dev/TrainingBloodPanel';
+import DonationPanel from './dev/DonationPanel';
 import CharacterCarePanel from './dev/CharacterCarePanel';
 import ActionLogPanel from './dev/ActionLogPanel';
 import ShopPanel from './dev/ShopPanel';
@@ -72,14 +79,18 @@ function ResourceBar({ label, value, max }) {
 
 export default function App() {
   const [key, setKey] = useState('');
-  const [view, setView] = useState('home');
+  const {route,go,back}=useNavigation();
+  const view=route.tab;
+  const setView=tab=>go({admin:false,tab});
   const [menuOpen, setMenuOpen] = useState(false);
   const [loggedIn, setLoggedIn] = useState(false);
   const [provider, setProvider] = useState(null);
   const [authError, setAuthError] = useState(null);
   const [authAttempt, setAuthAttempt] = useState(0);
   const [user, setUser] = useState(null);
-  const [adminOpen, setAdminOpen] = useState(false);
+  const adminOpen=route.admin;
+  const setAdminOpen=open=>go({admin:open,tab:view,menu:'dashboard'});
+  const canAdmin=loggedIn && user?.role==='ADMIN' && (provider==='mastodon'||process.env.NODE_ENV!=='production');
   const [character, setCharacter] = useState(null);
   const [inventory, setInventory] = useState([]);
   const [storage, setStorage] = useState([]);
@@ -110,6 +121,7 @@ export default function App() {
         .then(async config => {
           if (!live) return;
 
+          if (process.env.NODE_ENV==='production' && config.provider==='dev') throw new Error('운영 환경에서는 개발 로그인을 사용할 수 없습니다.');
           if (!['mastodon','dev'].includes(config.provider)) throw new Error('지원하지 않는 인증 설정입니다.');
           setProvider(config.provider);
 
@@ -236,6 +248,7 @@ export default function App() {
 
   const navigation = [
     ['home', '홈', 'home'],
+    ['world','세계관','book'],['system','시스템 안내','book'],['schedule','러닝 일정','book'],['roster','공개 캐릭터','user'],
     ['character', '캐릭터', 'user'],
     ['investigation', '조사', 'compass'],
     ['battle', '전투', 'swords'],
@@ -255,6 +268,7 @@ export default function App() {
   ];
 
   const pageDescriptions = {
+    world:'공개된 세계관을 확인합니다.',system:'운영진이 등록한 시스템 안내입니다.',schedule:'러닝 일정과 진행 상태를 확인합니다.',roster:'공개된 캐릭터를 살펴봅니다.',
     home: '식량을 확보하고, 조리하고, 버텨내세요.',
     character: '생존자 정보와 상태를 확인합니다.',
     investigation: '탐사 지역과 조사 결과를 확인합니다.',
@@ -285,22 +299,21 @@ export default function App() {
   const currentTime = now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false });
   const currentDate = now.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' });
 
-  if (loggedIn && adminOpen) {
-    return (
-        <main>
-          <AdminPanel onBack={() => setAdminOpen(false)} />
-        </main>
-    );
-  }
 
   return (
-      <div className="survival-app">
+      <>
+      {adminOpen&&<main className="admin-workspace">
+        {canAdmin?<AdminPanel route={route} onNavigate={next=>go({...route,...next})} onBack={back} onExit={()=>go({admin:false,tab:view})} onLogout={()=>run(logout)} onAccessLost={()=>setUser(current=>current?{...current,role:null}:null)}/>:
+        <section className="admin-gate"><h1>운영진 전용 페이지</h1><p role="alert">{provider===null?'인증 확인 중…':loggedIn?'관리자 권한이 필요합니다.':'로그인 후 관리자 권한을 확인합니다.'}</p><button onClick={()=>setAdminOpen(false)}>게임으로 돌아가기</button></section>}
+      </main>}
+      <div className="survival-app" hidden={adminOpen}>
         <aside className={`survival-sidebar ${menuOpen ? 'is-open' : ''}`}>
           <button type="button" className="survival-logo survival-logo-link" onClick={() => navigate('home')} aria-label="생존밥 홈으로 이동">
             <img src={publicAsset('saengjonbap_logo.png')} alt="생존밥" />
           </button>
 
           <nav aria-label="주 메뉴">
+            {canAdmin&&<button type="button" onClick={()=>setAdminOpen(true)}>운영 관리</button>}
             {navigation.map(([id, label, symbol]) => (
                 <button key={id} type="button" className={view === id ? 'is-active' : ''} onClick={() => navigate(id)}>
                   <NavIcon name={symbol} className="survival-nav-icon" />
@@ -424,6 +437,7 @@ export default function App() {
                 </div>
             )}
 
+            {view==='home'&&character&&<AnemiaNotice character={character}/>}
             <div className="survival-auth" style={{ display: loggedIn && view !== 'home' ? 'none' : 'block' }}>
               <section aria-labelledby="login-title">
                 <OAuthErrorNotice />
@@ -455,7 +469,7 @@ export default function App() {
                 ) : (
                     <div className="actions">
                       <span>로그인됨</span>
-                      {user?.role === 'ADMIN' && <button disabled={busy} onClick={() => setAdminOpen(true)}>관리자 영역</button>}
+                      {canAdmin && <button disabled={busy} onClick={() => setAdminOpen(true)}>관리자 영역</button>}
                       <button disabled={busy} onClick={() => run(refreshAll)}>전체 상태 새로고침</button>
                       <button disabled={busy} onClick={() => run(logout)}>로그아웃</button>
                     </div>
@@ -464,12 +478,17 @@ export default function App() {
             </div>
 
             {(busy || message) && <p className="dev-message" role="status" aria-live="polite">{busy ? '처리 중…' : message}</p>}
+            {['world','system','schedule'].includes(view)&&<GuidePage key={view} kind={view}/>}
+            {view==='roster'&&<CharacterDirectory recordId={route.record} onOpen={record=>go({admin:false,tab:'roster',record})} onBack={()=>go({admin:false,tab:'roster'})} canReadDetails={loggedIn&&!!user?.character_id}/>}
             {loggedIn && !user?.character_id && <CharacterCreationPanel />}
 
             {loggedIn && user?.character_id && (
                 <>
                   <div className="survival-page" style={display('character')}>
                     <CharacterPanel character={character} error={errors.character} busy={busy} run={run} onCharacter={setCharacter} refresh={refreshAll} notify={setMessage} dev={provider === 'dev'} />
+                    <PublicCharacterPanel />
+                    <CoinTransferPanel character={character} busy={busy} refresh={refreshAll} />
+                    <DonationPanel character={character} busy={busy} refresh={refreshAll} />
                     <CharacterCarePanel character={character} busy={busy} run={run} refresh={refreshAll} notify={setMessage} />
                     <TrainingBloodPanel character={character} inventory={inventory} busy={busy} run={run} refresh={refreshAll} />
                   </div>
@@ -526,5 +545,6 @@ export default function App() {
           </nav>
         </div>
       </div>
+      </>
   );
 }

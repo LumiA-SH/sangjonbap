@@ -49,7 +49,7 @@ export function createRecordsRepository(pool) {
                 cl.first_discoverer_id as character_id,c.name as character_name,a.id as area_id,a.name as area_name
                 from public.clue cl left join public.area a on a.id=cl.area_id
                 left join public.game_character c on c.id=cl.first_discoverer_id
-                where ${account} and cl.is_discovered=true and ($2::bigint is null or cl.id<$2)
+                where ${account} and cl.is_discovered=true and cl.is_public=true and ($2::bigint is null or cl.id<$2)
                 order by cl.id desc limit 31`, [userId, before]);
             return result.rows;
         }

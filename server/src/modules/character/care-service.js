@@ -15,7 +15,7 @@ function validateRequest(targetId, body) {
 }
 
 // Called by the repository only after both rows have been locked.
-function planCare(action, provider, target, settings) {
+export function planCare(action, provider, target, settings) {
     if (!provider) throw new AppError(404, 'CHARACTER_NOT_FOUND', '연결된 활성 캐릭터가 없습니다.');
     if (!target) throw new AppError(404, 'TARGET_NOT_FOUND', '활성 대상 캐릭터가 없습니다.');
     const revive = action === 'REVIVE';

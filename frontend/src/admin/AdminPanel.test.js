@@ -6,7 +6,7 @@ import {api} from '../api/client';
 jest.mock('../api/client',()=>({api:jest.fn()}));
 let root,container;
 const button=text=>[...container.querySelectorAll('button')].find(b=>b.textContent===text);
-beforeEach(()=>{global.IS_REACT_ACT_ENVIRONMENT=true;Object.defineProperty(global,'crypto',{configurable:true,value:{randomUUID:()=> '12345678-1234-4234-8234-123456789012'}});api.mockReset();container=document.createElement('div');document.body.appendChild(container);root=createRoot(container);});
+beforeEach(()=>{global.IS_REACT_ACT_ENVIRONMENT=true;Object.defineProperty(global,'crypto',{configurable:true,value:{randomUUID:()=> '12345678-1234-4234-8234-123456789012'}});window.history.replaceState(null,"","/");window.confirm=jest.fn(()=>true);window.scrollTo=jest.fn();api.mockReset();container=document.createElement('div');document.body.appendChild(container);root=createRoot(container);});
 afterEach(async()=>{await act(async()=>root.unmount());container.remove();});
 async function mount(){await act(async()=>root.render(<AdminPanel onBack={()=>{}}/>));}
 test('permission denied exposes no editors or management data',async()=>{
@@ -41,4 +41,19 @@ test('registered blood pack links to a free daily-limited shop draft without ID 
   api.mockResolvedValueOnce({record:{id:'9',item_id:'8',price:0,daily_limit:1}}).mockResolvedValueOnce({records:[]});
   await act(async()=>Simulate.submit(container.querySelector('form')));
   expect(api).toHaveBeenCalledWith('/admin/products',expect.objectContaining({method:'POST',body:expect.objectContaining({item_id:'8',price:0,daily_limit:1})}));
+});
+
+test('authority loss on window focus removes existing editors',async()=>{
+ api.mockResolvedValueOnce({role:'ADMIN'}).mockResolvedValueOnce({records:[]});await mount();expect(container.querySelector('form')).not.toBeNull();
+ api.mockRejectedValueOnce(Object.assign(new Error('권한 회수'),{status:403}));await act(async()=>window.dispatchEvent(new Event('focus')));expect(container.querySelector('form')).toBeNull();expect(container.querySelector('.admin-navigation')).toBeNull();
+});
+test('cancelled save never sends a mutation',async()=>{
+ api.mockResolvedValueOnce({role:'ADMIN'}).mockResolvedValueOnce({records:[]});await mount();window.confirm.mockReturnValue(false);api.mockClear();
+ await act(async()=>Simulate.submit(container.querySelector('form')));expect(api).not.toHaveBeenCalled();
+});
+test('direct record URL fetches authoritative record and cancel returns to list',async()=>{
+ const navigate=jest.fn();api.mockImplementation(path=>Promise.resolve(path==='/admin/access'?{role:'ADMIN'}:path==='/admin/items/7'?{record:{id:'7',name:'기존 물품',category:'ETC',is_active:true}}:{records:[]}));
+ await act(async()=>root.render(<AdminPanel route={{menu:'items',record:'7'}} onNavigate={navigate} onBack={()=>{}}/>));
+ expect(api).toHaveBeenCalledWith('/admin/items/7');expect(container.querySelector('form').textContent).toContain('ID 7 수정');
+ await act(async()=>button('편집 취소 · 목록으로').click());expect(navigate).toHaveBeenCalledWith({record:null});
 });

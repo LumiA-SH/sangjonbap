@@ -12,6 +12,18 @@ function cursor(req,allowed=['after']) {
 }
 // Called only after existing authentication + ADMIN middleware.
 export function mountExtendedAdminRoutes(router,repo) {
+    router.get('/content/:kind',async(req,res)=>ok(res,await repo.getAdminContent(req.params.kind)));
+    router.patch('/content/:kind',async(req,res)=>ok(res,await repo.saveAdminContent(req.auth.user.id,req.params.kind,req.body)));
+    router.get('/storage',async(req,res)=>{const records=await repo.listAdminStorage(req.query.q??'',cursor(req,['q','after']));ok(res,{records,nextAfter:records.length===100?records.at(-1).item_id:null});});
+    router.patch('/storage/:id',async(req,res)=>{id(req.params.id);ok(res,await repo.saveAdminStorage(req.auth.user.id,req.params.id,req.body));});
+    router.get('/clues',async(req,res)=>{const records=await repo.listAdminClues(req.query.q??'',cursor(req,['q','after']));ok(res,{records,nextAfter:records.length===100?records.at(-1).id:null});});
+    router.get('/clues/:id',async(req,res)=>{id(req.params.id);ok(res,await repo.getAdminClue(req.params.id));});
+    router.post('/clues',async(req,res)=>ok(res,await repo.saveAdminClue(req.auth.user.id,null,req.body),201));
+    router.patch('/clues/:id',async(req,res)=>{id(req.params.id);ok(res,await repo.saveAdminClue(req.auth.user.id,req.params.id,req.body));});
+    router.get('/characters/:id/details',async(req,res)=>{id(req.params.id);ok(res,await repo.getAdminCharacterDetails(req.params.id));});
+    router.patch('/characters/:id/details',async(req,res)=>{id(req.params.id);ok(res,await repo.saveAdminCharacterDetails(req.auth.user.id,req.params.id,req.body));});
+    router.get('/policies/:kind',async(req,res)=>ok(res,await repo.getOperatingPolicy(req.params.kind)));
+    router.patch('/policies/:kind',async(req,res)=>ok(res,await repo.saveOperatingPolicy(req.auth.user.id,req.params.kind,req.body)));
     router.delete('/food-grades/:id',async(req,res)=>{id(req.params.id);ok(res,await repo.deleteFoodGrade(req.auth.user.id,req.params.id,requestKey(req.body)));});
     router.get('/diagnostics',async(req,res)=>ok(res,await repo.getAdminDiagnostics()));
     router.get('/areas/:areaId/results',async(req,res)=>{id(req.params.areaId);ok(res,await repo.getAdminInvestigation(req.params.areaId));});

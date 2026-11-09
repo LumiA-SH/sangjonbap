@@ -1,3 +1,4 @@
+import {publicContentRoutes} from './modules/public-content/routes.js';
 import express from 'express';
 import {battleRoutes} from './modules/battle/routes.js';
 import {trainingRoutes} from './modules/training/routes.js';
@@ -82,11 +83,17 @@ export function createApp(config, repository, authDependencies={}) {
   );
   if(config.provider==='mastodon')app.use('/api/auth/mastodon',mastodonRoutes(config,repository,sessions,authDependencies));
 
+  app.use('/api/public',publicContentRoutes(repository));
+
   // Complete overdue resets before accepting new gameplay on every instance.
   // Auth/health remain available when reset recovery needs operator attention.
   if(repository.recoverDailyReset) app.use(
       ['/api/characters','/api/inventory','/api/investigation','/api/shop','/api/training','/api/cooking','/api/gacha','/api/battles'],
-      sessions.require,async(req,res,next)=>{await repository.recoverDailyReset();next();}
+      sessions.require,async(req,res,next)=>{
+        // These informational GETs never initiate a reset or consume resources.
+        const readOnly=['GET','HEAD'].includes(req.method)&&req.baseUrl==='/api/characters'&&/^\/(?:search|[^/]+\/(?:public|care-preview))\/?$/.test(req.path);
+        if(!readOnly)await repository.recoverDailyReset();next();
+      }
   );
 
   app.use(

@@ -22,8 +22,10 @@ test('same names distinguish IDs; selecting uses existing heal/revive numeric ID
   api.mockResolvedValueOnce({characters:[{id:'2',name:'동명'},{id:'3',name:'동명'}]});await search();
   await act(async()=>button('ID 3 선택').click());expect(container.querySelector('#care-target').value).toBe('3');
   for(const [label,path] of [['대상 치료','/characters/3/heal'],['대상 부활','/characters/3/revive'],['자기 치료','/characters/1/heal']]){
+    api.mockResolvedValueOnce({action:path.endsWith('/revive')?'revive':'heal',provider:{blood:80},target:{id:path.split('/')[2],name:'동명',hp:50},cost:10,hpRecovery:20,expected:{providerBlood:70,targetHp:70,targetBlood:50,targetAp:7}});
+    await act(async()=>button(label).click());
     api.mockResolvedValueOnce({provider:{},target:{}}).mockResolvedValueOnce({logs:[]});
-    await act(async()=>button(label).click());expect(api).toHaveBeenCalledWith(path,expect.objectContaining({method:'POST'}));
+    await act(async()=>button('실행 확인').click());expect(api).toHaveBeenCalledWith(path,expect.objectContaining({method:'POST'}));
   }
   await act(async()=>Simulate.change(container.querySelector('#care-target'),{target:{value:'9'}}));expect(container.querySelector('#care-target').value).toBe('9');
 });

@@ -1,3 +1,6 @@
+import {createPublicContentRepository} from './modules/public-content/repository.js';
+import {createInteractionRepository} from './modules/character/interactions.js';
+import {createDonationRepository} from './modules/character/donation.js';
 import {createBattleRepository} from './modules/battle/repository.js';
 import {createPostgresRepository} from './modules/character/repository.js';
 import {createInventoryRepository} from './modules/inventory/repository.js';
@@ -22,6 +25,7 @@ export function createGameRepository(pool) {
 
     return {
         ...createOAuthRepository(pool),
+        ...createPublicContentRepository(pool),
         recoverDailyReset:createDailyRecovery(pool),
         ...createTrainingRepository(pool),
         ...createBloodPackRepository(pool),
@@ -33,6 +37,8 @@ export function createGameRepository(pool) {
         ...createGachaRepository(pool),
         ...createAdminRepository(pool),
         ...createCharacterCareRepository(pool),
+        ...createDonationRepository(pool),
+        ...createInteractionRepository(pool),
         ...inventoryRepository,
         ...battleRepository,
         ...createInvestigationRepository(pool,{battleRepository})

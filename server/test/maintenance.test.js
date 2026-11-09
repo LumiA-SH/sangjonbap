@@ -26,7 +26,7 @@ test('maintenance preserves start HOLD and activity HOLD; next invocation can re
         return {completed:[]};
     },expireBattles:async options=>{assert.equal(options.limit,10);expired++;return 0;}},true);
     const headers={'x-maintenance-secret':secret};
-    assert.equal((await (await request({headers})).json()).data.hold,'DAILY_RESET_START_HOLD');assert.equal(expired,0);
+    assert.equal((await (await request({headers})).json()).error.code,'DAILY_RESET_START_HOLD');assert.equal(expired,0);
     mode='activity';assert.equal((await request({headers})).status,503);assert.equal(expired,0);
     mode='ready';assert.equal((await request({headers})).status,200);assert.equal(expired,1);
 });
@@ -53,4 +53,12 @@ test('diagnostic authentication and independent execution endpoints preserve HOL
  assert.equal(response.status,503);assert.equal((await response.json()).error.code,'MAINTENANCE_CONCURRENCY_HOLD');
  }
  assert.equal(reads,1);assert.equal(writes,0);
+});
+
+
+test('partial expiry failure is HTTP503, not successful Cron completion',async t=>{
+ const request=await fixture(t,{recoverDailyReset:async()=>({completed:[]}),expireBattles:async options=>{
+ assert.equal(options.resilient,true);return {attempted:10,expired:9,failed:1,deferred:0,durationMs:12};}},true);
+ const response=await request({headers:{'x-maintenance-secret':secret}});
+ assert.equal(response.status,503);const body=await response.json();assert.equal(body.ok,false);assert.equal(body.error.code,'MAINTENANCE_PARTIAL_FAILURE');assert.equal(body.data.expired,9);
 });

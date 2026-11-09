@@ -18,6 +18,7 @@ export function battleView(battle) {
     if (!battle) return null;
     const {snapshot, ...view} = battle;
     return {...view, monster: snapshot?.monster || null,
+        abilityApCosts:Object.fromEntries('EDCBAS'.split('').map(g=>[g,snapshot?.abilities?.[`battle_ability_${g.toLowerCase()}_ap_cost`]??null])),
         options: battle.battle_status==='ACTIVE' && battle.declaration ? commandOptions(battle.declaration) : []};
 }
 
@@ -160,16 +161,50 @@ export function createBattleRepository(pool, {random=randomUnit}={}) {
                 return {battle:battleView(after),character,rewards,currencyReward,resolved};
             });
         },
-        async expireBattles({limit=100}={}) {
+        async expireBattles({limit=100,resilient=false}={}) {
             if(!Number.isInteger(limit)||limit<1||limit>100)fail('INVALID_EXPIRY_LIMIT','전투 만료 처리 한도를 확인하세요.',400);
-            const due=(await pool.query(`select id,character_id from public.battle where battle_status='ACTIVE'
+            const started=performance.now();
+            const due=(await pool.query(resilient ? `select b.id,b.character_id from public.battle b
+                left join maintenance_control.battle_expiry_retry r on r.battle_id=b.id
+                where b.battle_status='ACTIVE'
+                and coalesce(b.last_command_at,b.started_at)<=clock_timestamp()-interval '24 hours'
+                and (r.next_attempt_at is null or r.next_attempt_at<=clock_timestamp())
+                order by r.last_attempt_at nulls first,b.character_id limit $1` : `select id,character_id from public.battle where battle_status='ACTIVE'
                 and coalesce(last_command_at,started_at)<=clock_timestamp()-interval '24 hours' order by character_id limit $1`,[limit])).rows;
-            for (const row of due) await actionTransaction(pool,async client=>{
-                await lockCharacter(client,row.character_id);
-                const battle=(await client.query('select * from public.battle where id=$1 for update',[row.id])).rows[0];
-                await expire(client,battle);
-            });
-            return due.length;
+            const result={attempted:0,expired:0,skipped:0,failed:0,deferred:0,durationMs:0};
+            for (const row of due) {
+                if(resilient&&performance.now()-started>=60000)break;
+                result.attempted++;
+                try {
+                    const ended=await actionTransaction(pool,async client=>{
+                        if(resilient){
+                            await client.query("set local statement_timeout='2000ms'");
+                            await client.query("set local lock_timeout='1000ms'");
+                        }
+                        await lockCharacter(client,row.character_id);
+                        const battle=(await client.query('select * from public.battle where id=$1 for update',[row.id])).rows[0];
+                        const after=await expire(client,battle);
+                        return battle?.battle_status==='ACTIVE'&&after?.battle_status==='DEFEAT'&&after?.end_reason==='TIMEOUT';
+                    });
+                    if(ended)result.expired++;else result.skipped++;
+                } catch(error) {
+                    if(!resilient)throw error;
+                    result.failed++;
+                    // Game transaction has already rolled back and released its locks.
+                    const code=/^[A-Z0-9_]{1,64}$/.test(error.code||'')?error.code:'EXPIRY_FAILED';
+                    await pool.query(`insert into maintenance_control.battle_expiry_retry
+                        (battle_id,last_attempt_at,next_attempt_at,last_error_code)
+                        select id,clock_timestamp(),clock_timestamp()+interval '5 minutes',$2
+                        from public.battle where id=$1 and battle_status='ACTIVE'
+                        on conflict(battle_id) do update set last_attempt_at=excluded.last_attempt_at,
+                        next_attempt_at=excluded.next_attempt_at,last_error_code=excluded.last_error_code`,[row.id,code]);
+                    continue;
+                }
+                if(resilient)await pool.query('delete from maintenance_control.battle_expiry_retry where battle_id=$1',[row.id]);
+            }
+            result.deferred=due.length-result.attempted;
+            result.durationMs=Math.round(performance.now()-started);
+            return resilient?result:due.length;
         }
     };
 }

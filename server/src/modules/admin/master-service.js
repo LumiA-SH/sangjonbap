@@ -5,9 +5,9 @@ import {validateStockChange} from '../gacha/rules.js';
 export const masterFields = {
     areas: ['name','description','image_url','sort_order','investigation_rate','encounter_rate','is_open','unlock_at'],
     'food-grades': ['name','blood_recovery','is_active'],
-    foods: ['grade_id','is_failure','item_id','blood_recovery','stat_growth_enabled','stat_growth_rate','stat_growth_target','stat_growth_value','rp_effect_text'],
+    foods: ['grade_id','is_failure','item_id','blood_recovery','stat_growth_enabled','stat_growth_rate','stat_growth_target','stat_growth_value','rp_effect_text','rp_effect_texts'],
     recipes: ['name','description','discovery_grade','learn_cost','success_rate','result_quantity','result_item_id','failure_item_id','is_active','ingredients'],
-    gachas: ['name','price','is_active','start_at','end_at','rewards']
+    gachas: ['name','price','is_active','start_at','end_at','period_enabled','start_inclusive','end_inclusive','rewards']
 };
 export const invalid = message => {throw new AppError(400,'INVALID_ADMIN_INPUT',message);};
 export function requestKey(body) {
@@ -26,10 +26,12 @@ export function validateMasterInput(kind,body,create) {
     const required={'food-grades':['name','blood_recovery'],areas:['name','is_open','encounter_rate'],foods:['item_id'],recipes:['name','success_rate','result_item_id','ingredients'],gachas:['name','price','rewards']}[kind];
     if (create && required.some(k=>!Object.hasOwn(patch,k))) invalid('필수 필드가 없습니다.');
     if (!create && 'item_id' in patch) invalid('음식의 연결 아이템은 변경할 수 없습니다.');
+    if('rp_effect_texts' in patch&&(!Array.isArray(patch.rp_effect_texts)||patch.rp_effect_texts.length>50||patch.rp_effect_texts.some(v=>typeof v!=='string'||!v.trim()||v.length>500)))invalid('RP 문구는 1~500자, 최대 50개입니다.');
     if ('name' in patch && (typeof patch.name!=='string'||!patch.name.trim()||[...patch.name].length>100)) invalid('이름은 1~100자입니다.');
     if ('discovery_grade' in patch && patch.discovery_grade!==null && !['COMMON','RARE','SPECIAL'].includes(patch.discovery_grade)) invalid('발견 등급은 COMMON/RARE/SPECIAL 또는 미확정 NULL입니다.');
     for (const k of ['description','rp_effect_text','image_url']) if (k in patch && patch[k]!==null && typeof patch[k]!=='string') invalid(`${k}: 문자열 또는 NULL이 필요합니다.`);
     for (const k of ['stat_growth_enabled','is_active','is_open','is_failure']) if (k in patch && typeof patch[k]!=='boolean') invalid(`${k}: boolean이 필요합니다.`);
+    for(const k of ['period_enabled','start_inclusive','end_inclusive'])if(k in patch&&patch[k]!==null&&typeof patch[k]!=='boolean')invalid('기간 설정은 boolean 또는 기존 동작 유지 NULL입니다.');
     if ('grade_id' in patch && patch.grade_id!==null && !validId(patch.grade_id)) invalid('음식 등급 ID를 확인하세요.');
     for (const k of ['item_id','result_item_id','failure_item_id']) if (k in patch && !(k==='failure_item_id'&&patch[k]===null) && !validId(patch[k])) invalid(`${k}: 올바른 ID가 필요합니다.`);
     for (const k of ['blood_recovery','stat_growth_value','learn_cost','price']) if (k in patch) integer(patch[k],0,k);
@@ -66,5 +68,6 @@ export function validateMasterState(kind,row) {
         if (row.stat_growth_enabled ? !row.stat_growth_target||row.stat_growth_value<=0 : row.stat_growth_target!==null||row.stat_growth_value!==0) invalid('성장 활성 시 대상과 양수 성장량, 비활성 시 대상 NULL과 성장량 0이 필요합니다.');
     }
     if (kind==='recipes' && (!Number.isInteger(row.result_quantity)||row.result_quantity<1||!row.failure_item_id)) invalid('양수 성공 수량과 실패 음식이 필요합니다.');
+    if(kind==='gachas'&&row.period_enabled===true&&(!row.start_at||!row.end_at||typeof row.start_inclusive!=='boolean'||typeof row.end_inclusive!=='boolean'))invalid('기간 활성 시 시작·종료 시각과 경계 포함 여부를 설정하세요.');
     // Gacha period ordering is enforced with PostgreSQL timestamptz precision in the repository.
 }

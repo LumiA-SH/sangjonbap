@@ -31,3 +31,17 @@ test('timeout and stale-turn errors refresh without granting rewards locally',as
     await render();await act(async()=>button('일반공격').click());
     expect(container.textContent).toContain('STALE_BATTLE_TURN');expect(container.textContent).toContain('TIMEOUT');expect(container.textContent).toContain('지급 재화: 0');expect(button('일반공격')).toBeUndefined();
 });
+
+test('image failure fallback, ability ownership and exact AP snapshot cost',async()=>{
+ const data=state();data.battle.monster.image_url='https://example.invalid/monster.png';data.character.has_ability=false;api.mockResolvedValue(data);await render();
+ expect(button('이능공격').disabled).toBe(true);expect(container.textContent).toContain('이능을 보유하지 않았습니다');
+ await act(async()=>container.querySelector('img').dispatchEvent(new Event('error')));expect(container.querySelector('img')).toBeNull();expect(container.textContent).toContain('마물 이미지가 없습니다');
+ data.character.has_ability=true;data.character.ability_grade='B';data.character.ap=1;data.battle.abilityApCosts={B:2};await act(async()=>button('전투 새로고침').click());expect(container.textContent).toContain('AP 부족: 필요 2, 현재 1');expect(button('이능공격').disabled).toBe(true);
+ data.character.ap=2;await act(async()=>button('전투 새로고침').click());expect(button('이능공격').disabled).toBe(false);
+});
+test('mutual kill shows victory and historical PC death even after revival',async()=>{
+ const data=state('VICTORY');data.battle.character_hp=0;data.character.status='ALIVE';api.mockResolvedValue(data);await render();expect(container.textContent).toContain('전투는 승리했지만 PC는 사망했습니다');expect(container.textContent).toContain('현재 캐릭터 상태: 생존');expect(button('일반공격')).toBeUndefined();
+});
+test('near-death state disables all battle commands with reason',async()=>{
+ const data=state();data.character.blood=0;data.character.status='NEAR_DEATH';api.mockResolvedValue(data);await render();expect(button('일반공격').disabled).toBe(true);expect(container.textContent).toContain('혈량 0의 빈사 상태');
+});

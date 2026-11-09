@@ -20,8 +20,11 @@ export function loadEdgeConfig(env) {
         throw new Error('Edge requires the configured project transaction pooler on port 6543');
     }
     const apiBase = base.href.replace(/\/$/, '');
+    const oauthRedirect = env.MASTODON_REDIRECT_URI || apiBase+'/auth/mastodon/callback';
+    if (![apiBase+'/auth/mastodon/callback','https://survivalbob.site/api/auth/mastodon/callback'].includes(oauthRedirect))
+        throw new Error('Invalid Mastodon redirect URI');
     return {nodeEnv:'production',provider:'mastodon',mode:'supabase',cors:true,origin,databaseUrl,
         databaseCa:env.EDGE_DATABASE_CA || '',apiBase,
         oauthClientId:required('MASTODON_CLIENT_ID'),oauthClientSecret:required('MASTODON_CLIENT_SECRET'),
-        oauthRedirect:apiBase+'/auth/mastodon/callback'};
+        oauthRedirect};
 }

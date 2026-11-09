@@ -1,3 +1,4 @@
+import {failureRpText} from './failure-rp.js';
 import {beginGameTransaction, commitGameTransaction, rollbackGameTransaction} from '../../shared/daily-gate.js';
 import {AppError} from '../../shared/http.js';
 import {lockCharacterByUser, changeCharacterResources, changeInventoryQuantity, writeActionLog} from '../../shared/game.js';
@@ -155,7 +156,7 @@ export function createCookingRepository(pool, {random = randomUnit} = {}) {
                 await client.query('update public.game_character set atk=$1,def=$2,agi=$3,daily_meal_count=$4 where id=$5',
                     [stats.atk,stats.def,stats.agi,before.daily_meal_count+1,before.id]);
                 return {itemId,inventoryQuantity:inventory.after,bloodBefore:before.blood,blood:after.blood,
-                    isFailure:!!food.effective_failure,dailyMealCount:before.daily_meal_count+1,dailyMealLimit:DAILY_MEAL_LIMIT,growth,stats,permanentStatCap:cap,rpEffectText:food.rp_effect_text??null};
+                    isFailure:!!food.effective_failure,dailyMealCount:before.daily_meal_count+1,dailyMealLimit:DAILY_MEAL_LIMIT,growth,stats,permanentStatCap:cap,rpEffectText:food.effective_failure?failureRpText(food,random):(food.rp_effect_text??null)};
             });
         }
     };

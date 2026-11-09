@@ -7,11 +7,11 @@ import GachaStockEditor from './GachaStockEditor';
 const defaults={
   areas:{name:'',description:null,image_url:null,sort_order:0,investigation_rate:0,encounter_rate:40,is_open:false,unlock_at:null},
   'food-grades':{name:'',blood_recovery:10,is_active:true},
-  foods:{grade_id:null,is_failure:false,item_id:'',blood_recovery:0,stat_growth_enabled:false,stat_growth_rate:0,stat_growth_target:null,stat_growth_value:0,rp_effect_text:null},
+  foods:{grade_id:null,is_failure:false,item_id:'',blood_recovery:0,stat_growth_enabled:false,stat_growth_rate:0,stat_growth_target:null,stat_growth_value:0,rp_effect_text:null,rp_effect_texts:[]},
   recipes:{name:'',description:null,discovery_grade:null,learn_cost:0,success_rate:80,result_quantity:3,result_item_id:'',failure_item_id:null,is_active:true,ingredients:[]},
-  gachas:{name:'',price:1,is_active:true,start_at:null,end_at:null,rewards:[]}
+  gachas:{name:'',price:1,is_active:true,start_at:null,end_at:null,period_enabled:null,start_inclusive:null,end_inclusive:null,rewards:[]}
 };
-const labels={grade_id:'음식 등급',is_failure:'실패 RP 음식 (수치 효과 없음)',encounter_rate:'조우 확률 (%)',item_id:'아이템 ID',blood_recovery:'혈량 회복',stat_growth_enabled:'성장 활성',stat_growth_rate:'성장 확률 (%)',stat_growth_target:'고정 성장 스탯',stat_growth_value:'성장량',rp_effect_text:'RP 효과 설명',name:'이름',description:'설명',learn_cost:'습득 비용',success_rate:'성공 확률 (%)',result_item_id:'성공 음식 ID',failure_item_id:'실패 음식 ID',is_active:'활성',price:'가격',start_at:'시작 시각 (시간대 포함 ISO)',end_at:'종료 시각 (시간대 포함 ISO)'};
+const labels={period_enabled:'기간 제한',start_inclusive:'시작 경계 포함',end_inclusive:'종료 경계 포함',grade_id:'음식 등급',is_failure:'실패 RP 음식 (수치 효과 없음)',encounter_rate:'조우 확률 (%)',item_id:'아이템 ID',blood_recovery:'혈량 회복',stat_growth_enabled:'성장 활성',stat_growth_rate:'성장 확률 (%)',stat_growth_target:'고정 성장 스탯',stat_growth_value:'성장량',rp_effect_texts:'실패요리 RP 문구 후보 (한 줄에 하나, 최대 50개)',rp_effect_text:'기존 RP 효과 설명',name:'이름',description:'설명',learn_cost:'습득 비용',success_rate:'성공 확률 (%)',result_item_id:'성공 음식 ID',failure_item_id:'실패 음식 ID',is_active:'활성',price:'가격',start_at:'시작 시각 (시간대 포함 ISO)',end_at:'종료 시각 (시간대 포함 ISO)'};
 const numeric=['encounter_rate','investigation_rate','sort_order','blood_recovery','stat_growth_rate','stat_growth_value','learn_cost','success_rate','price','result_quantity'];
 labels.result_quantity='성공 음식 수량';
 Object.assign(labels,{is_open:'공개 허용',unlock_at:'공개 시각 (시간대 포함 ISO, 비우면 즉시)'});
@@ -23,6 +23,7 @@ export function validateDraft(kind,draft) {
     if (key.endsWith('rate')&&(value>100||Number(value.toFixed(2))!==value)) return '확률은 소수 둘째 자리까지의 0~100입니다.';
     if (key.endsWith('item_id') && !(key==='failure_item_id'&&value===null) && !isId(value)) return '아이템 ID는 양의 정수입니다.';
   }
+  if(draft.rp_effect_texts&& (draft.rp_effect_texts.length>50||draft.rp_effect_texts.some(v=>!v.trim()||v.length>500)))return 'RP 문구는 1~500자, 최대 50개입니다.';
   if ('grade_id' in draft && draft.grade_id!==null && !isId(draft.grade_id)) return '음식 등급을 선택하세요.';
   if ('name' in draft && (!draft.name.trim()||[...draft.name].length>100)) return '이름은 1~100자입니다.';
   if (kind==='foods' && (draft.stat_growth_enabled ? !draft.stat_growth_target||draft.stat_growth_value<=0 : draft.stat_growth_target!==null||draft.stat_growth_value!==0)) return '성장 활성: 대상과 양수 성장량 / 비활성: 대상 NULL과 성장량 0';
@@ -36,6 +37,7 @@ export function validateDraft(kind,draft) {
   if (kind==='recipes'&&!draft.failure_item_id) return '실패 가능한 레시피에는 실패 음식이 필요합니다.';
   if (kind==='recipes'&&draft.result_quantity!==undefined&&draft.result_quantity<1) return '성공 음식 수량은 양수입니다.';
   for (const key of ['start_at','end_at','unlock_at']) if (draft[key] && (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,6})?(Z|[+-]\d{2}:\d{2})$/.test(draft[key])||!Number.isFinite(Date.parse(draft[key])))) return '시각은 2026-10-11T00:00:00+09:00 형식입니다.';
+  if(kind==='gachas'&&draft.period_enabled===true&&(!draft.start_at||!draft.end_at||typeof draft.start_inclusive!=='boolean'||typeof draft.end_inclusive!=='boolean'))return '기간 활성 시 시작·종료 시각과 경계 포함 여부를 설정하세요.';
   const micros=value=>BigInt(Date.parse(value))*1000n+BigInt((value.match(/\.(\d+)/)?.[1]||'').padEnd(6,'0').slice(3,6));
   if (draft.start_at&&draft.end_at&&micros(draft.end_at)<=micros(draft.start_at)) return '종료 시각은 시작 시각 이후여야 합니다.';
   return '';
@@ -69,12 +71,13 @@ function MasterEditor({kind,record,onSaved,onDenied,onBusy}) {
     {kind==='foods'&&<p>등급 미지정은 기존 개별 회복량을 유지합니다. 등급 지정 시 등급 회복량이 우선합니다. 실패 RP 설정 또는 레시피 실패 결과로 연결된 아이템은 회복·성장이 0입니다. 현재 실패 판정: {record?.effective_failure?'예':'아니오'}</p>}
     {kind==='areas'&&<p>공개 허용과 공개 시각으로 접근을 제어합니다. 조사율 수동 조정은 발견 이력이나 공개 여부를 바꾸지 않습니다.</p>}
     {kind==='recipes'&&<p>기본 성공률 80%, 성공 3개 / 실패 1개. 성공률·성공 수량 변경은 다음 요리부터 적용됩니다. 실패 재료는 max(1, floor(수량/2))입니다.</p>}
+    {kind==='gachas'&&<p>운영 시간대: KST (Asia/Seoul). ISO 시각에 +09:00을 입력하세요. 기간 제한을 끄면 저장된 시각과 관계없이 추첨합니다.<br/>{['start_at','end_at'].map(k=><span key={k}>{k==='start_at'?'시작':'종료'} KST: {draft[k]&&Number.isFinite(Date.parse(draft[k]))?new Date(draft[k]).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'}):'미설정'} </span>)}</p>}
     {Object.entries(defaults[kind]).filter(([k])=>k!==child).map(([k,v])=>k.endsWith('item_id')?<ItemPicker key={k} label={labels[k]} value={draft[k]} disabled={busy||(k==='item_id'&&!!record)} onDenied={onDenied} onChange={id=>change(k,id)}/>:<label key={k}>{k==='discovery_grade'?'최초 발견 등급 / 판매 가격':labels[k]}
-      {typeof v==='boolean'?<input type="checkbox" checked={draft[k]} disabled={busy} onChange={e=>change(k,e.target.checked)}/>:
+      {['period_enabled','start_inclusive','end_inclusive'].includes(k)?<select value={draft[k]===null?'':String(draft[k])} disabled={busy} onChange={e=>change(k,e.target.value===''?null:e.target.value==='true')}><option value="">기존 동작 유지 / 미설정</option><option value="true">사용 / 포함</option><option value="false">사용 안 함 / 제외</option></select>:typeof v==='boolean'?<input type="checkbox" checked={draft[k]} disabled={busy} onChange={e=>change(k,e.target.checked)}/>:
       k==='grade_id'?<select value={draft[k]??''} disabled={busy} onChange={e=>change(k,e.target.value||null)}><option value="">개별 회복량 유지</option>{grades.map(g=><option key={g.id} value={g.id} disabled={!g.is_active}>{g.name} · +{g.blood_recovery}{g.is_active?'':' (비활성)'}</option>)}</select>:
       k==='stat_growth_target'?<select value={draft[k]??''} disabled={busy} onChange={e=>change(k,e.target.value||null)}><option value="">NULL</option>{['ATK','DEF','AGI'].map(s=><option key={s}>{s}</option>)}</select>:
       k==='discovery_grade'?<select value={draft[k]??''} disabled={busy} onChange={e=>change(k,e.target.value||null)}><option value="">미확정</option><option value="COMMON">일반 / 1코인</option><option value="RARE">희귀 / 2코인</option><option value="SPECIAL">특수 / 3코인</option></select>:
-      ['description','rp_effect_text'].includes(k)?<textarea disabled={busy} value={draft[k]??''} onChange={e=>change(k,e.target.value||null)}/>:
+      k==='rp_effect_texts'?<textarea disabled={busy} value={(draft[k]||[]).join('\n')} onChange={e=>change(k,e.target.value?e.target.value.split('\n'):[])}/>:['description','rp_effect_text'].includes(k)?<textarea disabled={busy} value={draft[k]??''} onChange={e=>change(k,e.target.value||null)}/>:
       <input type={numeric.includes(k)?'number':'text'} step={k.endsWith('rate')?'any':1} value={draft[k]??''} disabled={busy||(k==='item_id'&&!!record)}
         onChange={e=>change(k,numeric.includes(k)?(e.target.value===''?'':Number(e.target.value)):(e.target.value|| (v===null?null:'')))}/>}
     </label>)}
@@ -92,32 +95,41 @@ function MasterEditor({kind,record,onSaved,onDenied,onBusy}) {
     <button disabled={busy}>{busy?'저장 중…':'저장'}</button><p role="alert">{message}</p>
   </form>;
 }
-export default function MasterPanel({kind,onDenied}) {
+export default function MasterPanel({kind,onDenied,recordId,onOpen,after,onPage}) {
+  const selection=useRef(0),listing=useRef(0);
+  const [search,setSearch]=useState('');
   const Editor=kind==='gachas'?GachaStockEditor:MasterEditor;
   const [records,setRecords]=useState([]),[selected,setSelected]=useState(null),[revision,setRevision]=useState(0);
   const [busy,setBusy]=useState(false),[saving,setSaving]=useState(false),[message,setMessage]=useState(''),[next,setNext]=useState(null);
-  async function load(after=null) {
+  async function load(cursor=after||null) {
+    const request=++listing.current;
     setBusy(true);
-    try{const data=await api(`/admin/${kind}${after?`?after=${after}`:''}`);setRecords(data.records);setNext(data.nextAfter);return true;}
+    try{const data=await api(`/admin/${kind}${cursor?`?after=${cursor}`:''}`);if(request!==listing.current)return false;setRecords(data.records);setNext(data.nextAfter);return true;}
     catch(e){setMessage(`${e.code}: ${e.message}`);if([401,403].includes(e.status))onDenied(e.message);return false;}
     finally{setBusy(false);}
   }
   useEffect(()=>{load(); // Remounted for each menu.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[]);
-  async function select(row) {
+  },[after]);
+  useEffect(()=>{selection.current++;if(!onOpen)return;setSelected(null);setRevision(v=>v+1);if(recordId&&recordId!=='new')select({id:recordId},false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[recordId]);
+  async function select(row,navigate=true) {
+    if(onOpen&&navigate){onOpen(String(row.id));return;}
+    const request=++selection.current;
     setBusy(true);setMessage('');
-    try{const data=await api(`/admin/${kind}/${row.id}`);setSelected(data.record);setRevision(v=>v+1);}
+    try{const data=await api(`/admin/${kind}/${row.id}`);if(request!==selection.current)return;setSelected(data.record);setRevision(v=>v+1);}
     catch(e){setMessage(`${e.code}: ${e.message}`);if([401,403].includes(e.status))onDenied(e.message);}
     finally{setBusy(false);}
   }
   return <section aria-label="마스터 관리"><p role="status">{busy?'불러오는 중…':message}</p>
-    <button disabled={busy||saving} onClick={()=>{setSelected(null);setRevision(v=>v+1);setMessage('');}}>새로 등록</button>
+    <button disabled={busy||saving} onClick={()=>{setSelected(null);setRevision(v=>v+1);setMessage('');onOpen?.('new');}}>새로 등록</button>
     <button disabled={busy||saving} onClick={()=>load()}>목록 새로고침</button>
     {!records.length&&!busy&&<p>등록된 데이터가 없습니다.</p>}
-    <ul>{records.map(r=><li key={r.id}>ID {r.id} · {r.name||`음식 아이템 ${r.item_id}`} <button disabled={busy||saving} onClick={()=>select(r)}>상세/수정</button></li>)}</ul>
-    {next&&<button disabled={busy||saving} onClick={()=>load(next)}>다음 100건</button>}
-    {!busy&&<Editor key={revision} kind={kind} record={selected} onDenied={onDenied} onBusy={setSaving} onSaved={async r=>{
+    <label>현재 페이지 검색<input value={search} onChange={e=>setSearch(e.target.value)}/></label><ul>{records.filter(r=>[r.id,r.name,r.item_id].join(' ').toLowerCase().includes(search.toLowerCase())).map(r=><li key={r.id}>ID {r.id} · {r.name||`음식 아이템 ${r.item_id}`} <button disabled={busy||saving} onClick={()=>select(r)}>상세/수정</button></li>)}</ul>
+    {after&&<button disabled={busy||saving} onClick={()=>onPage(null)}>처음 페이지</button>}
+    {next&&<button disabled={busy||saving} onClick={()=>onPage?onPage(next):load(next)}>다음 100건</button>}
+    {!busy&&(!onOpen||recordId==='new'||selected)&&<Editor key={revision} kind={kind} record={selected} onDenied={onDenied} onBusy={setSaving} onSaved={async r=>{
       setSelected(r);setRevision(v=>v+1);if(await load())setMessage('저장 성공');
     }}/>}
   </section>;

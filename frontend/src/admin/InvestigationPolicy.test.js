@@ -26,3 +26,11 @@ test('diagnostic UI offers read-only lookup and no recovery execution',async()=>
  await act(async()=>root.render(<DiagnosticsPanel onDenied={jest.fn()}/>));await act(async()=>container.querySelector('button').click());
  expect(api).toHaveBeenCalledWith('/admin/diagnostics');expect(api).toHaveBeenCalledTimes(1);expect(container.textContent).toContain('복구·삭제는 실행하지 않습니다');
 });
+
+test('investigation route restores region and result; cancel preserves region and list',async()=>{
+ const record={id:'2',result_grade:'NORMAL',result_text:'결과',weight:1,is_unique:false,investigation_rate_value:0,clue_id:null,is_active:true,is_failure:false,failure_selectable:true,rewards:[]};
+ api.mockImplementation(async path=>path==='/admin/areas'?{records:[{id:'1',name:'지역'}]}:path==='/admin/recipes'?{records:[]}:{results:[record],clues:[]});
+ const onNavigate=jest.fn(),onDenied=jest.fn();await act(async()=>root.render(<InvestigationAdminPanel onDenied={onDenied} onNavigate={onNavigate} route={{area:'1',record:'2'}}/>));
+ expect(container.textContent).toContain('결과 2 수정');expect(container.querySelector('select').value).toBe('1');
+ await act(async()=>root.render(<InvestigationAdminPanel onDenied={onDenied} onNavigate={onNavigate} route={{area:'1',record:null}}/>));expect(container.querySelector('form')).toBeNull();expect(container.textContent).toContain('결과 수정');
+});

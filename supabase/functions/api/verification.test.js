@@ -68,3 +68,26 @@ test('proxy and Edge guards compose without executing gameplay', async t => {
     assert.equal((await proxy(new Request(base+'/admin/items',{method:'POST',headers,body:'{}'}),env,relay)).status,403);
     assert.equal((await fetch(`http://127.0.0.1:${server.address().port}/api/health`,{headers:{'x-edge-verification-key':env.EDGE_VERIFICATION_TOKEN}})).status,403);
 });
+
+test('OAuth-only deployment allows exact auth routes, retains all game and proxy guards',async t=>{
+ const runtime=createVerificationApi({...env,MASTODON_CLIENT_ID:'fixture',MASTODON_CLIENT_SECRET:'fixture'}, {oauthEnabled:true,poolFactory:()=>({query(){throw Error('unexpected SQL');}})});
+ let stateWrites=0,revokes=0;runtime.repository.saveOAuthState=async()=>{stateWrites++;};
+ runtime.repository.getOAuthSession=async()=>({id:1,role:'USER',character_id:null});
+ runtime.repository.revokeOAuthSession=async()=>{revokes++;};
+ runtime.repository.consumeOAuthState=async()=>false;
+ const server=runtime.app.listen(0,'127.0.0.1');await new Promise(r=>server.once('listening',r));t.after(()=>new Promise(r=>server.close(r)));
+ const base=`http://127.0.0.1:${server.address().port}`,headers={'x-sangjonbap-proxy':env.EDGE_PROXY_SECRET,Origin:env.FRONTEND_ORIGIN};
+ const call=(path,opts={})=>fetch(base+path,{redirect:'manual',headers,...opts});
+ assert.equal((await call('/api/auth/config')).status,200);
+ assert.equal((await call('/api/auth/me')).status,401);
+ const login=await call('/api/auth/mastodon/login');assert.equal(login.status,302);assert.equal(stateWrites,1);assert.equal(new URL(login.headers.get('location')).searchParams.get('code_challenge_method'),'S256');
+ const callback=await call('/api/auth/mastodon/callback?state=bad&code=private');assert.equal(callback.status,303);assert.equal(callback.headers.get('location'),'https://survivalbob.site/#oauth_error=OAUTH_STATE_INVALID');
+ const cookie='__Host-sangjonbap-session='+'b'.repeat(64);
+ assert.equal((await call('/api/auth/me',{headers:{...headers,Cookie:cookie}})).status,200);
+ assert.equal((await call('/api/auth/logout',{method:'POST',headers:{...headers,Cookie:cookie}})).status,200);assert.equal(revokes,1);
+ assert.equal((await call('/api/auth/logout',{method:'POST',headers:{'x-sangjonbap-proxy':env.EDGE_PROXY_SECRET,Cookie:cookie}})).status,403);
+ for(const path of ['/api/shop/products','/api/admin/items','/api/auth/dev/login','/api/auth/config/','/api/auth/%63onfig'])for(const method of ['GET','POST'])assert.equal((await call(path,{method})).status,401,path);
+ assert.equal((await call('/api/auth/config',{headers:{Origin:env.FRONTEND_ORIGIN}})).status,403);
+ assert.equal((await call('/api/auth/config',{headers:{...headers,Origin:'https://lumia-sh.github.io'}})).status,403);
+ assert.equal((await call('/api/admin/items',{method:'POST',headers:{...headers,'x-edge-verification-key':env.EDGE_VERIFICATION_TOKEN}})).status,403);
+});

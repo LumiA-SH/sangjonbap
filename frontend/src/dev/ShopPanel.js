@@ -11,7 +11,7 @@ export default function ShopPanel({products, character, error, busy, run, refres
   const count = id => quantities[id] ?? '1';
   const valid = value => /^[1-9][0-9]*$/.test(value) && Number(value) <= 2147483647;
   async function buy(product) {
-    if (sending.current || blocked || (product.recipe_id && character?.status==='NEAR_DEATH') || product.learned || !valid(count(product.id))) return;
+    if (sending.current || blocked || product.learned || !valid(count(product.id))) return;
     sending.current = true;
     try {
       await run(async () => {
@@ -31,7 +31,7 @@ export default function ShopPanel({products, character, error, busy, run, refres
   return <section aria-labelledby="shop-title">
     <span className="badge">SHOP</span><h2 id="shop-title">상점 DEV</h2>
     <p>개인 한도는 캐릭터별 전체 운영 기간 누적 수량입니다. 전체 재고는 모든 캐릭터가 공유합니다.</p>
-    {character?.status === 'NEAR_DEATH' && <p>빈사 상태에서도 일반 상품을 구매할 수 있습니다. 레시피 습득은 불가합니다.</p>}
+    {character?.status === 'NEAR_DEATH' && <p>빈사 상태에서도 상품과 레시피를 구매할 수 있습니다.</p>}
     {character?.status === 'DEAD' && <p>DEAD 캐릭터는 구매할 수 없습니다.</p>}
     <button disabled={busy} onClick={() => run(refresh)}>상품 새로고침</button>
     {error && <p role="alert">상품 조회 실패: {error} · 이전 표시값일 수 있습니다.</p>}
@@ -43,7 +43,7 @@ export default function ShopPanel({products, character, error, busy, run, refres
       {product.recipe_id && <p>레시피 · {product.learned ? '습득 완료' : '구매 즉시 습득'}</p>}
       <input id={`shop-${product.id}`} inputMode="numeric" value={count(product.id)} disabled={busy || !!product.recipe_id}
         onChange={event => setQuantities({...quantities, [product.id]: event.target.value})}/>
-      <button disabled={blocked || (product.recipe_id && character?.status==='NEAR_DEATH') || product.learned || (product.dailyRemaining != null && Number(count(product.id)) > product.dailyRemaining) || !valid(count(product.id)) ||
+      <button disabled={blocked || product.learned || (product.dailyRemaining != null && Number(count(product.id)) > product.dailyRemaining) || !valid(count(product.id)) ||
         (product.personalRemaining !== null && Number(count(product.id)) > product.personalRemaining) ||
         (product.globalRemaining !== null && Number(count(product.id)) > product.globalRemaining)} onClick={() => buy(product)}>구매</button>
     </li>)}</ul>

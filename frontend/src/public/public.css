@@ -1,0 +1,8 @@
+.public-content { padding:clamp(16px,3vw,28px); min-width:0; }
+.public-content article { margin-block:20px; border-bottom:1px solid #d5cebf; }
+.public-prose { white-space:pre-wrap; overflow-wrap:anywhere; line-height:1.8; }
+.public-content ul { padding-left:20px; }
+.public-content form { display:flex; flex-wrap:wrap; gap:12px; align-items:end; }
+.public-content input { max-width:100%; }
+.public-content p,.public-content h3 { overflow-wrap:anywhere; }
+@media(max-width:640px){.public-content form { flex-direction:column; align-items:stretch; }.public-content input{box-sizing:border-box;width:100%;}}

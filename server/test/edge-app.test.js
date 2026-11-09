@@ -73,3 +73,11 @@ test('Edge assembled API: health, credentials CORS, route auth before any DB act
     }
     assert.equal(calls,0,'No scheduler, recovery, OAuth or game SQL should execute');
 });
+
+test('registered legacy callback can be kept without changing API base or allowing arbitrary redirects',()=>{
+ const legacy='https://survivalbob.site/api/auth/mastodon/callback';
+ const config=loadEdgeConfig({...env,MASTODON_REDIRECT_URI:legacy});
+ assert.equal(config.oauthRedirect,legacy);
+ assert.equal(config.apiBase,env.PUBLIC_API_BASE_URL);
+ for(const value of ['https://evil.example/callback',legacy+'?next=bad',legacy+'/',legacy.replace('https:','http:')])assert.throws(()=>loadEdgeConfig({...env,MASTODON_REDIRECT_URI:value}));
+});

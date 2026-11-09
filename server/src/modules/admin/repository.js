@@ -1,3 +1,4 @@
+import {createAdminCompletionRepository} from './completion-repository.js';
 import {beginGameTransaction, commitGameTransaction, rollbackGameTransaction} from '../../shared/daily-gate.js';
 import {AppError} from '../../shared/http.js';
 import {writeActionLog} from '../../shared/game.js';
@@ -8,6 +9,7 @@ import {createAdminSettingsRepository} from './settings-repository.js';
 import {createAdminDeleteRepository} from './delete-repository.js';
 import {createAdminCharacterOperations} from './character-operations.js';
 import {createAdminInvestigationOperations} from './investigation-operations.js';
+import {createOperatingPolicyRepository} from './operating-policy.js';
 import {createAdminDiagnostics} from './diagnostics.js';
 const tables={items:'item',products:'shop_product'};
 const fail=(code,message,status=409)=>{throw new AppError(status,code,message);};
@@ -15,6 +17,8 @@ const fail=(code,message,status=409)=>{throw new AppError(status,code,message);}
 export function createAdminRepository(pool) {
     return {
         ...createAdminDiagnostics(pool),
+        ...createAdminCompletionRepository(pool),
+        ...createOperatingPolicyRepository(pool),
         ...createAdminSettingsRepository(pool),
         ...createAdminDeleteRepository(pool),
         ...createAdminCharacterOperations(pool),

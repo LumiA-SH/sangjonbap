@@ -1,5 +1,11 @@
-import {useEffect, useRef, useState} from 'react';
+import ContentAdminPanel from './ContentAdminPanel';
+import StorageAdminPanel from './StorageAdminPanel';
+import ClueAdminPanel from './ClueAdminPanel';
+import {useCallback, useEffect, useRef, useState} from 'react';
 import {api} from '../api/client';
+import {adminMenus} from './navigation';
+import './admin.css';
+import OperatingPolicyPanel from './OperatingPolicyPanel';
 import DiagnosticsPanel from './DiagnosticsPanel';
 import MasterPanel from './MasterPanel';
 import RolePanel from './RolePanel';
@@ -40,45 +46,57 @@ function Editor({kind,record,seed,onSaved,onDenied}) {
         <input type={['price','sort_order'].includes(key)?'number':'text'} value={draft[key]} required disabled={busy}
           maxLength={key==='name'?100:undefined} onChange={e=>change(key,['price','sort_order'].includes(key)?(e.target.value===''?'':Number(e.target.value)):e.target.value)}/>}
     </label>)}
+    {record&&<details><summary>변경 전후 확인</summary><pre>{JSON.stringify({before:record,after:draft},null,2)}</pre></details>}
     <button disabled={busy}>{busy?'저장 중…':'저장'}</button><p role="status">{message}</p>
   </form>;
 }
-export default function AdminPanel({onBack}) {
+export default function AdminPanel({onBack,onExit=onBack,onLogout,onAccessLost,route,onNavigate}) {
   const [authentication,setAuthentication]=useState('');
-  const [allowed,setAllowed]=useState(false),[kind,setKind]=useState('items'),[rows,setRows]=useState([]);
+  const [allowed,setAllowed]=useState(false),[localKind,setLocalKind]=useState('items'),[rows,setRows]=useState([]);
   const [selected,setSelected]=useState(null),[editorKey,setEditorKey]=useState(0),[message,setMessage]=useState('권한 확인 중…');
   const [busy,setBusy]=useState(false),[next,setNext]=useState(null);
   const [productSeed,setProductSeed]=useState(null);
-  function denied(message){setAllowed(false);setRows([]);setSelected(null);setMessage(message);}
-  async function load(type=kind,after=null) {
+  const selectionRequest=useRef(0),listRequest=useRef(0);
+  const [search,setSearch]=useState(''),[filter,setFilter]=useState('all');
+  const kind=route?.menu||localKind,recordId=route?.record;
+  function setKind(menu){setSearch('');setSelected(null);setProductSeed(null);setEditorKey(v=>v+1);if(onNavigate)onNavigate({menu,record:null,after:null,area:null});else setLocalKind(menu);}
+  function openRecord(record){onNavigate?.({record});}
+
+  const accessLost=useRef(onAccessLost);accessLost.current=onAccessLost;
+  const denied=useCallback(message=>{selectionRequest.current++;listRequest.current++;setAllowed(false);setRows([]);setSelected(null);setMessage(message);accessLost.current?.();},[]);
+  async function load(type=kind,after=route?.after||null) {
+    const request=++listRequest.current;
     setBusy(true);setMessage('');
-    try {const data=await api(`/admin/${type}${after?`?after=${after}`:''}`);setRows(data.records);setNext(data.nextAfter);return true;}
+    try {const data=await api(`/admin/${type}${after?`?after=${after}`:''}`);if(request!==listRequest.current)return false;setRows(data.records);setNext(data.nextAfter);return true;}
     catch(e){setMessage(`${e.code || 'LOAD_FAILED'}: ${e.message}`);if(e.status===401||e.status===403)denied(e.message);}
     finally{setBusy(false);}
   }
   useEffect(()=>{
     let live=true;
-    api('/admin/access').then(data=>{if(live){setAuthentication(data.authentication||'DEV');setAllowed(true);load('items');}}).catch(e=>{if(live)denied(`${e.code || 'ACCESS_FAILED'}: ${e.message}`);});
-    return()=>{live=false;};
-    // Access is checked again by the server on every request.
+    const verify=()=>api('/admin/access').then(data=>{if(live){if(data.role!=='ADMIN')throw new Error('관리자 권한이 필요합니다.');setAuthentication(data.authentication||'DEV');setAllowed(true);}}).catch(e=>{if(live)denied(`${e.code||'ACCESS_FAILED'}: ${e.message}`);});
+    verify();window.addEventListener('focus',verify);const timer=window.setInterval(verify,30000);
+    return()=>{live=false;window.removeEventListener('focus',verify);window.clearInterval(timer);};
     // eslint-disable-next-line react-hooks/exhaustive-deps
   },[]);
-  async function select(row){
+  useEffect(()=>{selectionRequest.current++;if(!allowed)return;setSelected(null);setEditorKey(v=>v+1);setMessage('');if(['items','products'].includes(kind)){load(kind,route?.after);if(recordId&&recordId!=='new')select({id:recordId},false);}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[allowed,kind,recordId,route?.after]);
+  async function select(row,navigate=true){
+    if(onNavigate&&navigate){openRecord(String(row.id));return;}
+    const request=++selectionRequest.current;
     setBusy(true);
-    try{const data=await api(`/admin/${kind}/${row.id}`);setSelected(data.record);setEditorKey(v=>v+1);}
+    try{const data=await api(`/admin/${kind}/${row.id}`);if(request!==selectionRequest.current)return;setSelected(data.record);setEditorKey(v=>v+1);}
     catch(e){setMessage(e.message);if(e.status===401||e.status===403)denied(e.message);}
     finally{setBusy(false);}
   }
-  return <section className="admin-panel"><h1>관리자</h1>
+  return <section className="admin-panel" onSubmitCapture={e=>{if(/저장|등록|수정|적용/.test((e.nativeEvent.submitter||e.target.querySelector('button:not([type="button"])'))?.textContent||'')&&!window.confirm("변경 내용을 저장하시겠습니까?")){e.preventDefault();e.stopPropagation();}}}><header className="admin-heading"><div><small>생존밥 · 운영 관리</small><h1>관리자</h1></div><div className="actions"><button onClick={onBack}>뒤로가기</button><button onClick={onExit}>게임으로 돌아가기</button>{onLogout&&<button onClick={onLogout}>로그아웃</button>}</div></header>
     <p>서버 ADMIN 권한 검증 영역입니다. 인증 방식: {authentication||'확인 중'}</p>
-    <button onClick={onBack}>DEV 콘솔로 돌아가기</button><p role="alert">{message}</p>
+    <p role="alert">{message}</p>
     {allowed&&<>
-      <button disabled={busy} onClick={()=>setKind('diagnostics')}>데이터 진단</button>
-      <button disabled={busy} onClick={()=>setKind('balance')}>공통 밸런스</button>
-      <button disabled={busy} onClick={()=>setKind('characters')}>캐릭터 운영 관리</button>
-      <button disabled={busy} onClick={()=>setKind('investigation')}>조사 결과·보상</button>
-      <nav className="actions">{[['items','아이템'],['products','상점 상품'],['foods','음식 설정'],['food-grades','음식 등급'],['recipes','레시피'],['gachas','가챠'],['areas','지역 공개·조우'],['users','관리자 권한'],['battle','PVE·캐릭터 등록'],['logs','전체 행동 로그']].map(([type,label])=><button key={type} disabled={busy} onClick={()=>{setKind(type);setSelected(null);setEditorKey(v=>v+1);if(['items','products'].includes(type))load(type);}}>{label}</button>)}</nav>
-      {kind==='diagnostics'?<DiagnosticsPanel onDenied={denied}/>:kind==='investigation'?<InvestigationAdminPanel onDenied={denied}/>:kind==='characters'?<CharacterOperationsPanel onDenied={denied}/>:kind==='balance'?<BalancePanel onDenied={denied}/>:kind==='logs'?<RecordsPanel admin onDenied={denied}/>:kind==='battle'?<BattleAdminPanel onDenied={denied}/>:kind==='users'?<RolePanel onDenied={denied}/>:['foods','food-grades','recipes','gachas','areas'].includes(kind)?<MasterPanel key={kind} kind={kind} onDenied={denied}/>:<>
+      <nav className="admin-navigation" aria-label="관리자 메뉴">{adminMenus.map(([type,label])=><button key={type} aria-current={kind===type?'page':undefined} disabled={busy} onClick={()=>setKind(type)}>{label}</button>)}</nav>
+      <div className="admin-content"><h2>{adminMenus.find(([id])=>id===kind)?.[1]}</h2>
+      {recordId&&<button disabled={busy} onClick={()=>onNavigate({record:null})}>편집 취소 · 목록으로</button>}
+      {kind==='dashboard'?<div className="admin-dashboard">{adminMenus.filter(([id])=>id!=='dashboard').map(([id,label])=><button key={id} onClick={()=>setKind(id)}><strong>{label}</strong><span>조회 및 관리 →</span></button>)}</div>:kind.startsWith('guide-')?<ContentAdminPanel key={kind} kind={kind.slice(6)} onDenied={denied}/>:kind==='storage'?<StorageAdminPanel onDenied={denied}/>:kind==='clues'?<ClueAdminPanel onDenied={denied} recordId={recordId} onOpen={onNavigate?openRecord:undefined}/>:kind==='policies'?<OperatingPolicyPanel onDenied={denied}/>:kind==='diagnostics'?<DiagnosticsPanel onDenied={denied}/>:kind==='investigation'?<InvestigationAdminPanel onDenied={denied} route={route} onNavigate={onNavigate}/>:kind==='characters'?<CharacterOperationsPanel onDenied={denied} recordId={recordId} onOpen={onNavigate?openRecord:undefined}/>:kind==='balance'?<BalancePanel onDenied={denied}/>:kind==='logs'?<RecordsPanel admin onDenied={denied}/>:kind==='battle'?<BattleAdminPanel onDenied={denied} recordId={recordId} onOpen={onNavigate?openRecord:undefined}/>:kind==='users'?<RolePanel onDenied={denied}/>:['foods','food-grades','recipes','gachas','areas'].includes(kind)?<MasterPanel key={kind} kind={kind} onDenied={denied} recordId={recordId} onOpen={onNavigate?openRecord:undefined} after={route?.after} onPage={onNavigate?after=>onNavigate({after,record:null}):undefined}/>:<>
       <p>혈액팩은 명시적 효과로 지정하며 무료 상품의 일일 한도는 1입니다. 영구 삭제는 참조가 없는 아이템만 가능하며 기록은 보존합니다.</p>
       {kind==='items'&&selected&&<button disabled={busy} onClick={async()=>{
         if(!window.confirm(`아이템 ${selected.name} (ID ${selected.id})을 영구 삭제합니까? 참조가 있으면 거부됩니다.`))return;
@@ -88,15 +106,19 @@ export default function AdminPanel({onBack}) {
       }}>미참조 아이템 영구 삭제</button>}
       {kind==='items'&&selected&&<button disabled={busy} onClick={()=>{
         setProductSeed({item_id:String(selected.id),price:0,daily_limit:selected.effect_type==='BLOOD_PACK'?1:null});
-        setKind('products');setSelected(null);setEditorKey(v=>v+1);load('products');
+        if(onNavigate)onNavigate({menu:'products',record:'new'});else setLocalKind('products');setSelected(null);setEditorKey(v=>v+1);if(!route)load('products');
       }}>이 아이템을 상점에 등록</button>}
-      {kind==='products'&&<p>저장 후 DEV 콘솔로 돌아가 상점 목록을 새로고침하고 구매를 검증하세요. 구매는 로그인한 캐릭터의 실제 재화를 사용합니다.</p>}
-      <button disabled={busy} onClick={()=>{setSelected(null);setEditorKey(v=>v+1);}}>새로 등록</button>
+      {kind==='products'&&<p>상점 상품 설정은 다음 구매부터 적용됩니다. 기존 구매 이력은 유지됩니다.</p>}
+      <button disabled={busy} onClick={()=>{setSelected(null);setProductSeed(null);setEditorKey(v=>v+1);openRecord('new');}}>새로 등록</button>
       <button disabled={busy} onClick={()=>load()}>목록 새로고침</button>
-      <ul>{rows.map(row=><li key={row.id}>ID {row.id} · {row.name || `아이템 ${row.item_id} / 가격 ${row.price}`} · {row.is_active?'활성':'비활성'} <button disabled={busy} onClick={()=>select(row)}>상세/수정</button></li>)}</ul>
-      {next&&<button disabled={busy} onClick={()=>load(kind,next)}>다음 100건</button>}
-      <Editor key={`${kind}-${editorKey}`} kind={kind} record={selected} seed={kind==='products'?productSeed:null} onDenied={denied} onSaved={saved=>{setProductSeed(null);setSelected(saved);setEditorKey(v=>v+1);load().then(ok=>{if(ok)setMessage('저장 성공');});}}/>
+      <div className="admin-toolbar"><label>현재 페이지 검색<input value={search} onChange={e=>setSearch(e.target.value)}/></label><label>상태<select value={filter} onChange={e=>setFilter(e.target.value)}><option value="all">전체</option><option value="active">활성</option><option value="inactive">비활성</option></select></label></div>
+      {busy&&<p role="status">불러오는 중…</p>}{!busy&&!rows.length&&<p>등록된 데이터가 없습니다.</p>}
+      <ul className="admin-records">{rows.filter(row=>(filter==='all'||row.is_active===(filter==='active'))&&[row.id,row.name,row.item_id].join(' ').toLowerCase().includes(search.toLowerCase())).map(row=><li key={row.id}>ID {row.id} · {row.name || `아이템 ${row.item_id} / 가격 ${row.price}`} · {row.is_active?'활성':'비활성'} <button disabled={busy} onClick={()=>select(row)}>상세/수정</button></li>)}</ul>
+      {route?.after&&<button disabled={busy} onClick={()=>onNavigate({after:null,record:null})}>처음 페이지</button>}
+      {next&&<button disabled={busy} onClick={()=>onNavigate?onNavigate({after:next,record:null}):load(kind,next)}>다음 100건</button>}
+      {(!route||recordId==='new'||selected)&&!busy&&<Editor key={`${kind}-${editorKey}`} kind={kind} record={selected} seed={kind==='products'?productSeed:null} onDenied={denied} onSaved={saved=>{setProductSeed(null);setSelected(saved);setEditorKey(v=>v+1);load().then(ok=>{if(ok)setMessage('저장 성공');});}}/>}
       </>}
+      </div>
     </>}
   </section>;
 }

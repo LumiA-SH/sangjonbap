@@ -29,7 +29,7 @@ export default function GachaPanel({gachas, character, error, busy, run, refresh
     {!error && !gachas.length && <p>활성 가챠가 없습니다.</p>}
     <ul className="dev-list">{gachas.map(gacha=><li className="dev-row" key={gacha.id}>
       <h3>{gacha.name}</h3><p>가격 {gacha.price} · ID {gacha.id}</p>
-      <p>기간: {gacha.start_at || '시작 제한 없음'} ~ {gacha.end_at || '종료 제한 없음'}</p>
+      <p>기간: {gacha.period_enabled===false?'기간 제한 없음':`${gacha.start_at || '시작 제한 없음'} ~ ${gacha.end_at || '종료 제한 없음'}`}</p>
       {gacha.outside && <p>현재 운영 기간 외 · 시작 후 새로고침하세요.</p>}
       {gacha.boundary && <p>HOLD: 기간 경계 포함 정책 확정 대기</p>}
       {gacha.stock_hold?<p>재고 설정 준비 중</p>:gacha.sold_out&&<p>전체 품절</p>}

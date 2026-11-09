@@ -136,7 +136,7 @@ export function createInvestigationRepository(pool, {random = randomUnit, battle
           await client.query(`update public.clue set is_discovered=true,first_discoverer_id=$2,
             discovered_at=clock_timestamp() where id=$1 and is_discovered=false`, [selected.clue_id,before.id]);
           const clueResult = await client.query('select * from public.clue where id=$1', [selected.clue_id]);
-          clue = clueResult.rows[0] || null;
+          clue = clueResult.rows[0]?.is_public===false?null:(clueResult.rows[0] || null);
         }
         const result = {
           result: {id: selected.id, is_failure:!!selected.is_failure, result_grade: selected.result_grade, result_text: selected.result_text,

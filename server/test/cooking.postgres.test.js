@@ -116,10 +116,11 @@ test('PostgreSQL cooking and meals with isolated fixtures', {skip: process.env.R
             const key2 = randomUUID(); await cook(key2); await rejects(cook(key2),'DUPLICATE_REQUEST');
             const key3 = randomUUID(); assert.equal((await Promise.allSettled([eat(key3,0),eat(key3,1)])).filter(r=>r.status==='fulfilled').length,1);
         });
-        await scenario('DEAD/NEAR_DEATH all actions; absent food rejected', async () => {
+        await scenario('DEAD blocks all; NEAR_DEATH permits paid learning and meals, not cooking', async () => {
             for (const [status,code] of [['DEAD','CHARACTER_DEAD'],['NEAR_DEATH','CHARACTER_NEAR_DEATH']]) {
-                await pool.query('update public.game_character set status=$1 where id=$2',[status,characters[0]]);
-                await rejects(learn(),code); await rejects(cook(),code);
+                await pool.query('update public.game_character set status=$1,hp=$3,blood=$4 where id=$2',[status,characters[0],status==='DEAD'?0:100,status==='NEAR_DEATH'?0:50]);
+                if(status==='DEAD')await rejects(learn(),code);else assert.equal((await learn()).learned,true);
+                await rejects(cook(),code);
                 if(status==='DEAD')await rejects(eat(),code);else assert.equal((await eat()).dailyMealCount,1);
             }
             await pool.query("update public.game_character set status='ALIVE' where id=$1",[characters[0]]);

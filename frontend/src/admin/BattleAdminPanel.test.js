@@ -8,6 +8,7 @@ let root,container;
 beforeEach(()=>{
   global.IS_REACT_ACT_ENVIRONMENT=true;
   Object.defineProperty(global,'crypto',{configurable:true,value:{randomUUID:()=> '12345678-1234-4234-8234-123456789012'}});
+  window.confirm=jest.fn(()=>true);
   api.mockReset();container=document.createElement('div');document.body.appendChild(container);root=createRoot(container);
 });
 afterEach(async()=>{await act(async()=>root.unmount());container.remove();});
@@ -37,4 +38,20 @@ test('permission errors reach the existing admin gate',async()=>{
   const denied=jest.fn();api.mockRejectedValue(Object.assign(Error('관리자 필요'),{status:403,code:'ADMIN_REQUIRED'}));
   await act(async()=>root.render(<BattleAdminPanel onDenied={denied}/>));
   expect(denied).toHaveBeenCalledWith('관리자 필요');expect(container.textContent).toContain('ADMIN_REQUIRED');
+});
+
+test('routed monster detail reloads from API and list return removes editor',async()=>{
+ const record={id:'5',name:'마물',max_hp:1,atk:0,def:0,agi:0,is_active:false,areas:[],drops:[],actions:[]};
+ api.mockImplementation(async path=>path==='/admin/monsters/5'?{record}:path==='/admin/battle-abilities'?{settings:{}}:{records:[]});
+ const open=jest.fn(),denied=jest.fn();await act(async()=>root.render(<BattleAdminPanel onDenied={denied} recordId="5" onOpen={open}/>));
+ expect(container.textContent).toContain('마물 5 수정');await act(async()=>root.render(<BattleAdminPanel onDenied={denied} recordId={null} onOpen={open}/>));
+ expect(container.textContent).not.toContain('마물 5 수정');expect(button('마물 저장')).toBeUndefined();
+});
+
+test('recipe drop editor saves recipe-only target and preserves item drops',async()=>{
+ setup();await act(async()=>root.render(<BattleAdminPanel onDenied={()=>{}}/>));await act(async()=>button('드롭 추가').click());
+ const kind=[...container.querySelectorAll('label')].find(l=>l.textContent.startsWith('드롭 대상 종류')).querySelector('select');
+ api.mockImplementation(async p=>p==='/admin/recipes'?{records:[{id:'8',name:'레시피'}]}:p==='/admin/battle-abilities'?{settings:{}}:{records:[]});
+ await act(async()=>Simulate.change(kind,{target:{value:'recipe'}}));const select=[...container.querySelectorAll('select')].find(s=>[...s.options].some(o=>o.value==='8'));await act(async()=>Simulate.change(select,{target:{value:'8'}}));
+ api.mockImplementation(async(p,o)=>{if(o?.method==='POST')throw Error('stop after capture');return {records:[]};});await act(async()=>Simulate.submit(container.querySelector('form')));const drop=api.mock.calls.find(c=>c[1]?.method==='POST')[1].body.drops[0];expect(drop).toMatchObject({recipe_id:'8',item_id:null,min_quantity:1,max_quantity:1,is_ingredient:false});
 });

@@ -135,13 +135,13 @@ test('recipe discovery isolated PostgreSQL: global uniqueness, integration and r
             await pool.query("update public.game_character set status='DEAD',hp=0 where id=$1",[u.c.id]);
             await rejects(shop.buyProduct(u.u.id,p.id,1,key),'CHARACTER_DEAD');
             await pool.query("update public.game_character set status='NEAR_DEATH',hp=100,blood=0,currency=0 where id=$1",[u.c.id]);
-            await rejects(shop.buyProduct(u.u.id,p.id,1,key),'CHARACTER_NEAR_DEATH');
-            await pool.query("update public.game_character set status='ALIVE',blood=100 where id=$1",[u.c.id]);
+            await rejects(shop.buyProduct(u.u.id,p.id,1,key),'NOT_ENOUGH_CURRENCY');
+            // Stay NEAR_DEATH through successful concurrent purchase (v0.2).
             await rejects(shop.buyProduct(u.u.id,p.id,1,key),'NOT_ENOUGH_CURRENCY');
             await pool.query('update public.game_character set currency=10 where id=$1',[u.c.id]);
             const results=await Promise.allSettled([shop.buyProduct(u.u.id,p.id,1,key),shop.buyProduct(u.u.id,p.id,1,randomUUID())]);
             assert.equal(results.filter(x=>x.status==='fulfilled').length,1);
-            assert.equal((await inspect(u.c.id)).currency,9);assert.equal((await inspect(u.c.id)).status,'ALIVE');
+            assert.equal((await inspect(u.c.id)).currency,9);assert.equal((await inspect(u.c.id)).status,'NEAR_DEATH');
             await pool.query("update public.game_character set status='ALIVE',blood=100 where id=$1",[u.c.id]);
         });
         await t.test('ordinary shop and single cooking success/failure remain unchanged',async()=>{

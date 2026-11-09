@@ -1,0 +1,11 @@
+name = "sangjonbap-maintenance-cron"
+main = "worker.mjs"
+compatibility_date = "2026-11-08"
+workers_dev = false
+preview_urls = false
+[triggers]
+crons = ["0 15 * * *", "*/5 * * * *"]
+# Approved scheduled verification; Edge execution HOLD remains enabled.
+[observability]
+enabled = true
+# Register MAINTENANCE_SECRET separately. Never put it in vars.

@@ -32,8 +32,8 @@ test('isolated Cron preview, read-only enforcement, bounded overlapping expiry b
  const pool={query:(q,p)=>raw.query(rewrite(q),p),async connect(){const c=await raw.connect();return {query:(q,p)=>c.query(rewrite(q),p),release:()=>c.release()};}};
  try {
  const preview=await raw.query(readFileSync(new URL('../scripts/maintenance-cron.draft.sql',import.meta.url),'utf8'));
- assert.equal(preview.rowCount,2);assert.equal(preview.rows[0].schedule,'0 15 * * *');
- for(const r of preview.rows){assert.match(r.proposed_sql,/vault.decrypted_secrets/);assert.match(r.proposed_sql,/active := false/);}
+ assert.equal(preview.rowCount,4);assert.equal(preview.rows[0].schedule,'0 15 * * *');
+ for(const r of preview.rows){assert.match(r.proposed_sql,/maintenance_control./);assert.match(r.proposed_sql,/active := false/);}
  await raw.query('create schema '+schema);
  for(const table of ['game_character','daily_reset_state','battle','battle_log','action_log'])await raw.query('create table '+schema+'.'+table+' (like public.'+table+' including all)');
  await pool.query('insert into public.daily_reset_state(singleton) values(true)');

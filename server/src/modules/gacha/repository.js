@@ -14,11 +14,13 @@ export function createGachaRepository(pool,{random}={}) {
             const found = await pool.query(`select c.id from public.game_character c join public.auth_user u on u.character_id=c.id
                 where u.id=$1 and u.is_active and c.is_active`,[userId]);
             if (!found.rowCount) fail('CHARACTER_NOT_FOUND','연결된 활성 캐릭터가 없습니다.',404);
-            const result = await pool.query(`select g.id,g.name,1 as price,g.start_at,g.end_at,
+            const result = await pool.query(`select g.id,g.name,1 as price,g.start_at,g.end_at,g.period_enabled,g.start_inclusive,g.end_inclusive,
                 exists(select 1 from public.gacha_reward r where r.gacha_id=g.id and r.is_active and r.max_stock is null) as stock_hold,
                 not exists(select 1 from public.gacha_reward r where r.gacha_id=g.id and r.is_active and r.remaining_stock>0) as sold_out,
-                coalesce(statement_timestamp()=start_at or statement_timestamp()=end_at,false) boundary,
-                coalesce(statement_timestamp()<start_at,false) or coalesce(statement_timestamp()>end_at,false) outside
+                (g.period_enabled is null and coalesce(statement_timestamp()=g.start_at or statement_timestamp()=g.end_at,false)) boundary,
+                (g.period_enabled is distinct from false and (
+                  coalesce(statement_timestamp()<g.start_at,false) or coalesce(statement_timestamp()>g.end_at,false)
+                  or (g.period_enabled is true and ((not g.start_inclusive and statement_timestamp()=g.start_at) or (not g.end_inclusive and statement_timestamp()=g.end_at))))) outside
                 from public.gacha g where g.is_active order by g.id`);
             return {gachas:result.rows};
         },
@@ -47,8 +49,10 @@ export function createGachaRepository(pool,{random}={}) {
                     items.set(id,item);
                 }
                 // Read actual database clock after any lock wait; preserve PostgreSQL microseconds.
-                const period = (await client.query(`select coalesce(t.now=g.start_at or t.now=g.end_at,false) boundary,
-                    coalesce(t.now<g.start_at,false) or coalesce(t.now>g.end_at,false) outside
+                const period = (await client.query(`select (g.period_enabled is null and coalesce(t.now=g.start_at or t.now=g.end_at,false)) boundary,
+                (g.period_enabled is distinct from false and (
+                  coalesce(t.now<g.start_at,false) or coalesce(t.now>g.end_at,false)
+                  or (g.period_enabled is true and ((not g.start_inclusive and t.now=g.start_at) or (not g.end_inclusive and t.now=g.end_at))))) outside
                     from public.gacha g cross join (select clock_timestamp() as now) t where g.id=$1`,[gachaId])).rows[0];
                 requirePeriod(period);
                 if (before.currency<1) fail('NOT_ENOUGH_CURRENCY','가챠에는 코인 1개가 필요합니다.');

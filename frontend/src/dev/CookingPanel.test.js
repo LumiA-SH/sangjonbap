@@ -39,7 +39,7 @@ test('server AP cost, learned state, meal limit and policy HOLD drive controls',
   await render({catalog:learned});expect(button('요리').disabled).toBe(false);expect(button('습득').disabled).toBe(true);
   await render({catalog:{...catalog,dailyMealCount:5}});expect(button('식사').disabled).toBe(true);
   await render({character:{status:'DEAD',ap:10}});expect(button('식사').disabled).toBe(true);
-  await render({character:{status:'NEAR_DEATH',ap:10}});expect(button('식사').disabled).toBe(false);expect(button('습득').disabled).toBe(true);
+  await render({character:{status:'NEAR_DEATH',ap:10}});expect(button('식사').disabled).toBe(false);expect(button('습득').disabled).toBe(false);
   await render({activeBattle:true});expect(button('식사').disabled).toBe(true);
 });
 test('learn/cook/eat use actual API paths and UUID, refresh after committed failure outcome',async()=>{

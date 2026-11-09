@@ -56,7 +56,9 @@ export function createAdminBattleRepository(pool) {
             if(!row)fail('USER_NOT_FOUND','계정이 없습니다.',404);
             return row;
         },
-        async listAdminMonsters(){return (await pool.query('select * from public.monster order by id limit 100')).rows;},
+        async listAdminMonsters(){return (await pool.query(`select m.*,coalesce((select jsonb_agg(jsonb_build_object('recipeId',r.id::text,'name',r.name,'dropRate',d.drop_rate,'discovered',exists(select 1 from public.recipe_discovery rd where rd.recipe_id=r.id)) order by d.id)
+          from public.monster_drop d join public.recipe r on r.id=d.recipe_id where d.monster_id=m.id),'[]'::jsonb) recipe_drops
+          from public.monster m order by m.id limit 100`)).rows;},
         getAdminMonster:id=>adminTransaction(pool,async c=>{
             await c.query('select id from public.monster where id=$1 for share',[id]);
             return readMonster(c,id);

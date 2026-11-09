@@ -47,7 +47,7 @@ export async function discoverRecipe(client,characterId,recipe,sourceType,source
 
 // The existing shop transaction owns product -> character before entering here.
 export async function buyRecipeProduct(client,before,product,quantity,requestKey,day) {
-    requireActionCharacter(before);
+    requireActionCharacter(before,{allowNearDeath:true});
     if (quantity!==1) throw new AppError(400,'RECIPE_PURCHASE_QUANTITY','레시피는 한 번에 하나만 습득할 수 있습니다.');
     const recipe=(await client.query('select * from public.recipe where id=$1 for share',[product.recipe_id])).rows[0];
     if (!recipe?.is_active) throw new AppError(409,'RECIPE_NOT_FOUND','활성 레시피가 없습니다.');

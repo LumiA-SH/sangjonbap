@@ -62,5 +62,14 @@ export function characterRoutes(repository, sessions,config={}) {
     ok(res, await care.revive(req.auth.user.id, req.params.characterId, req.body));
   });
 
+  const interaction = name => {
+    if(typeof repository[name]!=='function')throw new AppError(501,'CHARACTER_INTERACTION_UNAVAILABLE','이 기능은 PostgreSQL 연결 환경에서 지원합니다.');
+    return repository[name];
+  };
+  router.get('/:characterId/public',async(req,res)=>ok(res,await interaction('getPublicCharacter')(req.auth.user.id,req.params.characterId)));
+  router.get('/:characterId/care-preview',async(req,res)=>ok(res,await interaction('previewCare')(req.auth.user.id,req.params.characterId,req.query.action)));
+  router.post('/:characterId/coins',async(req,res)=>ok(res,await interaction('transferCoins')(req.auth.user.id,req.params.characterId,req.body)));
+  router.get('/:characterId/donation-preview',async(req,res)=>ok(res,await repository.previewDonation(req.auth.user.id,req.params.characterId)));
+  router.post('/:characterId/donate',async(req,res)=>ok(res,await repository.donateBlood(req.auth.user.id,req.params.characterId,req.body)));
   return router;
 }

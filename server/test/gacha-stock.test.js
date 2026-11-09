@@ -22,7 +22,7 @@ function fixture({stock=1,currency=2,failLog=false,item=rp,food=false}={}) {
         if(sql.startsWith('select * from public.gacha_reward'))return rows([{id:'7',item_id:'8',quantity:99,weight:99,max_stock:stock==null?null:Math.max(1,stock),remaining_stock:state.stock}]);
         if(sql.startsWith('select * from public.item'))return rows([item]);
         if(sql.startsWith('select 1 from public.food_config'))return rows(food?[{}]:[]);
-        if(sql.startsWith('select coalesce(t.now'))return rows([{boundary:false,outside:false}]);
+        if(sql.includes('cross join (select clock_timestamp() as now)'))return rows([{boundary:false,outside:false}]);
         if(sql.startsWith('select quantity from public.inventory'))return rows([{quantity:state.inventory}]);
         if(sql.startsWith('update public.gacha_reward')){if(!state.stock)return rows([]);state.stock--;return rows([{remaining_stock:state.stock}]);}
         if(sql.startsWith('update public.game_character')){['hp','blood','ap','currency','status','death_count'].forEach((k,i)=>state.character[k]=p[i]);return rows([{...state.character}]);}

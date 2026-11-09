@@ -115,3 +115,16 @@ test('food policy controls expose grade and failure with preserved individual re
  await mount('foods');expect(container.textContent).toContain('개별 회복량 유지');expect(container.textContent).toContain('실패 RP 음식');
  expect(validateDraft('foods',{...{item_id:'1',grade_id:null,is_failure:true,blood_recovery:7,stat_growth_enabled:false,stat_growth_target:null,stat_growth_value:0}})).toBe('');
 });
+
+test('routed master detail uses server record, returns to list and retains page cursor',async()=>{
+ api.mockImplementation(async path=>path==='/admin/areas/8'?{record:{id:'8',name:'구역',encounter_rate:0,is_open:true,unlock_at:null}}:{records:[{id:'8',name:'구역'}],nextAfter:'8'});
+ const onOpen=jest.fn(),onPage=jest.fn(),onDenied=jest.fn();await act(async()=>root.render(<MasterPanel kind="areas" onDenied={onDenied} recordId="8" onOpen={onOpen} after="7" onPage={onPage}/>));
+ expect(api).toHaveBeenCalledWith('/admin/areas?after=7');expect(container.textContent).toContain('ID 8 상세/수정');
+ await act(async()=>root.render(<MasterPanel kind="areas" onDenied={onDenied} recordId={null} onOpen={onOpen} after="7" onPage={onPage}/>));expect(container.querySelector('form')).toBeNull();
+ await act(async()=>button('다음 100건').click());expect(onPage).toHaveBeenCalledWith('8');
+});
+
+test('failure RP candidate textarea supports multiple, one and empty legacy fallback',async()=>{
+ await mount('foods');await change('실패요리 RP 문구 후보','first\nsecond');expect(input('실패요리 RP 문구 후보').value).toBe('first\nsecond');await change('실패요리 RP 문구 후보','only');expect(input('실패요리 RP 문구 후보').value).toBe('only');await change('실패요리 RP 문구 후보','');expect(input('실패요리 RP 문구 후보').value).toBe('');
+ expect(validateDraft('foods',{rp_effect_texts:[''] })).toContain('RP 문구');
+});
