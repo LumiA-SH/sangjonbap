@@ -1,3 +1,4 @@
+import {validateInitialStats} from '../character/initial-stats.js';
 import {AppError} from '../../shared/http.js';
 import {lockCharacter,changeCharacterResources,changeInventoryQuantity,writeActionLog} from '../../shared/game.js';
 import {requireNoActiveBattle} from '../../shared/actions.js';
@@ -24,6 +25,28 @@ export function createAdminCharacterOperations(pool) {
         return {character,inventory};
     }
     return {
+        initializeAdminCharacter(actor,id,body) {
+            const key=requestKey(body);
+            const allowed=['requestKey','expectedUpdatedAt','hunter_grade','has_ability','ability_grade','atk','def','agi'];
+            if(Object.keys(body).some(k=>!allowed.includes(k))||typeof body.expectedUpdatedAt!=='string')invalid('초기 설정과 현재 버전이 필요합니다.');
+            const stats=validateInitialStats(body.hunter_grade,body);
+            if(typeof body.has_ability!=='boolean'||(body.has_ability?!['E','D','C','B','A','S'].includes(body.ability_grade):body.ability_grade!==null))invalid('이능 보유 여부와 등급을 확인하세요.');
+            return adminTransaction(pool,async c=>{
+                await requireAdminRow(c,actor);await checkDuplicate(c,key);
+                const before=await lockCharacter(c,id);
+                if(!before)fail('CHARACTER_NOT_FOUND','캐릭터가 없습니다.',404);
+                if(before.initial_setup_complete!==false)fail('CHARACTER_ALREADY_CONFIGURED','초기 설정이 이미 완료되었습니다.');
+                if(new Date(before.updated_at).toISOString()!==body.expectedUpdatedAt)fail('ADMIN_EDIT_CONFLICT','캐릭터가 변경되었습니다. 다시 조회하세요.');
+                await requireNoActiveBattle(c,before);
+                await c.query(`update public.game_character set hunter_grade=$2,has_ability=$3,ability_grade=$4,
+                    atk=$5,def=$6,agi=$7,initial_setup_complete=true,updated_at=clock_timestamp() where id=$1`,
+                    [id,body.hunter_grade,body.has_ability,body.ability_grade,stats.atk,stats.def,stats.agi]);
+                const after=await read(c,id);
+                await writeActionLog(c,{adminUserId:actor,characterId:id,category:'ADMIN',actionType:'CHARACTER_INITIAL_SETTINGS',targetType:'CHARACTER',targetId:id,
+                    description:'관리자 게임 초기 능력치 설정',detail:{before,after:after.character},requestKey:key});
+                return after;
+            });
+        },
         async searchAdminCharacters(query,after='0') {return (await pool.query('select id,name,status,is_active from public.game_character where id>$2 and strpos(lower(name),lower($1))>0 order by id limit 50',[query,after])).rows;},
         getAdminCharacter:id=>read(pool,id),
         saveAdminCharacter(actor,id,body,inventory=false) {

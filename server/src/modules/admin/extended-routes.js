@@ -36,6 +36,7 @@ export function mountExtendedAdminRoutes(router,repo) {
         if(typeof q!=='string'||q.length>100)throw new AppError(400,'INVALID_QUERY','검색어는 100자 이내입니다.');
         const records=await repo.searchAdminCharacters(q,after);ok(res,{records,nextAfter:records.length===50?records.at(-1).id:null});
     });
+    router.patch('/characters/:id/initial-settings',async(req,res)=>{id(req.params.id);ok(res,await repo.initializeAdminCharacter(req.auth.user.id,req.params.id,req.body));});
     router.get('/characters/:id',async(req,res)=>{id(req.params.id);ok(res,await repo.getAdminCharacter(req.params.id));});
     router.patch('/characters/:id',async(req,res)=>{id(req.params.id);ok(res,await repo.saveAdminCharacter(req.auth.user.id,req.params.id,req.body));});
     router.patch('/characters/:id/inventory',async(req,res)=>{id(req.params.id);ok(res,await repo.saveAdminCharacter(req.auth.user.id,req.params.id,req.body,true));});

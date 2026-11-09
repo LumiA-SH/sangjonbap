@@ -28,10 +28,10 @@ test('OAuth guest gets fixed login link and no DEV key input',async()=>{
   expect(div.querySelector('a').getAttribute('href')).toBe('/api/auth/mastodon/login');
   expect(div.querySelector('input[type=password]')).toBeNull();expect(setToken).not.toHaveBeenCalled();
 });
-test('OAuth USER without character restores cookie session, gets creation HOLD and no admin menu',async()=>{
+test('OAuth USER without character restores cookie session, gets OAuth relink guidance and no admin menu',async()=>{
   api.mockResolvedValueOnce({provider:'mastodon'}).mockResolvedValueOnce({user:{id:'1',role:'USER',character_id:null}});
   await act(async()=>root.render(<App/>));
-  expect(div.textContent).toContain('캐릭터 생성 준비');expect(div.textContent).not.toContain('관리자 영역');
+  expect(div.textContent).toContain('캐릭터 연결 확인');expect(div.textContent).not.toContain('관리자 영역');
   expect(setToken).not.toHaveBeenCalled();expect(api).toHaveBeenCalledTimes(2);
 });
 test('OAuth ADMIN without character can access existing protected admin UI',async()=>{
@@ -76,4 +76,19 @@ test('existing blood gauge shows only configured RP name, no duplicate resource 
  const blood=[...div.querySelectorAll('.survival-resource')].find(e=>e.querySelector('b').textContent.startsWith('혈량'));
  expect(blood.querySelector('small').textContent).toBe(' · 등록 단계');expect(blood.querySelector('span').textContent).toBe('60 / 100');expect(blood.querySelector('progress').value).toBe(60);
  expect(div.querySelectorAll('[aria-label="빈혈 RP 단계"]')).toHaveLength(1);expect(div.textContent).not.toContain('운영진 확인 대기');expect(div.textContent).not.toContain('능력치 페널티는 없습니다');
+});
+
+test('linked pending character opens own page and explains missing configuration without approval',async()=>{
+ const character={id:'44',name:'연결 러너',hp:100,blood:100,ap:10,max_hp:100,max_blood:100,max_ap:10,status:'ALIVE',initial_setup_complete:false};
+ api.mockImplementation(async path=>{
+  if(path==='/auth/config')return {provider:'mastodon'};
+  if(path==='/auth/me')return {user:{id:'7',role:'USER',character_id:'44'}};
+  if(path==='/characters/me')return {character};
+  throw new Error('검증 제한');
+ });
+ await act(async()=>root.render(<App/>));
+ expect(window.location.hash).toContain('character');
+ expect(div.textContent).toContain('게임 초기 능력치가 아직 설정되지 않았습니다');
+ expect(div.textContent).not.toContain('운영진 심사');
+ expect(div.textContent).not.toContain('캐릭터 생성 준비');
 });

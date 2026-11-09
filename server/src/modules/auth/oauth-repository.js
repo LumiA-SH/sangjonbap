@@ -12,10 +12,11 @@ export function createOAuthRepository(pool) {
             return (await pool.query(`delete from public.oauth_login_state
                 where state_hash=$1 and browser_hash=$2 and expires_at>clock_timestamp() returning state_hash`,[stateHash,browserHash])).rowCount===1;
         },
-        async resolveOAuthUser(instance,accountId) {
+        async resolveOAuthUser(instance,accountId,profile={}) {
             const c=await pool.connect();
             try {
                 await c.query('begin');
+                await c.query("set local lock_timeout = '5s'");
                 await c.query('select pg_advisory_xact_lock(hashtextextended($1,0))',[`oauth:${instance}:${accountId}`]);
                 const result=await c.query(`select id,character_id,role,is_active from public.auth_user
                     where mastodon_account_id=$1 and lower(rtrim(mastodon_instance,'/'))=any($2::text[]) for update`,
@@ -25,6 +26,21 @@ export function createOAuthRepository(pool) {
                 if(!user)user=(await c.query(`insert into public.auth_user(role,mastodon_instance,mastodon_account_id)
                     values('USER',$1,$2) returning id,character_id,role,is_active`,[instance,accountId])).rows[0];
                 if(!user.is_active)throw new AppError(403,'USER_UNAVAILABLE','비활성 계정입니다.');
+                // Profile data comes only from the verified Mastodon response, never request input.
+                const name=(typeof profile.display_name==='string'&&profile.display_name.trim())||
+                    (typeof profile.username==='string'&&profile.username.trim())||accountId;
+                let avatar=null;
+                try {const url=new URL(profile.avatar);if(url.protocol==='https:'&&!url.username&&!url.password)avatar=url.href;}catch{}
+                if(!user.character_id){
+                    const character=(await c.query(`insert into public.game_character
+                        (name,profile_image_url,hunter_grade,has_ability,atk,def,agi,initial_setup_complete)
+                        values($1,$2,null,null,null,null,null,false) returning id`,[name.slice(0,100),avatar])).rows[0];
+                    await c.query('update public.auth_user set character_id=$1 where id=$2',[character.id,user.id]);
+                    user={...user,character_id:character.id};
+                }else if(Object.keys(profile).length){
+                    await c.query('update public.game_character set name=$1,profile_image_url=$2,updated_at=clock_timestamp() where id=$3',
+                        [name.slice(0,100),avatar,user.character_id]);
+                }
                 await c.query('update public.auth_user set oauth_verified_at=clock_timestamp() where id=$1',[user.id]);
                 await c.query('commit');return user;
             } catch(error){await c.query('rollback');throw error;}

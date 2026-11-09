@@ -14,10 +14,10 @@ export default function CharacterPanel({character, error, busy, run, onCharacter
     notify(`AP ${delta > 0 ? '+' : ''}${delta} 처리 완료`);
   }
 
-  const blocked = busy || character?.in_active_battle || character?.status==='DEAD';
+  const blocked = busy || character?.initial_setup_complete===false || character?.in_active_battle || character?.status==='DEAD';
   return <section aria-labelledby="character-title">
     <span className="badge">CHARACTER</span>
-    <h2 id="character-title">캐릭터 DEV</h2>
+    <h2 id="character-title">{dev?'캐릭터 DEV':'내 캐릭터'}</h2>
     {error && <p role="alert">조회 실패: {error} · 이전 표시값일 수 있습니다.</p>}
     <button disabled={busy} onClick={() => run(refresh)}>캐릭터 새로고침</button>
     {!character ? <p>캐릭터 정보를 불러오지 못했습니다.</p> : <>
@@ -28,9 +28,9 @@ export default function CharacterPanel({character, error, busy, run, onCharacter
           ['혈액', `${character.blood}/${character.effective_max_blood ?? Math.min(100,character.max_blood)}`], ['재화', character.currency]
         ].map(([label, value]) => <div key={label}><small>{label}</small><strong>{value}</strong></div>)}
       </div>
-      <p>ID {character.id} · 등급 {character.hunter_grade} · 상태 {character.status}</p>
+      <p>ID {character.id} · 등급 {character.hunter_grade??'미설정'} · 상태 {character.status}</p>
       {character.in_active_battle && <p>진행 중 전투: 전투 행동과 조회만 가능합니다.</p>}
-      <p>이능관리등급: {character.ability_grade ?? '없음'}</p>
+      <p>이능관리등급: {character.initial_setup_complete===false?'미설정':character.ability_grade ?? '없음'}</p>
       <dl>
         {[['나이', character.age], ['직업', character.job], ['포지션', character.position],
           ['외부 프로필 URL', character.profile_url]].map(([label, value]) => <div key={label}>

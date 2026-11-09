@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
 import {createIsolatedPool as createPool} from './isolated-pool.js';
 import {createOAuthRepository} from '../src/modules/auth/oauth-repository.js';
+import {createAdminCharacterOperations} from '../src/modules/admin/character-operations.js';
+import {requireActionCharacter} from '../src/shared/actions.js';
 import {digest} from '../src/modules/auth/oauth-session.js';
 import {createApp} from '../src/app.js';
 import {loadEdgeConfig} from '../src/config/edge.js';
@@ -14,10 +16,13 @@ test('OAuth shared PostgreSQL state, identity and sessions (isolated)',{skip:pro
     const repo=createOAuthRepository(pool);
     try {
         await raw.query(`create schema ${schema}`);
-        for(const table of ['auth_user','auth_session','oauth_login_state'])await raw.query(`create table ${schema}.${table} (like public.${table} including all)`);
-        await t.test('concurrent registration creates only one USER, no character or role assignment',async()=>{
+        for(const table of ['game_character','auth_user','auth_session','oauth_login_state','daily_reset_state','battle','action_log','inventory','item'])await raw.query(`create table ${schema}.${table} (like public.${table} including all)`);
+        await pool.query('insert into public.daily_reset_state(singleton) values(true)');
+        await t.test('concurrent registration creates one linked pending character without granting roles',async()=>{
             const users=await Promise.all([repo.resolveOAuthUser('survival-bob.site','123'),repo.resolveOAuthUser('survival-bob.site','123')]);
-            assert.equal(users[0].id,users[1].id);assert.equal(users[0].role,'USER');assert.equal(users[0].character_id,null);
+            assert.equal(users[0].id,users[1].id);assert.equal(users[0].role,'USER');assert.ok(users[0].character_id);assert.equal(users[0].character_id,users[1].character_id);
+            const character=(await pool.query('select * from public.game_character where id=$1',[users[0].character_id])).rows[0];
+            assert.equal(character.initial_setup_complete,false);assert.equal(character.atk,null);assert.equal(character.hp,100);assert.equal(character.blood,100);assert.equal(character.ap,10);
             assert.equal((await pool.query('select * from public.auth_user')).rowCount,1);
             assert.ok((await pool.query('select oauth_verified_at from public.auth_user')).rows[0].oauth_verified_at);
             const other=await repo.resolveOAuthUser('other.example','123');assert.notEqual(other.id,users[0].id);
@@ -27,6 +32,36 @@ test('OAuth shared PostgreSQL state, identity and sessions (isolated)',{skip:pro
             const user=await repo.resolveOAuthUser('survival-bob.site','456');assert.equal(user.role,'ADMIN');assert.equal(user.character_id,'99');
             await pool.query('update public.auth_user set is_active=false where id=$1',[user.id]);
             await assert.rejects(repo.resolveOAuthUser('survival-bob.site','456'),{code:'USER_UNAVAILABLE'});
+        });
+        await t.test('profile sync preserves resources and admin initialization is atomic and role checked',async()=>{
+            const user=await repo.resolveOAuthUser('survival-bob.site','3344',{username:'runner',display_name:'러너',avatar:'https://example.test/avatar.png'});
+            const ops=createAdminCharacterOperations(pool);
+            let before=(await ops.getAdminCharacter(user.character_id)).character;
+            assert.equal(before.name,'러너');assert.equal(before.profile_image_url,'https://example.test/avatar.png');
+            assert.throws(()=>requireActionCharacter(before),{code:'CHARACTER_SETUP_REQUIRED'});
+            const admin=(await pool.query("insert into public.auth_user(role) values('ADMIN') returning id")).rows[0].id;
+            const body={hunter_grade:'B',has_ability:true,ability_grade:'E',atk:12,def:12,agi:12,expectedUpdatedAt:before.updated_at.toISOString(),requestKey:randomUUID()};
+            await assert.rejects(ops.initializeAdminCharacter(user.id,user.character_id,body),{code:'ADMIN_REQUIRED'});
+            assert.throws(()=>ops.initializeAdminCharacter(admin,user.character_id,{...body,atk:13}),{code:'INVALID_INITIAL_STATS'});
+            await repo.resolveOAuthUser('survival-bob.site','3344',{username:'runner',display_name:'변경',avatar:'javascript:alert(1)'});
+            await assert.rejects(ops.initializeAdminCharacter(admin,user.character_id,body),{code:'ADMIN_EDIT_CONFLICT'});
+            before=(await ops.getAdminCharacter(user.character_id)).character;
+            assert.equal(before.profile_image_url,null);
+            body.expectedUpdatedAt=before.updated_at.toISOString();
+            const fault=createAdminCharacterOperations({async connect(){const c=await pool.connect();return {release:()=>c.release(),query(q,p){if(q.includes('insert into public.action_log'))throw Error('audit failure');return c.query(q,p);}};}});
+            await assert.rejects(fault.initializeAdminCharacter(admin,user.character_id,body),/audit failure/);
+            assert.equal((await ops.getAdminCharacter(user.character_id)).character.initial_setup_complete,false);
+            const results=await Promise.allSettled([ops.initializeAdminCharacter(admin,user.character_id,body),ops.initializeAdminCharacter(admin,user.character_id,{...body,requestKey:randomUUID()})]);
+            assert.equal(results.filter(r=>r.status==='fulfilled').length,1);
+            const ready=(await ops.getAdminCharacter(user.character_id)).character;
+            assert.equal(ready.initial_setup_complete,true);assert.equal(ready.atk+ready.def+ready.agi,36);
+            await pool.query('update public.game_character set hp=77,blood=66,ap=3,currency=5 where id=$1',[user.character_id]);
+            const again=await repo.resolveOAuthUser('survival-bob.site','3344',{username:'runner',display_name:'최종 이름',avatar:'https://example.test/new.png'});
+            assert.equal(again.character_id,user.character_id);
+            const preserved=(await ops.getAdminCharacter(user.character_id)).character;
+            assert.equal(preserved.hp,77);assert.equal(preserved.blood,66);assert.equal(preserved.ap,3);assert.equal(preserved.currency,5);
+            assert.equal(preserved.atk,12);assert.equal(preserved.hunter_grade,'B');assert.equal(preserved.name,'최종 이름');
+            assert.equal((await pool.query("select * from public.action_log where action_type='CHARACTER_INITIAL_SETTINGS'")).rowCount,1);
         });
         await t.test('state is browser-bound, expires and can be consumed by exactly one instance',async()=>{
             const state=digest('state'),browser=digest('browser');await repo.saveOAuthState(state,browser);

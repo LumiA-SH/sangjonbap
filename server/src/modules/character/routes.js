@@ -10,9 +10,9 @@ export function characterRoutes(repository, sessions,config={}) {
 
   router.use(sessions.require);
   router.post('/',async(req,res)=>{
-    // Approved characters are registered by ADMIN and linked to verified OAuth identities.
+    // Character identity is created only from a verified OAuth response.
     if(req.auth.user.character_id)throw new AppError(409,'CHARACTER_ALREADY_LINKED','이미 연결된 캐릭터가 있습니다.');
-    throw new AppError(403,'CHARACTER_ADMIN_REGISTRATION_REQUIRED','캐릭터는 운영진 심사 후 관리자가 등록합니다.');
+    throw new AppError(403,'CHARACTER_OAUTH_LINK_REQUIRED','Mastodon으로 다시 로그인하여 캐릭터 연결을 확인해 주세요.');
   });
 
   router.get('/search', async (req, res) => {

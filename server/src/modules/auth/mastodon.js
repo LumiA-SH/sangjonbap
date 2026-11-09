@@ -42,7 +42,7 @@ export function mastodonRoutes(config,repository,sessions,{fetchImpl=fetch}={}) 
             identity=await account.json();
             if(typeof identity.id!=='string'||!/^\d{1,100}$/.test(identity.id))throw new Error('identity format');
         } catch {fail('OAUTH_EXCHANGE_FAILED','인증 서버 확인에 실패했습니다. 다시 로그인하세요.',502);}
-        const user=await repository.resolveOAuthUser('survival-bob.site',identity.id);
+        const user=await repository.resolveOAuthUser('survival-bob.site',identity.id,{display_name:identity.display_name,username:identity.username,avatar:identity.avatar});
         await sessions.revoke(readCookie(req,sessionCookie));
         const session=await sessions.issue(user);
         res.cookie(sessionCookie,session.token,{...secureCookie,maxAge:session.expiresIn*1000});

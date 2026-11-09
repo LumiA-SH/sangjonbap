@@ -1,3 +1,4 @@
+import InitialCharacterSettings from './InitialCharacterSettings';
 import CharacterDetailsEditor from './CharacterDetailsEditor';
 import {useEffect,useRef,useState} from 'react';
 import {api} from '../api/client';
@@ -22,8 +23,10 @@ export default function CharacterOperationsPanel({onDenied,recordId,onOpen}) {
     <p role="alert">{message}</p><ul>{rows.map(r=><li key={r.id}>{r.name} · ID {r.id} · {r.status} · {r.is_active?'활성':'비활성'}<button disabled={busy} onClick={()=>onOpen?onOpen(String(r.id)):work(()=>select(r.id))}>선택</button></li>)}</ul>
     {next&&<button disabled={busy} onClick={()=>work(()=>search(next))}>다음 50건</button>}
     {data&&<><h3>{data.character.name} · {data.character.status}</h3><p>사망 {data.character.death_count}회 · 부활 {data.character.revive_count}회</p>
+      {data.character.initial_setup_complete===false?<InitialCharacterSettings key={data.character.id} character={data.character} onDenied={onDenied} onSaved={()=>select(data.character.id)}/>:<>
       <form className="admin-form" onSubmit={e=>{e.preventDefault();work(()=>save(false));}}>{Object.entries(fields).map(([k,label])=><label key={k}>{label}<input required type="number" min="0" step="1" value={draft[k]} disabled={busy} onChange={e=>setDraft({...draft,[k]:e.target.value===''?'':Number(e.target.value)})}/></label>)}<button disabled={busy}>캐릭터 저장</button></form>
       <CharacterDetailsEditor key={data.character.id} id={data.character.id} onDenied={onDenied} onSaved={()=>select(data.character.id)}/>
+      </>}
       <h3>보유 아이템</h3><ul>{data.inventory.map(r=><li key={r.item_id}>{r.name} · ID {r.item_id} · {r.quantity}개<button disabled={busy} onClick={()=>{setItemId(String(r.item_id));setQuantity(r.quantity);}}>수량 선택</button></li>)}</ul>
       <form className="admin-form" onSubmit={e=>{e.preventDefault();work(()=>save(true));}}><ItemPicker value={itemId} onChange={setItemId} disabled={busy} onDenied={onDenied}/><label>최종 보유 수량<input required type="number" min="0" step="1" value={quantity} disabled={busy} onChange={e=>setQuantity(e.target.value===''?'':Number(e.target.value))}/></label><button disabled={busy||!itemId}>보유량 저장</button></form>
     </>}

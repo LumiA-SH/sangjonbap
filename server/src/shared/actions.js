@@ -9,6 +9,7 @@ export async function requireNoActiveBattle(client, character) {
 
 export function requireActionCharacter(character,{allowNearDeath=false}={}) {
     if (!character) throw new AppError(404,'CHARACTER_NOT_FOUND','활성 캐릭터가 없습니다.');
+    if (character.initial_setup_complete===false) throw new AppError(409,'CHARACTER_SETUP_REQUIRED','캐릭터의 게임 초기 능력치가 아직 설정되지 않았습니다.');
     if (character.status==='DEAD'||Number(character.hp)<=0) throw new AppError(409,'CHARACTER_DEAD','사망 상태에서는 행동할 수 없습니다.');
     if (!allowNearDeath&&(character.status==='NEAR_DEATH'||Number(character.blood)<=0)) throw new AppError(409,'CHARACTER_NEAR_DEATH','빈사 상태에서는 이 행동을 할 수 없습니다.');
 }

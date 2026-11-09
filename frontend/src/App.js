@@ -137,6 +137,7 @@ export default function App() {
 
                 if (data.user.character_id) {
                   await refreshAll('mastodon');
+                  if(!window.location.hash)go({admin:false,tab:'character'});
                 }
               }
             } catch (error) {
@@ -361,6 +362,7 @@ export default function App() {
               <p>{pageDescriptions[view]}</p>
             </div>
 
+            {loggedIn && character?.initial_setup_complete===false && <section role="status"><h2>캐릭터 연결 완료</h2><p>{character.name}의 게임 초기 능력치가 아직 설정되지 않았습니다. 운영진이 캐릭터 관리에서 헌터 등급·이능·능력치를 설정하면 이용할 수 있습니다.</p></section>}
             {loggedIn && user?.character_id && (
                 <div className="survival-home" style={{ display: view === 'home' ? 'grid' : 'none' }}>
                   <DashboardCard title="SURVIVOR ID" subtitle={`#${String(character?.id ?? '---').padStart(3, '0')}`} className="survival-profile">
