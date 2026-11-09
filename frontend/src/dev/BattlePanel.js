@@ -1,4 +1,3 @@
-import AnemiaNotice from '../public/AnemiaNotice';
 import {useEffect,useRef,useState} from 'react';
 import {api} from '../api/client';
 
@@ -54,7 +53,6 @@ export default function BattlePanel({inventory=[],busy,run,refresh,revision=0}) 
       <h3>{battle.monster?.name||`마물 ${battle.monster_id}`} · 전투 {battle.id}</h3>
       <p>상태 {battle.battle_status} · 턴 {battle.turn_no} · 종료 사유 {battle.end_reason||'-'}</p>
       <p>HP {data.character.hp}/{data.character.max_hp} · 혈량 {data.character.blood}/{Math.min(100,data.character.max_blood)} · AP {data.character.ap}/{data.character.max_ap}</p>
-      <AnemiaNotice character={data.character}/>
       <p>마물 HP {battle.monster_hp}/{battle.monster_max_hp}</p>
       {active&&<>
         <p>마물 행동 예고: {battle.declaration?.name} ({battle.declaration?.action_type})</p>

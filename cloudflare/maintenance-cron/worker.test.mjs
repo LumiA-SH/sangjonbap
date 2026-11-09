@@ -19,3 +19,5 @@ test('malformed JSON and invalid success contract',async()=>{for(const fetcher o
 test('untrusted fields never logged',async()=>{const logs=[];await runScheduled(event,env,{log:e=>logs.push(e),fetcher:async()=>response(503,{ok:false,error:{code:secret,message:secret},data:{headers:secret}})});assert.ok(!JSON.stringify(logs).includes(secret));});
 test('duplicate events forwarded; DB remains dedup authority',async()=>{let n=0;await Promise.all([1,2].map(()=>runScheduled(event,env,{...options,fetcher:async u=>{n++;return good(u);}})));assert.equal(n,4);});
 test('external HTTP never schedules work',async()=>{assert.equal((await worker.fetch(new Request('https://invalid/run',{method:'POST'}))).status,404);});
+
+test('approved half-hour expression executes both paths; retired five-minute trigger is ignored',async()=>{assert.equal(RETRY,'*/30 * * * *');let calls=0;const deps={...options,fetcher:async u=>{calls++;return good(u);}};await runScheduled({...event,cron:'*/30 * * * *'},env,deps);assert.equal(calls,2);await runScheduled({...event,cron:'*/5 * * * *'},env,deps);assert.equal(calls,2);});

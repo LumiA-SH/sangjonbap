@@ -5,6 +5,7 @@ import {requestKey} from './master-service.js';
 
 export const eventNames=['death','revive','area_unlock','monster_discovery','clue_discovery','investigation_progress','story','raid'];
 export const policyDefaults={
+ anemia:{enabled:false,stages:[]},
  donation:{enabled:false,cost:null,recovery:null,minimumRemaining:null,maximum:null,dailyLimitEnabled:false,dailyLimit:null},
  announcements:{events:Object.fromEntries(eventNames.map(name=>[name,{enabled:false,template:'',visibility:null,deduplicate:true,retryEnabled:false,maxAttempts:null,retryMinutes:null,thresholds:[]}]))},
  homepage:{enabled:false,accountId:null,noticeTag:null,eventTag:null,limit:null,publicOnly:true,excludeReplies:true,excludeBoosts:true},
@@ -16,7 +17,14 @@ const bool=v=>{if(typeof v!=='boolean')invalid();};
 const number=(v,min,max)=>{if(v!==null&&(!Number.isInteger(v)||v<min||v>max))invalid();};
 export function validatePolicy(kind,v){
  if(!Object.hasOwn(policyDefaults,kind))invalid();object(v,Object.keys(policyDefaults[kind]));
- if(kind==='donation'){
+ if(kind==='anemia'){
+  bool(v.enabled);if(!Array.isArray(v.stages)||v.stages.length>100)invalid();
+  for(const stage of v.stages){object(stage,['name','min','max','order']);if(typeof stage.name!=='string'||!stage.name.trim()||stage.name.length>50)invalid();
+   for(const k of ['min','max'])if(!Number.isInteger(stage[k])||stage[k]<1||stage[k]>100)invalid();
+   if(stage.min>stage.max||!Number.isInteger(stage.order)||stage.order<0||stage.order>2147483647)invalid();
+  }
+  if(v.enabled||v.stages.length){const sorted=[...v.stages].sort((a,b)=>a.min-b.min);let next=1;for(const s of sorted){if(s.min!==next)invalid();next=s.max+1;}if(next!==101)invalid();}
+ }else if(kind==='donation'){
   bool(v.enabled);bool(v.dailyLimitEnabled);
   for(const k of ['cost','recovery','maximum'])number(v[k],1,100);
   number(v.minimumRemaining,0,100);number(v.dailyLimit,1,2147483647);
@@ -52,6 +60,7 @@ export async function readPolicy(client,kind,lock=false){
  return validatePolicy(kind,row.config_value);
 }
 export function createOperatingPolicyRepository(pool){return {
+ async getAnemiaPolicy(){const row=(await pool.query("select config_value from public.system_config where config_key='operating_anemia'")).rows[0];if(!row)return {settings:null};return {settings:validatePolicy('anemia',row.config_value)};},
  async getOperatingPolicy(kind){return {settings:await readPolicy(pool,kind),executionReady:kind==='donation'};},
  async saveOperatingPolicy(actor,kind,body){
   object(body,['settings','before','requestKey']);const key=requestKey(body),settings=validatePolicy(kind,body.settings);

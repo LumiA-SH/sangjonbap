@@ -3,7 +3,7 @@ import {createRoot} from 'react-dom/client';
 import {Simulate} from 'react-dom/test-utils';
 import GuidePage,{kst} from './GuidePage';
 import CharacterDirectory from './CharacterDirectory';
-import AnemiaNotice,{anemiaText} from './AnemiaNotice';
+import AnemiaNotice,{anemiaText,AnemiaPolicyContext} from './AnemiaNotice';
 import ContentAdminPanel from '../admin/ContentAdminPanel';
 import {api} from '../api/client';
 jest.mock('../api/client',()=>({api:jest.fn()}));
@@ -21,6 +21,11 @@ test('guest profile never requests runner inventory; authenticated detail reuses
 test('admin confirmation, duplicate clicks and conflict display',async()=>{
  api.mockResolvedValue({content:{title:'원래',body:'본문',published:false},version:'v1'});await act(async()=>root.render(<ContentAdminPanel kind="world"/>));await act(async()=>Simulate.change(div.querySelector('input'),{target:{value:'수정'}}));window.confirm.mockReturnValue(false);await act(async()=>Simulate.submit(div.querySelector('form')));expect(api.mock.calls.filter(c=>c[1]?.method==='PATCH')).toHaveLength(0);window.confirm.mockReturnValue(true);let reject;api.mockImplementation(()=>new Promise((r,j)=>{reject=j;}));await act(async()=>{Simulate.submit(div.querySelector('form'));Simulate.submit(div.querySelector('form'));});expect(api.mock.calls.filter(c=>c[1]?.method==='PATCH')).toHaveLength(1);expect(api).toHaveBeenLastCalledWith('/admin/content/world',expect.objectContaining({body:expect.objectContaining({expectedVersion:'v1'})}));await act(async()=>reject(Object.assign(Error('다시 조회'),{code:'CONTENT_CHANGED'})));expect(div.textContent).toContain('CONTENT_CHANGED');
 });
-test('unconfirmed RP boundaries remain pending, dead overrides near-death and props refresh',async()=>{
- for(const blood of [1,29,30,59,60,79,80,100])expect(anemiaText({hp:100,status:'ALIVE',blood})).toContain('확인 대기');expect(anemiaText({hp:100,status:'NEAR_DEATH',blood:0})).toContain('빈사');expect(anemiaText({hp:0,status:'DEAD',blood:0})).toContain('사망');await act(async()=>root.render(<AnemiaNotice character={{hp:100,status:'ALIVE',blood:30}}/>));expect(div.textContent).toContain('30/100');await act(async()=>root.render(<AnemiaNotice character={{hp:100,status:'NEAR_DEATH',blood:0}}/>));expect(div.textContent).toContain('빈사');
+test('RP names require configuration, preserve zero/dead states and refresh with blood',async()=>{
+ const policy={enabled:true,stages:[{name:'낮음',min:1,max:49,order:0},{name:'높음',min:50,max:100,order:1}]};
+ for(const blood of [1,50,100])expect(anemiaText({hp:100,status:'ALIVE',blood})).toBeNull();
+ expect(anemiaText({hp:100,blood:1},policy)).toBe('낮음');expect(anemiaText({hp:100,blood:100},policy)).toBe('높음');
+ expect(anemiaText({hp:100,blood:0},policy)).toBeNull();expect(anemiaText({hp:0,blood:50,status:'DEAD'},policy)).toBeNull();expect(anemiaText({hp:100,blood:50},{...policy,enabled:false})).toBeNull();
+ const render=blood=><AnemiaPolicyContext.Provider value={policy}><AnemiaNotice character={{hp:100,status:'ALIVE',blood}}/></AnemiaPolicyContext.Provider>;
+ await act(async()=>root.render(render(1)));expect(div.textContent).toBe(' · 낮음');expect(div.textContent).not.toContain('/100');await act(async()=>root.render(render(100)));expect(div.textContent).toBe(' · 높음');await act(async()=>root.render(render(0)));expect(div.textContent).toBe('');
 });

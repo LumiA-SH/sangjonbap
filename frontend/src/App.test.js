@@ -63,3 +63,17 @@ test('admin direct URL rechecks server access; logout removes content and back c
 test('public guide renders for guests without requesting game resources',async()=>{
  window.history.replaceState(null,'','/#game/world');api.mockImplementation(async path=>{if(path==='/public/guides/world')return {content:{title:'공개 제목',body:'운영진 내용'}};throw Object.assign(Error('검증 제한'),{code:'VERIFICATION_KEY_REQUIRED'});});await act(async()=>root.render(<App/>));expect(div.textContent).toContain('공개 제목');expect(api.mock.calls.some(([p])=>p.startsWith('/characters/'))).toBe(false);
 });
+
+test('existing blood gauge shows only configured RP name, no duplicate resource notice',async()=>{
+ const character={id:'1',name:'러너',hp:100,blood:60,ap:10,max_hp:100,max_blood:100,max_ap:10,hunter_grade:'B',status:'ALIVE'};
+ api.mockImplementation(async path=>{
+ if(path==='/auth/config')return {provider:'mastodon'};
+ if(path==='/auth/me')return {user:{id:'1',role:'USER',character_id:'1'}};
+ if(path==='/characters/me')return {character};
+ if(path==='/public/anemia')return {settings:{enabled:true,stages:[{name:'등록 단계',min:1,max:100,order:0}]}};
+ throw new Error('테스트 대상 외 API');});
+ await act(async()=>root.render(<App/>));
+ const blood=[...div.querySelectorAll('.survival-resource')].find(e=>e.querySelector('b').textContent.startsWith('혈량'));
+ expect(blood.querySelector('small').textContent).toBe(' · 등록 단계');expect(blood.querySelector('span').textContent).toBe('60 / 100');expect(blood.querySelector('progress').value).toBe(60);
+ expect(div.querySelectorAll('[aria-label="빈혈 RP 단계"]')).toHaveLength(1);expect(div.textContent).not.toContain('운영진 확인 대기');expect(div.textContent).not.toContain('능력치 페널티는 없습니다');
+});

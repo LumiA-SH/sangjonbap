@@ -1,4 +1,3 @@
-import AnemiaNotice from '../public/AnemiaNotice';
 import {useEffect, useState} from 'react';
 import {api} from '../api/client';
 
@@ -29,7 +28,6 @@ export default function CharacterPanel({character, error, busy, run, onCharacter
           ['혈액', `${character.blood}/${character.effective_max_blood ?? Math.min(100,character.max_blood)}`], ['재화', character.currency]
         ].map(([label, value]) => <div key={label}><small>{label}</small><strong>{value}</strong></div>)}
       </div>
-      <AnemiaNotice character={character}/>
       <p>ID {character.id} · 등급 {character.hunter_grade} · 상태 {character.status}</p>
       {character.in_active_battle && <p>진행 중 전투: 전투 행동과 조회만 가능합니다.</p>}
       <p>이능관리등급: {character.ability_grade ?? '없음'}</p>

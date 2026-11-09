@@ -1,6 +1,6 @@
 import GuidePage from './public/GuidePage';
 import CharacterDirectory from './public/CharacterDirectory';
-import AnemiaNotice from './public/AnemiaNotice';
+import AnemiaNotice,{AnemiaPolicyContext} from './public/AnemiaNotice';
 import CoinTransferPanel from './dev/CoinTransferPanel';
 import PublicCharacterPanel from './dev/PublicCharacterPanel';
 import MobileLoginHelp from './MobileLoginHelp';
@@ -62,14 +62,14 @@ function DashboardCard({ title, subtitle, action, children, className = '' }) {
   );
 }
 
-function ResourceBar({ label, value, max }) {
+function ResourceBar({ label, value, max, character }) {
   const current = Math.max(0, Number(value) || 0);
   const maximum = Math.max(1, Number(max) || 1);
 
   return (
       <div className="survival-resource">
         <div className="survival-resource-label">
-          <b>{label}</b>
+          <b>{label}{label==='혈량'&&<AnemiaNotice character={character}/>}</b>
           <span>{current} / {maximum}</span>
         </div>
         <progress max={maximum} value={Math.min(current, maximum)} />
@@ -79,6 +79,7 @@ function ResourceBar({ label, value, max }) {
 
 export default function App() {
   const [key, setKey] = useState('');
+  const [anemiaPolicy,setAnemiaPolicy]=useState(null);
   const {route,go,back}=useNavigation();
   const view=route.tab;
   const setView=tab=>go({admin:false,tab});
@@ -107,6 +108,7 @@ export default function App() {
   const [now, setNow] = useState(() => new Date());
 
   const running = useRef(false);
+  useEffect(()=>{if(!loggedIn||!user?.character_id){setAnemiaPolicy(null);return;}let live=true;const read=()=>api('/public/anemia').then(r=>{if(live)setAnemiaPolicy(r.settings);}).catch(()=>{if(live)setAnemiaPolicy(null);});read();window.addEventListener('focus',read);const timer=setInterval(read,60000);return()=>{live=false;clearInterval(timer);window.removeEventListener('focus',read);};},[loggedIn,user?.character_id,revision]);
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(new Date()), 1000);
@@ -301,7 +303,7 @@ export default function App() {
 
 
   return (
-      <>
+      <AnemiaPolicyContext.Provider value={anemiaPolicy}>
       {adminOpen&&<main className="admin-workspace">
         {canAdmin?<AdminPanel route={route} onNavigate={next=>go({...route,...next})} onBack={back} onExit={()=>go({admin:false,tab:view})} onLogout={()=>run(logout)} onAccessLost={()=>setUser(current=>current?{...current,role:null}:null)}/>:
         <section className="admin-gate"><h1>운영진 전용 페이지</h1><p role="alert">{provider===null?'인증 확인 중…':loggedIn?'관리자 권한이 필요합니다.':'로그인 후 관리자 권한을 확인합니다.'}</p><button onClick={()=>setAdminOpen(false)}>게임으로 돌아가기</button></section>}
@@ -376,7 +378,7 @@ export default function App() {
 
                       <div className="survival-resource-list">
                         {resourceStats.map(([label, value, max]) => (
-                            <ResourceBar key={label} label={label} value={value} max={max} />
+                            <ResourceBar key={label} label={label} value={value} max={max} character={character} />
                         ))}
                       </div>
                     </div>
@@ -437,7 +439,7 @@ export default function App() {
                 </div>
             )}
 
-            {view==='home'&&character&&<AnemiaNotice character={character}/>}
+
             <div className="survival-auth" style={{ display: loggedIn && view !== 'home' ? 'none' : 'block' }}>
               <section aria-labelledby="login-title">
                 <OAuthErrorNotice />
@@ -545,6 +547,6 @@ export default function App() {
           </nav>
         </div>
       </div>
-      </>
+      </AnemiaPolicyContext.Provider>
   );
 }

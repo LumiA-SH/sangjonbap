@@ -14,6 +14,12 @@ test('policy input fails closed without invented values',()=>{
  assert.throws(()=>validatePolicy('recovery',{recipe:'EXECUTE',gacha:'HOLD',battle:'HOLD'}));
  assert.throws(()=>validatePolicy('announcements',{events:{attack:{enabled:true}}}));
 });
+test('anemia configuration covers 1 through 100 without modifying zero status',()=>{
+ const valid={enabled:true,stages:[{name:'A',min:1,max:50,order:0},{name:'B',min:51,max:100,order:1}]};assert.deepEqual(validatePolicy('anemia',valid),valid);
+ for(const stages of [[],[{name:'A',min:0,max:100,order:0}],[{name:'A',min:1,max:101,order:0}],[{name:'A',min:2,max:100,order:0}],[{name:'A',min:1.1,max:100,order:0}],[{name:'A',min:50,max:1,order:0}],[valid.stages[0],{...valid.stages[1],min:50}],[valid.stages[0],{...valid.stages[1],min:52}]])assert.throws(()=>validatePolicy('anemia',{enabled:true,stages}),{code:'INVALID_POLICY'});
+ assert.deepEqual(validatePolicy('anemia',{enabled:false,stages:[]}),{enabled:false,stages:[]});
+});
+
 test('operating policies isolated PostgreSQL',{skip:!process.env.ISOLATED_PG_CONFIG},async t=>{
  const raw=createIsolatedPool(),schema='policies_'+key().replaceAll('-',''),sql=q=>q.replaceAll('public.',schema+'.');
  const scoped=(fault=false)=>({query:(q,p)=>raw.query(sql(q),p),async connect(){const c=await raw.connect();return {release:()=>c.release(),query(q,p){if(fault&&q.includes('insert into public.action_log'))throw Error('audit fault');return c.query(sql(q),p);}};}});
@@ -50,6 +56,15 @@ test('operating policies isolated PostgreSQL',{skip:!process.env.ISOLATED_PG_CON
   await save(settings);
   await assert.rejects(admin.saveOperatingPolicy(owner.u.id,'donation',{settings,before,requestKey:key()}),e=>e.code==='POLICY_CHANGED');
   assert.equal((await pool.query("select count(*)::int n from public.action_log where action_type='OPERATING_POLICY_UPDATE'")).rows[0].n,1);
+ });
+ await t.test('anemia read, concurrent administrators, role, migration preservation and audit rollback',async()=>{
+ const before=(await admin.getOperatingPolicy('anemia')).settings,settings={enabled:true,stages:[{name:'테스트',min:1,max:100,order:0}]};
+ await assert.rejects(admin.saveOperatingPolicy(a.u.id,'anemia',{before,settings,requestKey:key()}),{code:'ADMIN_REQUIRED'});
+ const results=await Promise.allSettled([1,2].map(()=>admin.saveOperatingPolicy(owner.u.id,'anemia',{before,settings,requestKey:key()})));assert.equal(results.filter(r=>r.status==='fulfilled').length,1);assert.equal(results.find(r=>r.status==='rejected').reason.code,'POLICY_CHANGED');
+ assert.deepEqual((await admin.getAnemiaPolicy()).settings,settings);
+ await pool.query(fs.readFileSync(new URL('../../supabase/migrations/20261110110000_anemia_rp_policy.sql',import.meta.url),'utf8'));assert.deepEqual((await admin.getAnemiaPolicy()).settings,settings);
+ await assert.rejects(createOperatingPolicyRepository(scoped(true)).saveOperatingPolicy(owner.u.id,'anemia',{before:settings,settings:{enabled:false,stages:[]},requestKey:key()}),/audit fault/);assert.deepEqual((await admin.getAnemiaPolicy()).settings,settings);
+ assert.equal((await pool.query("select count(*)::int n from public.action_log where action_type='OPERATING_POLICY_UPDATE' and detail->>'kind'='anemia'")).rows[0].n,1);
  });
  await t.test('donation amount, cap, duplicate and self rejection',async()=>{
   const expected=await donation.previewDonation(a.u.id,b.c.id),requestKey=key();

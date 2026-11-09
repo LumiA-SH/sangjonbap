@@ -1,4 +1,4 @@
-export const MIDNIGHT='0 15 * * *', RETRY='*/5 * * * *';
+export const MIDNIGHT='0 15 * * *', RETRY='*/30 * * * *';
 const BASE='https://grkohfxvafbquhmgnvwj.supabase.co/functions/v1/maintenance';
 const codes=new Set(['MAINTENANCE_CONCURRENCY_HOLD','DAILY_RESET_START_HOLD','DAILY_RESET_ACTIVITY_HOLD','MAINTENANCE_PARTIAL_FAILURE','MAINTENANCE_UNAUTHORIZED','MAINTENANCE_BROWSER_DENIED']);
 export const kstDate=t=>new Date(t+9*3600000).toISOString().slice(0,10);

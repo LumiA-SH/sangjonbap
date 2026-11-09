@@ -8,3 +8,20 @@ coverage/
 .idea/
 *.pem
 *.md
+
+# Build
+dist/
+
+# IDE / OS
+.DS_Store
+Thumbs.db
+
+# Secrets
+*.key
+*.p12
+*.pfx
+
+# Database backups
+*.dump
+*.backup
+*.sql.gz
