@@ -91,3 +91,27 @@ test('OAuth-only deployment allows exact auth routes, retains all game and proxy
  assert.equal((await call('/api/auth/config',{headers:{...headers,Origin:'https://lumia-sh.github.io'}})).status,403);
  assert.equal((await call('/api/admin/items',{method:'POST',headers:{...headers,'x-edge-verification-key':env.EDGE_VERIFICATION_TOKEN}})).status,403);
 });
+
+test('OAuth admin namespace requires server role, protects writes and never opens game routes',async t=>{
+ const runtime=createVerificationApi({...env,MASTODON_CLIENT_ID:'fixture',MASTODON_CLIENT_SECRET:'fixture'}, {oauthEnabled:true,adminEnabled:true,poolFactory:()=>({query(){throw Error('Unexpected SQL');}})});
+ let role='USER',writes=0,resets=0;runtime.repository.getOAuthSession=async()=>({id:'306',role,is_active:true});runtime.repository.recoverDailyReset=async()=>{resets++;throw Error('Must not reset');};
+ runtime.repository.searchAdminUsers=async()=>[];
+ runtime.repository.changeAdminRole=async()=>{writes++;return {settings:{enabled:false}};};
+ const server=runtime.app.listen(0,'127.0.0.1');await new Promise(r=>server.once('listening',r));t.after(()=>new Promise(r=>server.close(r)));
+ const base=`http://127.0.0.1:${server.address().port}`,headers={'x-sangjonbap-proxy':env.EDGE_PROXY_SECRET,Origin:env.FRONTEND_ORIGIN,Cookie:'__Host-sangjonbap-session='+'b'.repeat(64)};
+ const call=(path,options={})=>fetch(base+path,{headers,...options});
+ assert.equal((await call('/api/admin/access',{headers:{'x-sangjonbap-proxy':env.EDGE_PROXY_SECRET}})).status,401);
+ assert.equal((await call('/api/admin/access')).status,403);
+ role='ADMIN';const access=await call('/api/admin/access');assert.equal(access.status,200);assert.equal((await access.json()).data.authentication,'MASTODON');
+ assert.equal((await call('/api/admin/users')).status,200);
+ const patch={method:'PATCH',headers:{...headers,'Content-Type':'application/json'},body:JSON.stringify({role:'ADMIN',requestKey:'12345678-1234-4234-8234-123456789012'})};
+ assert.equal((await call('/api/admin/users/2/role',patch)).status,200);assert.equal(writes,1);
+ assert.equal((await call('/api/admin/users/2/role',{...patch,headers:{...patch.headers,Origin:'https://evil.invalid'}})).status,403);
+ const noOrigin={...patch.headers};delete noOrigin.Origin;assert.equal((await call('/api/admin/users/2/role',{...patch,headers:noOrigin})).status,403);
+ role='USER';assert.equal((await call('/api/admin/users/2/role',patch)).status,403);assert.equal(writes,1);
+ role='ADMIN';for(const path of ['/api/shop/products','/api/battles/1/commands','/api/admin-other','/api/%61dmin/access'])assert.equal((await call(path)).status,401);
+ assert.equal((await call('/api/shop/1/purchase',{...patch,method:'POST'})).status,401);
+ assert.equal((await call('/api/admin/access',{headers:{Origin:env.FRONTEND_ORIGIN,Cookie:headers.Cookie}})).status,403);
+ assert.equal((await call('/api/admin/access',{headers:{...headers,Origin:'https://lumia-sh.github.io'}})).status,403);
+ const options=await call('/api/admin/users/2/role',{method:'OPTIONS'});assert.equal(options.status,204);assert.ok(options.headers.get('access-control-allow-methods').includes('PATCH'));assert.equal(resets,0);
+});

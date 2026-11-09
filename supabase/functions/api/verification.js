@@ -12,6 +12,8 @@ export function createVerificationApi(env, options = {}) {
     if (typeof token !== 'string' || token.length < 32) throw new Error('Missing verification access key');
     // Explicit deployment choice; never enables gameplay or bypasses proxy authentication.
     const oauthEnabled = options.oauthEnabled === true;
+    const adminEnabled = oauthEnabled && options.adminEnabled === true;
+    const isAdminPath = path => /^\/api\/admin(?:\/|$)/.test(path);
     const runtime = createEdgeApi(oauthEnabled ? env : {...env, MASTODON_CLIENT_ID:'VERIFICATION_DISABLED',
         MASTODON_CLIENT_SECRET:'VERIFICATION_DISABLED'}, options);
     const oauthMethods = new Map([
@@ -37,13 +39,18 @@ export function createVerificationApi(env, options = {}) {
         }
         if (req.method === 'OPTIONS') {
             if (!origin) throw new AppError(403, 'ORIGIN_DENIED', '출처가 필요합니다.');
-            res.set('Access-Control-Allow-Methods', oauthEnabled && req.path === '/api/auth/logout' && origin === runtime.config.origin ? 'POST, OPTIONS' : 'GET, OPTIONS');
+            res.set('Access-Control-Allow-Methods', adminEnabled && isAdminPath(req.path) && origin === runtime.config.origin ? 'GET, HEAD, POST, PATCH, PUT, DELETE, OPTIONS' : oauthEnabled && req.path === '/api/auth/logout' && origin === runtime.config.origin ? 'POST, OPTIONS' : 'GET, OPTIONS');
             res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Edge-Verification-Key');
             return res.sendStatus(204);
         }
         if (oauthEnabled && oauthMethods.get(req.path) === req.method) {
             if (origin && origin !== runtime.config.origin)
                 throw new AppError(403, 'ORIGIN_DENIED', '허용되지 않은 출처입니다.');
+            return runtime.app(req, res, next);
+        }
+        // Delegate only the admin namespace; its router rechecks OAuth session and ADMIN.
+        if (adminEnabled && isAdminPath(req.path)) {
+            if (origin && origin !== runtime.config.origin) throw new AppError(403, 'ORIGIN_DENIED', '허용되지 않은 출처입니다.');
             return runtime.app(req, res, next);
         }
         const supplied = Buffer.from(req.get('x-edge-verification-key') || '');
