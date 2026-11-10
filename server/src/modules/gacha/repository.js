@@ -1,3 +1,4 @@
+import {enqueueSystemEvent} from '../mastodon-system/outbox.js';
 import {beginGameTransaction, commitGameTransaction, rollbackGameTransaction} from '../../shared/daily-gate.js';
 import {requireNoActiveBattle} from '../../shared/actions.js';
 import {AppError} from '../../shared/http.js';
@@ -68,6 +69,7 @@ export function createGachaRepository(pool,{random}={}) {
                     reward:{id:selected.id,itemId:selected.item_id,name:item.name,description:item.description,quantity:1},inventoryBefore:inventory.before,inventoryQuantity:inventory.after};
                 await writeActionLog(client,{characterId:before.id,category:'GACHA',actionType:'GACHA_DRAW',targetType:'GACHA',targetId:gachaId,
                     description:`${gacha.name} 1회 추첨`,detail:result,requestKey});
+                await enqueueSystemEvent(client,{type:'gacha',key:requestKey,characterId:before.id,values:{character:before.name,reward:item.name,quantity:'1'}});
                 await commitGameTransaction(client);
                 return result;
             } catch(error) {

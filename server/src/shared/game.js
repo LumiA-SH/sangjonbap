@@ -1,3 +1,4 @@
+import {enqueueSystemEvent} from '../modules/mastodon-system/outbox.js';
 import {AppError} from './http.js';
 import {bloodLimit} from './balance.js';
 import {gameTransactionDay} from './daily-gate.js';
@@ -81,6 +82,7 @@ export async function changeCharacterResources(client, character, changes={}) {
 
     const updated = r.rows[0];
     if (character.status !== 'DEAD' && status === 'DEAD') {
+        await enqueueSystemEvent(client,{type:'death',key:`${character.id}:${deathCount}`,characterId:character.id,values:{character:character.name}});
         await writeActionLog(client, {
             characterId: character.id, category: 'CHARACTER', actionType: 'DEATH',
             targetType: 'CHARACTER', targetId: character.id, description: '캐릭터가 사망했습니다.',

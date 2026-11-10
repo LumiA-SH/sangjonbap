@@ -1,3 +1,4 @@
+import {enqueueSystemEvent} from '../mastodon-system/outbox.js';
 import {beginGameTransaction, commitGameTransaction, rollbackGameTransaction} from '../../shared/daily-gate.js';
 import {AppError} from '../../shared/http.js';
 import {requireActionCharacter,requireNoActiveBattle} from '../../shared/actions.js';
@@ -133,10 +134,11 @@ export function createInvestigationRepository(pool, {random = randomUnit, battle
         if (selected.clue_id !== null) {
           // The conditional UPDATE serializes a shared clue's first finder across areas.
           // Publish only after this investigation commits; later discoveries preserve its owner.
-          await client.query(`update public.clue set is_discovered=true,first_discoverer_id=$2,
+          const discovered=await client.query(`update public.clue set is_discovered=true,first_discoverer_id=$2,
             discovered_at=clock_timestamp() where id=$1 and is_discovered=false`, [selected.clue_id,before.id]);
           const clueResult = await client.query('select * from public.clue where id=$1', [selected.clue_id]);
           clue = clueResult.rows[0]?.is_public===false?null:(clueResult.rows[0] || null);
+          if(discovered.rowCount&&clue)await enqueueSystemEvent(client,{type:'clue_discovery',key:String(selected.clue_id),characterId:before.id,values:{character:before.name,clue:'중요 단서'}});
         }
         const result = {
           result: {id: selected.id, is_failure:!!selected.is_failure, result_grade: selected.result_grade, result_text: selected.result_text,

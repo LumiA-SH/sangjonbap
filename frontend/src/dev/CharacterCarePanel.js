@@ -47,7 +47,7 @@ export default function CharacterCarePanel({character, busy, run, refresh, notif
         let before = null;
         let logError = null;
         try {
-          const {logs} = await api(`/dev/action-logs?requestKey=${encodeURIComponent(requestKey)}`);
+          const {records:logs} = await api(`/records/action-logs?requestKey=${encodeURIComponent(requestKey)}`);
           before = logs.find(log => log.request_key?.toLowerCase() === requestKey.toLowerCase())?.detail?.before || null;
         } catch (error) { logError = `${error.code || 'LOG_READ_ERROR'}: ${error.message}`; }
         setResult({action, requestKey, before, after: data, logError});

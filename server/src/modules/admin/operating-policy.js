@@ -3,7 +3,7 @@ import {writeActionLog} from '../../shared/game.js';
 import {adminTransaction,requireAdminRow,checkDuplicate} from './transaction.js';
 import {requestKey} from './master-service.js';
 
-export const eventNames=['death','revive','area_unlock','monster_discovery','clue_discovery','investigation_progress','story','raid'];
+export const eventNames=['death','revive','area_unlock','monster_discovery','clue_discovery','investigation_progress','story','raid','gacha','failure_food'];
 export const policyDefaults={
  anemia:{enabled:false,stages:[]},
  donation:{enabled:false,cost:null,recovery:null,minimumRemaining:null,maximum:null,dailyLimitEnabled:false,dailyLimit:null},
@@ -32,7 +32,7 @@ export function validatePolicy(kind,v){
   if(v.cost!==null&&v.maximum!==null&&v.cost>v.maximum)invalid();
   if(v.cost!==null&&v.minimumRemaining!==null&&v.cost+v.minimumRemaining>100)invalid();
  }else if(kind==='announcements'){
-  object(v.events,eventNames);
+  object(v.events,eventNames.filter(name=>!['gacha','failure_food'].includes(name)||Object.hasOwn(v.events,name)));
   for(const [name,e] of Object.entries(v.events)){
    object(e,Object.keys(policyDefaults.announcements.events[name]));
    for(const k of ['enabled','deduplicate','retryEnabled'])bool(e[k]);
@@ -43,7 +43,7 @@ export function validatePolicy(kind,v){
    if(name!=='investigation_progress'&&e.thresholds.length)invalid();
    if(e.enabled&&(!e.template.trim()||!e.visibility||(name==='investigation_progress'&&!e.thresholds.length)))invalid();
    if(e.retryEnabled&&(e.maxAttempts===null||e.retryMinutes===null))invalid();
-   if(/\{(?!character\}|area\}|monster\}|clue\}|progress\}|event\})/.test(e.template))invalid();
+   if(/\{(?!character\}|provider\}|reward\}|quantity\}|rp\}|area\}|monster\}|clue\}|progress\}|event\})/.test(e.template))invalid();
   }
  }else if(kind==='homepage'){
   for(const k of ['enabled','publicOnly','excludeReplies','excludeBoosts'])bool(v[k]);

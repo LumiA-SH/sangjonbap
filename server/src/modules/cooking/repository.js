@@ -1,3 +1,4 @@
+import {enqueueSystemEvent} from '../mastodon-system/outbox.js';
 import {failureRpText} from './failure-rp.js';
 import {beginGameTransaction, commitGameTransaction, rollbackGameTransaction} from '../../shared/daily-gate.js';
 import {AppError} from '../../shared/http.js';
@@ -56,6 +57,7 @@ export function createCookingRepository(pool, {random = randomUnit} = {}) {
                 targetType: action === 'EAT' ? 'ITEM' : 'RECIPE', targetId: result.itemId || result.recipeId,
                 description: {LEARN_RECIPE:'레시피를 습득했습니다.',COOK:'요리를 시도했습니다.',EAT:'음식을 먹었습니다.'}[action],
                 detail: result, requestKey});
+            if(action==='EAT'&&result.isFailure)await enqueueSystemEvent(client,{type:'failure_food',key:requestKey,characterId:character.id,values:{character:character.name,rp:result.rpEffectText||'실패 음식을 먹었습니다.'}});
             await commitGameTransaction(client);
             return result;
         } catch (error) {

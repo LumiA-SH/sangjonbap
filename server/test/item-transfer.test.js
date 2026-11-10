@@ -15,8 +15,8 @@ function fixture({provider = {}, target = {}, item = {}, active = [], quantity =
     let queue = Promise.resolve();
     const statements = [];
     const characters = {
-        '2': {id: '2', hp: 100, blood: 50, status: 'ALIVE', ...provider},
-        '10': {id: '10', hp: 100, blood: 50, status: 'ALIVE', ...target}
+        '2': {id: '2', name:'송신자', hp: 100, blood: 50, status: 'ALIVE', ...provider},
+        '10': {id: '10', name:'수령자', hp: 100, blood: 50, status: 'ALIVE', ...target}
     };
     const pool = {async connect() {
         const previous = queue;
@@ -35,12 +35,12 @@ function fixture({provider = {}, target = {}, item = {}, active = [], quantity =
                 if (sql.startsWith('select * from public.game_character')) return rows(characters[params[0]] ? [characters[params[0]]] : []);
                 if (sql.startsWith('select id from public.action_log')) return rows(state.keys.includes(params[0]) ? [{id: 1}] : []);
                 if (sql.startsWith('select id from public.battle')) return rows(active.includes(params[0]) ? [{id: 1}] : []);
-                if (sql.startsWith('select * from public.item')) return rows([{id: '7', is_active: true, transferable: true, ...item}]);
+                if (sql.startsWith('select * from public.item')) return rows([{id: '7', name:'아이템', is_active: true, transferable: true, ...item}]);
                 if (sql.startsWith('select id,quantity from public.inventory')) return rows([{id: params[0], quantity: state.quantities[params[0]]}]);
                 if (sql.startsWith('select quantity from public.inventory')) return rows([{quantity: state.quantities[params[0]]}]);
                 if (sql.startsWith('update public.inventory')) {state.quantities[params[1]] = params[0]; return rows([]);}
                 if (sql.startsWith('insert into public.action_log')) {
-                    if (failLog) throw new Error('audit failure');
+                    if (failLog === true || (failLog === 'receive' && params[0] === '10')) throw new Error('audit failure');
                     state.keys.push(params[8]); state.logs.push({action: params[3], target: params[5], detail: JSON.parse(params[7])});
                     return rows([]);
                 }
@@ -58,6 +58,8 @@ test('general transfer atomically updates both inventories, logs and sorts chara
     assert.deepEqual(f.state().quantities, {'2': 2, '10': 4});
     assert.equal(f.state().logs[0].action, 'ITEM_TRANSFER');
     assert.equal(f.state().logs[0].target, '10');
+    assert.equal(f.state().logs[1].action,'ITEM_RECEIVE');assert.equal(f.state().logs[1].target,'2');
+    for(const log of f.state().logs){assert.equal(log.detail.providerName,'송신자');assert.equal(log.detail.targetName,'수령자');assert.equal(log.detail.itemName,'아이템');assert.equal(log.detail.quantity,3);}
     assert.deepEqual(f.statements.filter(s => s.sql.startsWith('select * from public.game_character')).map(s => s.params[0]), ['2', '10']);
     assert.equal(f.statements.at(-1).sql, 'commit');
 });
@@ -102,13 +104,14 @@ test('serialized retries and competing transfers cannot spend the same last item
     assert.equal(results[1].reason.code, 'DUPLICATE_REQUEST');
     assert.equal(results[2].reason.code, 'NOT_ENOUGH_ITEMS');
     assert.deepEqual(f.state().quantities, {'2': 0, '10': 2});
-    assert.equal(f.state().logs.length, 1);
+    assert.equal(f.state().logs.length, 2);
 });
 
 test('blood-pack endpoint retains explicit validation and historical log type', async () => {
     const f = fixture({item: {effect_type: 'BLOOD_PACK', effect_value: 10, usable: true, use_target: 'SELF'}});
     await createBloodPackRepository(f.pool).transferBloodPack('1', '10', '7', 1, randomUUID());
     assert.equal(f.state().logs[0].action, 'BLOOD_PACK_TRANSFER');
+    assert.equal(f.state().logs[1].action,'BLOOD_PACK_RECEIVE');
     const ordinary = fixture();
     await assert.rejects(createBloodPackRepository(ordinary.pool).transferBloodPack('1', '10', '7', 1, randomUUID()), {code: 'BLOOD_PACK_CONFIG_INVALID'});
 });
@@ -142,3 +145,5 @@ test('transfer HTTP requires authentication and always uses session owner', asyn
     assert.equal((await post('/inventory/transfer', body, login.data.token)).status, 200);
     assert.equal(calls.length, 1); assert.equal(calls[0][0], '1');
 });
+
+test('recipient audit failure rolls back sender log and both inventories',async()=>{const f=fixture({failLog:'receive'}),before=structuredClone(f.state());await assert.rejects(f.repo.transferItem('1','10','7',1,randomUUID()),/audit failure/);assert.deepEqual(f.state(),before);});

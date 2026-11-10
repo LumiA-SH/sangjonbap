@@ -59,6 +59,7 @@ test('production cookie auth permits own records, blocks unlinked users and non-
     const base=`http://127.0.0.1:${server.address().port}/api`;
     const get=(path,auth=true)=>fetch(base+path,{headers:auth?{Cookie:'__Host-sangjonbap-session='+'a'.repeat(64)}:{}});
     assert.equal((await get('/records/clues',false)).status,401);
+    assert.equal((await get('/records/action-logs?requestKey=12345678-1234-4234-8234-123456789012',false)).status,401);
     assert.equal((await get('/records/action-logs')).status,200);
     assert.deepEqual(calls[0],{name:'getActionRecords',args:['7',null,false]});
     assert.equal((await get('/records/investigations?before=9')).status,200);
@@ -66,6 +67,8 @@ test('production cookie auth permits own records, blocks unlinked users and non-
     assert.equal((await get('/records/clues?userId=2')).status,400);
     assert.equal((await get('/admin/action-logs')).status,403);
     assert.equal((await get('/dev/action-logs')).status,404);
+    assert.equal((await get('/records/action-logs?requestKey=12345678-1234-4234-8234-123456789012&userId=8')).status,400);
+    assert.equal((await get('/records/action-logs?requestKey=12345678-1234-4234-8234-123456789012')).status,200);assert.deepEqual(calls.at(-1).args,['7',null,false,'12345678-1234-4234-8234-123456789012']);
     user={...user,character_id:null};
     assert.equal((await get('/records/clues')).status,403);
     user={...user,role:'ADMIN'};
@@ -73,4 +76,8 @@ test('production cookie auth permits own records, blocks unlinked users and non-
     assert.deepEqual(calls.at(-1),{name:'getAdminActionRecords',args:['7','9']});
     user={...user,role:'USER'};
     assert.equal((await get('/admin/action-logs')).status,403);
+});
+
+test('request key filtering remains scoped to session owner',async()=>{
+ let query,params;await createRecordsRepository({query:async(q,p)=>{query=q;params=p;return {rows:[]};}}).getActionRecords('7',null,false,'12345678-1234-4234-8234-123456789012');assert.match(query,/u.id=\$1 and u.is_active and c.is_active/);assert.match(query,/l.request_key=\$4::uuid/);assert.deepEqual(params,['7',null,false,'12345678-1234-4234-8234-123456789012']);
 });

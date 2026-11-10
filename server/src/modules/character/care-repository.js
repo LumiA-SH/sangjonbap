@@ -1,3 +1,4 @@
+import {enqueueSystemEvent} from '../mastodon-system/outbox.js';
 import {beginGameTransaction, commitGameTransaction, rollbackGameTransaction} from '../../shared/daily-gate.js';
 import {AppError} from '../../shared/http.js';
 import {lockCharacterPairByUser, changeCharacterResources, characterState, writeActionLog} from '../../shared/game.js';
@@ -60,6 +61,7 @@ export function createCharacterCareRepository(pool) {
                         [target.id]
                     );
                     targetAfter = restored.rows[0];
+                    await enqueueSystemEvent(client,{type:'revive',key:requestKey,characterId:target.id,values:{character:target.name,provider:provider.name}});
                 }
                 const result = {provider: characterState(providerAfter), target: characterState(targetAfter)};
                 await writeActionLog(client, {

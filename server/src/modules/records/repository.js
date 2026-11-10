@@ -19,13 +19,14 @@ export function playerActionRecord(row) {
 
 export function createRecordsRepository(pool) {
     return {
-        async getActionRecords(userId, before = null, investigationsOnly = false) {
+        async getActionRecords(userId, before = null, investigationsOnly = false, requestKey = null) {
             const result = await pool.query(`select ${logColumns} from public.action_log l
                 join public.game_character c on c.id=l.character_id
                 join public.auth_user u on u.character_id=c.id
                 where u.id=$1 and u.is_active and c.is_active and ${logCursor}
                   and ($3::boolean=false or l.action_type='INVESTIGATE')
-                order by l.created_at desc,l.id desc limit 31`, [userId, before, investigationsOnly]);
+                  ${requestKey===null?'':'and l.request_key=$4::uuid'}
+                order by l.created_at desc,l.id desc limit 31`, requestKey===null?[userId,before,investigationsOnly]:[userId,before,investigationsOnly,requestKey]);
             return result.rows.map(playerActionRecord);
         },
         async getAdminActionRecords(userId, before = null) {

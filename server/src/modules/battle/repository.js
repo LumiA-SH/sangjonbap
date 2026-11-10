@@ -1,3 +1,4 @@
+import {enqueueSystemEvent} from '../mastodon-system/outbox.js';
 import {AppError} from '../../shared/http.js';
 import {actionTransaction, requireActionCharacter, rejectActionDuplicate} from '../../shared/actions.js';
 import {lockCharacterByUser, lockCharacter, changeCharacterResources, changeInventoryQuantity, writeActionLog} from '../../shared/game.js';
@@ -69,8 +70,9 @@ export function createBattleRepository(pool, {random=randomUnit}={}) {
             monster_hp,monster_max_hp,monster_atk,monster_def,monster_agi,snapshot,declaration)
             values($1,$2,$3,$4,$5,$5,$6,$7,$8,$9::jsonb,$10::jsonb) returning *`,
             [character.id,monster.id,area.id,character.hp,monster.max_hp,monster.atk,monster.def,monster.agi,JSON.stringify(snapshot),JSON.stringify(declaration)])).rows[0];
-        await client.query(`update public.monster set first_discoverer_id=$1,discovered_at=clock_timestamp()
+        const discovered=await client.query(`update public.monster set first_discoverer_id=$1,discovered_at=clock_timestamp()
             where id=$2 and first_discoverer_id is null`,[character.id,monster.id]);
+        if(discovered.rowCount)await enqueueSystemEvent(client,{type:'monster_discovery',key:String(monster.id),characterId:character.id,values:{character:character.name,monster:monster.name,area:area.name}});
         await writeActionLog(client,{characterId:character.id,category:'BATTLE',actionType:'BATTLE_START',
             targetType:'BATTLE',targetId:battle.id,description:'마물 조우',detail:{areaId:area.id,monsterId:monster.id,declaration}});
         return battleView(battle);

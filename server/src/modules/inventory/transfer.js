@@ -29,8 +29,15 @@ export function transferInventoryItem(pool, userId, targetId, itemId, quantity, 
         }
         const received = await changeInventoryQuantity(client, target.id, itemId, quantity);
         const result = {itemId, quantity, targetId, providerQuantity: owned.after, targetQuantity: received.after};
+        const detail = {...result, providerId: String(provider.id), providerName: provider.name,
+            targetName: target.name, itemName: item.name, transferRequestKey: key};
         await writeActionLog(client, {characterId: provider.id, category: 'ITEM', actionType,
-            targetType: 'CHARACTER', targetId, description, detail: result, requestKey: key});
+            targetType: 'CHARACTER', targetId, description: `${description}: ${provider.name} → ${target.name}, ${item.name} ${quantity}개`, detail, requestKey: key});
+        // The sender owns the unique request key; both rows commit or roll back together.
+        await writeActionLog(client, {characterId: target.id, category: 'ITEM',
+            actionType: actionType === 'BLOOD_PACK_TRANSFER' ? 'BLOOD_PACK_RECEIVE' : 'ITEM_RECEIVE',
+            targetType: 'CHARACTER', targetId: provider.id,
+            description: `아이템 수령: ${provider.name} → ${target.name}, ${item.name} ${quantity}개`, detail});
         return result;
     });
 }

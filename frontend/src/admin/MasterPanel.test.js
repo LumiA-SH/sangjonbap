@@ -128,3 +128,13 @@ test('failure RP candidate textarea supports multiple, one and empty legacy fall
  await mount('foods');await change('실패요리 RP 문구 후보','first\nsecond');expect(input('실패요리 RP 문구 후보').value).toBe('first\nsecond');await change('실패요리 RP 문구 후보','only');expect(input('실패요리 RP 문구 후보').value).toBe('only');await change('실패요리 RP 문구 후보','');expect(input('실패요리 RP 문구 후보').value).toBe('');
  expect(validateDraft('foods',{rp_effect_texts:[''] })).toContain('RP 문구');
 });
+
+test('existing inactive recipe can be activated through the existing admin PATCH',async()=>{
+ const record={id:'16',name:'레시피',description:null,discovery_grade:'COMMON',learn_cost:0,success_rate:80,result_quantity:3,result_item_id:'2',failure_item_id:'1',is_active:false,ingredients:[{item_id:'3',quantity:1}]};
+ api.mockResolvedValueOnce({records:[record],nextAfter:null});await act(async()=>root.render(<MasterPanel kind="recipes" onDenied={jest.fn()}/>));
+ api.mockResolvedValueOnce({record});await act(async()=>button('상세/수정').click());
+ await act(async()=>Simulate.change(input('활성'),{target:{checked:true}}));
+ api.mockResolvedValueOnce({record:{...record,is_active:true}}).mockResolvedValueOnce({records:[{...record,is_active:true}],nextAfter:null});
+ await act(async()=>Simulate.submit(container.querySelector('form')));
+ expect(api).toHaveBeenCalledWith('/admin/recipes/16',expect.objectContaining({method:'PATCH',body:expect.objectContaining({is_active:true,requestKey:uuid})}));expect(container.textContent).toContain('저장 성공');
+});

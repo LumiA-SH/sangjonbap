@@ -97,6 +97,11 @@ test('admin phase 2 PostgreSQL isolated schema: masters, roles, scripts, concurr
         await t.test('recipe ingredients + gacha rewards create/update/list/detail and probability',async()=>{
             recipe=await repo.getAdminMaster('recipes',recipe.id);
             assert.equal(recipe.result_quantity,3);
+            const originalIngredients=recipe.ingredients;
+            await rejects(save('recipes',recipe.id,{is_active:false},u.id),'ADMIN_REQUIRED');
+            assert.equal((await save('recipes',recipe.id,{is_active:false})).is_active,false);
+            const enabled=await save('recipes',recipe.id,{is_active:true});assert.equal(enabled.is_active,true);assert.deepEqual(enabled.ingredients,originalIngredients);
+            assert.ok((await pool.query("select 1 from public.action_log where action_type='RECIPE_UPDATE' and target_id=$1 and detail->'after'->>'is_active'='true'",[recipe.id])).rowCount);
             recipe=await save('recipes',recipe.id,{learn_cost:1,ingredients:[{item_id:material.id,quantity:3}]});
             assert.equal(recipe.ingredients[0].quantity,3);
             await rejects(save('recipes',recipe.id,{ingredients:[{item_id:'9223372036854775807',quantity:1}]}),'ITEM_NOT_FOUND');
