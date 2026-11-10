@@ -52,7 +52,7 @@ export function createOAuthRepository(pool) {
                 values($1,$2,clock_timestamp()+$3 * interval '1 second')`,[hash,userId,sessionLifetimeSeconds]);
         },
         async getOAuthSession(hash) {
-            return (await pool.query(`select u.id,u.character_id,u.role,u.is_active from public.auth_session s
+            return (await pool.query(`select u.id,u.character_id,u.role,u.is_active,u.game_test_enabled from public.auth_session s
                 join public.auth_user u on u.id=s.user_id where s.token_hash=$1 and s.expires_at>clock_timestamp() and u.is_active`,[hash])).rows[0]||null;
         },
         async revokeOAuthSession(hash){await pool.query('delete from public.auth_session where token_hash=$1',[hash]);}

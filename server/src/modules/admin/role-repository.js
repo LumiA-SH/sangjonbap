@@ -26,9 +26,26 @@ export function createAdminRoleRepository(pool) {
     return {
         async searchAdminUsers(q,after='0') {
             // Literal substring search; no tokens or external account identifiers in the response.
-            return (await pool.query(`select u.id,u.character_id,u.role,u.is_active,c.name as character_name from public.auth_user u
+            return (await pool.query(`select u.id,u.character_id,u.role,u.is_active,u.game_test_enabled,c.name as character_name from public.auth_user u
                 left join public.game_character c on c.id=u.character_id where u.id>$2 and
                 (strpos(lower(coalesce(c.name,'')),lower($1))>0 or u.id::text=$1) order by u.id limit 100`,[q,after])).rows;
+        },
+        async changeGameTestAccess(actorId,targetId,body) {
+            if(!body||Object.keys(body).some(k=>!['enabled','expectedEnabled','requestKey'].includes(k))||typeof body.enabled!=='boolean'||typeof body.expectedEnabled!=='boolean'||!validId(actorId)||!validId(targetId))invalid('테스트 참여 설정과 현재 상태를 확인하세요.');
+            const key=requestKey(body);
+            return adminTransaction(pool,async c=>{
+                await lockRoles(c);
+                const rows=(await c.query('select id,role,is_active,game_test_enabled from public.auth_user where id=any($1::bigint[]) order by id for update',[[actorId,targetId]])).rows;
+                const actor=rows.find(r=>r.id===actorId),before=rows.find(r=>r.id===targetId);
+                if(!actor?.is_active||actor.role!=='ADMIN')fail('ADMIN_REQUIRED','관리자 권한이 필요합니다.',403);
+                if(!before?.is_active)fail('USER_UNAVAILABLE','활성 계정이 아닙니다.');
+                await checkDuplicate(c,key);
+                if(before.game_test_enabled!==body.expectedEnabled)fail('ADMIN_EDIT_CONFLICT','테스트 참여 설정이 변경되었습니다. 다시 조회하세요.');
+                const after=(await c.query('update public.auth_user set game_test_enabled=$2 where id=$1 returning id,role,is_active,game_test_enabled',[targetId,body.enabled])).rows[0];
+                await writeActionLog(c,{adminUserId:actorId,category:'ADMIN',actionType:'GAME_TEST_ACCESS_CHANGE',targetType:'AUTH_USER',targetId,
+                    description:'운영진 게임 테스트 참여 설정',requestKey:key,detail:{before,after}});
+                return after;
+            });
         },
         async changeAdminRole(actorId,targetId,role,key) {
             const input=validateRoleInput({role,requestKey:key});

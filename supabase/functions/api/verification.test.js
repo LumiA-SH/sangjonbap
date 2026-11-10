@@ -115,3 +115,37 @@ test('OAuth admin namespace requires server role, protects writes and never open
  assert.equal((await call('/api/admin/access',{headers:{...headers,Origin:'https://lumia-sh.github.io'}})).status,403);
  const options=await call('/api/admin/users/2/role',{method:'OPTIONS'});assert.equal(options.status,204);assert.ok(options.headers.get('access-control-allow-methods').includes('PATCH'));assert.equal(resets,0);
 });
+
+test('limited game testing opens published reads and only active OAuth admins or participants',async t=>{
+ const runtime=createVerificationApi({...env,MASTODON_CLIENT_ID:'fixture',MASTODON_CLIENT_SECRET:'fixture'},{oauthEnabled:true,adminEnabled:true,gameTestingEnabled:true,poolFactory:()=>({query(){throw Error('Unexpected SQL');}})});
+ let user={id:'306',role:'ADMIN',is_active:true,character_id:'9',game_test_enabled:false},writes=0,resets=0;
+ runtime.repository.getOAuthSession=async()=>user;
+ runtime.repository.getPublicContent=async()=>({content:null});
+ runtime.repository.getAnemiaPolicy=async()=>({settings:null});
+ runtime.repository.recoverDailyReset=async()=>{resets++;return {hold:true};};
+ runtime.repository.getCharacter=async id=>{assert.equal(id,user.id);return {id:user.character_id,hp:100};};
+ runtime.repository.trainCharacter=async id=>{assert.equal(id,user.id);writes++;return {trained:true};};
+ const server=runtime.app.listen(0,'127.0.0.1');await new Promise(r=>server.once('listening',r));t.after(()=>new Promise(r=>server.close(r)));
+ const base='http://127.0.0.1:'+server.address().port;
+ const proxy={'x-sangjonbap-proxy':env.EDGE_PROXY_SECRET,Origin:env.FRONTEND_ORIGIN};
+ const headers={...proxy,Cookie:'__Host-sangjonbap-session='+'b'.repeat(64),'Content-Type':'application/json'};
+ const call=(path,options={})=>fetch(base+path,{headers,...options});
+ assert.equal((await call('/api/public/guides/world',{headers:proxy})).status,200);assert.equal(resets,0);
+ assert.equal((await call('/api/characters/me',{headers:proxy})).status,401);
+ assert.equal((await call('/api/characters/me')).status,200);
+ const post={method:'POST',body:JSON.stringify({requestKey:'12345678-1234-4234-8234-123456789012'})};
+ assert.equal((await call('/api/training',post)).status,200);assert.equal(writes,1);
+ user={...user,id:'2',role:'USER'};
+ const denied=await call('/api/characters/me');assert.equal(denied.status,403);assert.equal((await denied.json()).error.code,'GAME_TEST_ACCESS_REQUIRED');
+ const before=resets;assert.equal((await call('/api/training',post)).status,403);assert.equal(resets,before);
+ user.game_test_enabled=true;assert.equal((await call('/api/training',post)).status,200);assert.equal(writes,2);
+ assert.equal((await call('/api/admin/access')).status,403);
+ assert.equal((await call('/api/characters/999/profile',{method:'PATCH',body:'{}'})).status,404);
+ assert.equal((await call('/api/training',{...post,headers:{...headers,Origin:'https://evil.invalid'}})).status,403);
+ const noOrigin={...headers};delete noOrigin.Origin;assert.equal((await call('/api/training',{...post,headers:noOrigin})).status,403);
+ user.game_test_enabled=false;assert.equal((await call('/api/training',post)).status,403);
+ user=null;assert.equal((await call('/api/characters/me')).status,401);
+ assert.equal((await call('/api/public/guides/world',{headers:{}})).status,403);
+ const preflight=await call('/api/training',{method:'OPTIONS',headers:proxy});assert.equal(preflight.status,204);assert.ok(preflight.headers.get('access-control-allow-methods').includes('POST'));
+ assert.equal((await call('/api/dev/action-logs')).status,401);assert.equal(writes,2);
+});

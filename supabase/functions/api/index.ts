@@ -1,5 +1,5 @@
 import {createVerificationApi} from './verification.js';
 
-// Never import index.js or start schedulers. All gameplay remains disabled here.
-const {app} = createVerificationApi(Deno.env.toObject(), {oauthEnabled:true, adminEnabled:true});
+// Never import index.js or start schedulers. Gameplay remains limited to server-authorized test participants.
+const {app} = createVerificationApi(Deno.env.toObject(), {oauthEnabled:true, adminEnabled:true, gameTestingEnabled:true});
 app.listen(8000);

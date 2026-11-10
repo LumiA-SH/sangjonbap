@@ -1,0 +1,21 @@
+import React,{act} from 'react';
+import {createRoot} from 'react-dom/client';
+import {Simulate} from 'react-dom/test-utils';
+import RolePanel from './RolePanel';
+import {api} from '../api/client';
+jest.mock('../api/client',()=>({api:jest.fn()}));
+let root,div,onDenied;
+beforeEach(()=>{global.IS_REACT_ACT_ENVIRONMENT=true;Object.defineProperty(global,'crypto',{configurable:true,value:{randomUUID:()=> '12345678-1234-4234-8234-123456789012'}});window.confirm=jest.fn(()=>true);api.mockReset();div=document.createElement('div');root=createRoot(div);onDenied=jest.fn();});
+afterEach(async()=>{await act(async()=>root.unmount());});
+const button=text=>[...div.querySelectorAll('button')].find(b=>b.textContent===text);
+test('participation grant is confirmed, distinct from ADMIN and reloads actual state',async()=>{
+ await act(async()=>root.render(<RolePanel onDenied={onDenied}/>));
+ api.mockResolvedValueOnce({records:[{id:'2',role:'USER',is_active:true,character_name:'러너',game_test_enabled:false}],nextAfter:null});
+ await act(async()=>Simulate.submit(div.querySelector('form')));window.confirm.mockReturnValue(false);
+ await act(async()=>button('테스트 참여 허용').click());expect(api).toHaveBeenCalledTimes(1);
+ window.confirm.mockReturnValue(true);api.mockResolvedValueOnce({record:{}}).mockResolvedValueOnce({records:[{id:'2',role:'USER',is_active:true,character_name:'러너',game_test_enabled:true}],nextAfter:null});
+ await act(async()=>button('테스트 참여 허용').click());
+ expect(api).toHaveBeenCalledWith('/admin/users/2/test-access',expect.objectContaining({method:'PATCH',body:{enabled:true,expectedEnabled:false,requestKey:'12345678-1234-4234-8234-123456789012'}}));
+ expect(div.textContent).toContain('USER');expect(button('테스트 참여 해제')).toBeDefined();expect(api.mock.calls.some(([p])=>p.endsWith('/role'))).toBe(false);
+ api.mockRejectedValueOnce(Object.assign(Error('관리자 필요'),{status:403}));await act(async()=>button('테스트 참여 해제').click());expect(onDenied).toHaveBeenCalled();
+});

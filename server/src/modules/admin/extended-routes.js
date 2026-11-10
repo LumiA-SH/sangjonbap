@@ -81,6 +81,7 @@ export function mountExtendedAdminRoutes(router,repo) {
         const records=await repo.searchAdminUsers(q,after);
         ok(res,{records,nextAfter:records.length===100?records.at(-1).id:null});
     });
+    router.patch('/users/:id/test-access',async(req,res)=>{id(req.params.id);ok(res,{record:await repo.changeGameTestAccess(req.auth.user.id,req.params.id,req.body)});});
     router.patch('/users/:id/role',async(req,res)=>{
         id(req.params.id);
         const input=validateRoleInput(req.body);

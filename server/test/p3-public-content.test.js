@@ -49,3 +49,9 @@ test('P3 public content PostgreSQL integration',{skip:!process.env.ISOLATED_PG_C
  });
  }finally{fault=false;await raw.query('drop schema if exists '+schema+' cascade');await raw.end();}
 });
+
+test('public content validation does not depend on a Node global Buffer in Edge',()=>{
+ const saved=globalThis.Buffer;
+ try{delete globalThis.Buffer;assert.deepEqual(validateContent('world',{title:'',body:'',published:false}),{title:'',body:'',published:false});assert.deepEqual(validateContent('system',{items:[]}),{items:[]});}
+ finally{globalThis.Buffer=saved;}
+});

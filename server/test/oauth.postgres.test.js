@@ -5,6 +5,7 @@ import {createIsolatedPool as createPool} from './isolated-pool.js';
 import {createOAuthRepository} from '../src/modules/auth/oauth-repository.js';
 import {createAdminCharacterOperations} from '../src/modules/admin/character-operations.js';
 import {requireActionCharacter} from '../src/shared/actions.js';
+import {createAdminRoleRepository} from '../src/modules/admin/role-repository.js';
 import {digest} from '../src/modules/auth/oauth-session.js';
 import {createApp} from '../src/app.js';
 import {loadEdgeConfig} from '../src/config/edge.js';
@@ -63,6 +64,24 @@ test('OAuth shared PostgreSQL state, identity and sessions (isolated)',{skip:pro
             assert.equal(preserved.hp,77);assert.equal(preserved.blood,66);assert.equal(preserved.ap,3);assert.equal(preserved.currency,5);
             assert.equal(preserved.atk,12);assert.equal(preserved.hunter_grade,'B');assert.equal(preserved.name,'최종 이름');
             assert.equal((await pool.query("select * from public.action_log where action_type='CHARACTER_INITIAL_SETTINGS'")).rowCount,1);
+        });
+        await t.test('test participation is separate from ADMIN, audited, conflict-safe and reflected in live sessions',async()=>{
+            const roles=createAdminRoleRepository(pool),user=await repo.resolveOAuthUser('survival-bob.site','7788');
+            const admin=(await pool.query("insert into public.auth_user(role) values('ADMIN') returning id")).rows[0].id;
+            const hash=digest('test-participant');await repo.saveOAuthSession(hash,user.id);
+            assert.equal((await repo.getOAuthSession(hash)).game_test_enabled,false);
+            const body={enabled:true,expectedEnabled:false,requestKey:randomUUID()};
+            await assert.rejects(roles.changeGameTestAccess(user.id,user.id,body),{code:'ADMIN_REQUIRED'});
+            const faulty=createAdminRoleRepository({async connect(){const c=await pool.connect();return {release:()=>c.release(),query(q,p){if(q.includes('insert into public.action_log'))throw Error('audit failure');return c.query(q,p);}};}});
+            await assert.rejects(faulty.changeGameTestAccess(admin,user.id,body),/audit failure/);
+            assert.equal((await repo.getOAuthSession(hash)).game_test_enabled,false);
+            const outcomes=await Promise.allSettled([roles.changeGameTestAccess(admin,user.id,body),roles.changeGameTestAccess(admin,user.id,{...body,requestKey:randomUUID()})]);
+            assert.equal(outcomes.filter(x=>x.status==='fulfilled').length,1);
+            assert.equal((await repo.getOAuthSession(hash)).game_test_enabled,true);assert.equal((await repo.getOAuthSession(hash)).role,'USER');
+            await assert.rejects(roles.changeGameTestAccess(admin,user.id,{...body,requestKey:randomUUID()}),{code:'ADMIN_EDIT_CONFLICT'});
+            await roles.changeGameTestAccess(admin,user.id,{enabled:false,expectedEnabled:true,requestKey:randomUUID()});
+            assert.equal((await repo.getOAuthSession(hash)).game_test_enabled,false);
+            assert.equal((await pool.query("select * from public.action_log where action_type='GAME_TEST_ACCESS_CHANGE'")).rowCount,2);
         });
         await t.test('state is browser-bound, expires and can be consumed by exactly one instance',async()=>{
             const state=digest('state'),browser=digest('browser');await repo.saveOAuthState(state,browser);

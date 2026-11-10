@@ -6,13 +6,16 @@ import {createEdgeApi} from '../../../server/src/edge-app.js';
 import {createOAuthSessions} from '../../../server/src/modules/auth/oauth-session.js';
 import {AppError, errorHandler, ok} from '../../../server/src/shared/http.js';
 
-// Verification-only entrypoint. There is deliberately no switch to enable gameplay.
+// Diagnostics retain the verification key. Test gameplay requires a live session and server permission.
 export function createVerificationApi(env, options = {}) {
     const token = env.EDGE_VERIFICATION_TOKEN;
     if (typeof token !== 'string' || token.length < 32) throw new Error('Missing verification access key');
-    // Explicit deployment choice; never enables gameplay or bypasses proxy authentication.
+    // Explicit deployment choices; proxy authentication always remains required.
     const oauthEnabled = options.oauthEnabled === true;
     const adminEnabled = oauthEnabled && options.adminEnabled === true;
+    const gameTestingEnabled=oauthEnabled&&options.gameTestingEnabled===true;
+    const isGamePath=path=>/^\/api\/(?:characters|inventory|investigation|shop|training|cooking|gacha|battles|records)(?:\/|$)/.test(path);
+    const isPublicPath=path=>/^\/api\/public(?:\/|$)/.test(path);
     const isAdminPath = path => /^\/api\/admin(?:\/|$)/.test(path);
     const runtime = createEdgeApi(oauthEnabled ? env : {...env, MASTODON_CLIENT_ID:'VERIFICATION_DISABLED',
         MASTODON_CLIENT_SECRET:'VERIFICATION_DISABLED'}, options);
@@ -23,6 +26,7 @@ export function createVerificationApi(env, options = {}) {
     const verificationOrigin = env.VERIFICATION_FRONTEND_ORIGIN;
     if (verificationOrigin && verificationOrigin !== 'https://lumia-sh.github.io')
         throw new Error('Invalid verification frontend origin');
+    const testSessions=createOAuthSessions(runtime.repository,runtime.config.origin);
     const app = express();
     app.set('env', 'production');
     app.disable('x-powered-by');
@@ -39,7 +43,7 @@ export function createVerificationApi(env, options = {}) {
         }
         if (req.method === 'OPTIONS') {
             if (!origin) throw new AppError(403, 'ORIGIN_DENIED', '출처가 필요합니다.');
-            res.set('Access-Control-Allow-Methods', adminEnabled && isAdminPath(req.path) && origin === runtime.config.origin ? 'GET, HEAD, POST, PATCH, PUT, DELETE, OPTIONS' : oauthEnabled && req.path === '/api/auth/logout' && origin === runtime.config.origin ? 'POST, OPTIONS' : 'GET, OPTIONS');
+            res.set('Access-Control-Allow-Methods', ((adminEnabled && isAdminPath(req.path))||(gameTestingEnabled&&isGamePath(req.path))) && origin === runtime.config.origin ? 'GET, HEAD, POST, PATCH, PUT, DELETE, OPTIONS' : oauthEnabled && req.path === '/api/auth/logout' && origin === runtime.config.origin ? 'POST, OPTIONS' : 'GET, OPTIONS');
             res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Edge-Verification-Key');
             return res.sendStatus(204);
         }
@@ -52,6 +56,15 @@ export function createVerificationApi(env, options = {}) {
         if (adminEnabled && isAdminPath(req.path)) {
             if (origin && origin !== runtime.config.origin) throw new AppError(403, 'ORIGIN_DENIED', '허용되지 않은 출처입니다.');
             return runtime.app(req, res, next);
+        }
+        if(gameTestingEnabled&&isPublicPath(req.path)&&['GET','HEAD'].includes(req.method))return runtime.app(req,res,next);
+        if(gameTestingEnabled&&isGamePath(req.path)){
+            if(origin&&origin!==runtime.config.origin)throw new AppError(403,'ORIGIN_DENIED','허용되지 않은 출처입니다.');
+            return testSessions.require(req,res,()=>{
+                const user=req.auth.user;
+                if(!user.is_active||(user.role!=='ADMIN'&&user.game_test_enabled!==true))throw new AppError(403,'GAME_TEST_ACCESS_REQUIRED','운영진이 지정한 테스트 참여 계정만 이용할 수 있습니다.');
+                return runtime.app(req,res,next);
+            });
         }
         const supplied = Buffer.from(req.get('x-edge-verification-key') || '');
         const expected = Buffer.from(token);

@@ -1,3 +1,4 @@
+import {Buffer} from 'node:buffer';
 import {createHash} from 'node:crypto';
 import {AppError} from '../../shared/http.js';
 import {adminTransaction,requireAdminRow,checkDuplicate} from '../admin/transaction.js';
