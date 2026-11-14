@@ -12,11 +12,15 @@ export function validateInvestigationConfig(body) {
     const key=requestKey(body);
 
     for (const k of ['is_failure','failure_selectable']) {
-        if (k in body && typeof body[k]!=='boolean') invalid('실패 분류와 선택 포함 여부는 boolean입니다.');
+        if (k in body && typeof body[k]!=='boolean') invalid('구형 조사 분류 필드는 boolean입니다.');
+    }
+
+    if ('result_grade' in body && (typeof body.result_grade!=='string'||body.result_grade.length>30)) {
+        invalid('구형 조사 등급 형식이 올바르지 않습니다.');
     }
 
     if (Object.keys(body).some(k=>![...fields,'rewards','requestKey'].includes(k))) invalid('허용되지 않은 조사 설정 필드입니다.');
-    if (typeof body.result_grade!=='string'||!body.result_grade.trim()||body.result_grade.length>30||typeof body.result_text!=='string'||!body.result_text.trim()) invalid('결과 등급과 내용이 필요합니다.');
+    if (typeof body.result_text!=='string'||!body.result_text.trim()) invalid('조사 결과 내용이 필요합니다.');
     if (!Number.isInteger(body.weight)||body.weight<1||body.weight>2147483647) invalid('선택 가중치를 확인하세요.');
     if (typeof body.is_unique!=='boolean'||typeof body.is_active!=='boolean'||(body.clue_id!==null&&!validId(body.clue_id))) invalid('활성·고유 결과·단서를 확인하세요.');
     if (!Array.isArray(body.rewards)) invalid('보상 목록이 필요합니다.');
@@ -54,12 +58,12 @@ export function validateAreaRecipeConfig(body) {
 async function records(c,areaId) {
     return (await c.query(
         `select r.*,coalesce((select jsonb_agg(jsonb_build_object(
-            'item_id',w.item_id::text,'quantity',w.quantity,'probability',w.probability
-        ) order by w.id)
-        from public.investigation_reward w
-        where w.investigation_result_id=r.id and w.item_id is not null),'[]'::jsonb) rewards,
-        (select row_to_json(d) from public.unique_discovery d where d.investigation_result_id=r.id) discovery
-        from public.investigation_result r where r.area_id=$1 order by r.id`,
+                'item_id',w.item_id::text,'quantity',w.quantity,'probability',w.probability
+                                               ) order by w.id)
+                              from public.investigation_reward w
+                              where w.investigation_result_id=r.id and w.item_id is not null),'[]'::jsonb) rewards,
+                (select row_to_json(d) from public.unique_discovery d where d.investigation_result_id=r.id) discovery
+         from public.investigation_result r where r.area_id=$1 order by r.id`,
         [areaId]
     )).rows;
 }
@@ -67,10 +71,10 @@ async function records(c,areaId) {
 async function areaRecipeRecords(c,areaId) {
     const rows=(await c.query(
         `select ar.recipe_id::text as recipe_id,r.name as recipe_name,
-            ar.weight,ar.drop_rate,d.discovered_at
+                ar.weight,ar.drop_rate,d.discovered_at
          from public.area_recipe ar
-         join public.recipe r on r.id=ar.recipe_id
-         left join public.recipe_discovery d on d.recipe_id=ar.recipe_id
+                  join public.recipe r on r.id=ar.recipe_id
+                  left join public.recipe_discovery d on d.recipe_id=ar.recipe_id
          where ar.area_id=$1 order by ar.recipe_id`,
         [areaId]
     )).rows;
@@ -120,13 +124,19 @@ export function createAdminInvestigationOperations(pool) {
                     if (!(await c.query('select id from public.item where id=$1 for share',[itemId])).rowCount) fail('ITEM_NOT_FOUND','아이템이 없습니다.',404);
                 }
 
-                const values=fields.map(k=>['is_failure','failure_selectable'].includes(k)?(body[k]??before?.[k]??(k==='failure_selectable')):body[k]);
+                // 기존 DB 컬럼은 유지하되 성공/대성공/실패 분류를 사용하지 않는다.
+                const values=fields.map(k=>{
+                    if (k==='is_failure') return false;
+                    if (k==='failure_selectable') return true;
+                    if (k==='result_grade') return 'NORMAL';
+                    return body[k];
+                });
 
                 const saved=(await c.query(
                     id ? `update public.investigation_result set ${fields.map((k,i)=>`${k}=$${i+1}`).join(',')}
                           where id=$${fields.length+1} and area_id=$${fields.length+2} returning *`
                         : `insert into public.investigation_result(${fields.join(',')},area_id)
-                          values(${values.map((_,i)=>`$${i+1}`).join(',')},$${fields.length+1}) returning *`,
+                           values(${values.map((_,i)=>`$${i+1}`).join(',')},$${fields.length+1}) returning *`,
                     id?[...values,id,areaId]:[...values,areaId]
                 )).rows[0];
 
@@ -165,12 +175,11 @@ export function createAdminInvestigationOperations(pool) {
                 const recipeIds=sortIds(body.recipes.map(row=>row.recipe_id));
                 const requested=new Set(recipeIds);
 
-                // 이미 발견된 레시피의 구역 배치는 조사율 이력에 포함되므로 삭제하지 않는다.
+                // 발견 이력이 있는 레시피의 구역 배치는 보존한다.
                 if (before.some(row=>row.discovered&&!requested.has(row.recipe_id))) {
                     fail('RECIPE_DISCOVERY_HISTORY_PRESERVED','이미 발견된 레시피는 구역 배치에서 제거할 수 없습니다.');
                 }
 
-                // 기존 레시피 잠금 순서와 일치시킨다.
                 for (const recipeId of recipeIds) {
                     if (!(await c.query('select id from public.recipe where id=$1 for share',[recipeId])).rowCount) {
                         fail('RECIPE_NOT_FOUND','등록되지 않은 레시피입니다.',404);
@@ -186,8 +195,8 @@ export function createAdminInvestigationOperations(pool) {
                     await c.query(
                         `insert into public.area_recipe(area_id,recipe_id,weight,drop_rate)
                          values($1,$2,$3,$4)
-                         on conflict(area_id,recipe_id) do update
-                         set weight=excluded.weight,drop_rate=excluded.drop_rate`,
+                             on conflict(area_id,recipe_id) do update
+                                                                   set weight=excluded.weight,drop_rate=excluded.drop_rate`,
                         [areaId,row.recipe_id,row.weight,row.drop_rate]
                     );
                 }

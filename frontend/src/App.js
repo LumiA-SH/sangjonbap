@@ -95,6 +95,7 @@ export default function App() {
   const [inventory, setInventory] = useState([]);
   const [storage, setStorage] = useState([]);
   const [areas, setAreas] = useState([]);
+  const [globalInvestigationRate, setGlobalInvestigationRate] = useState(null);
   const [logs, setLogs] = useState([]);
   const [products, setProducts] = useState([]);
   const [cooking, setCooking] = useState(null);
@@ -107,7 +108,30 @@ export default function App() {
   const [now, setNow] = useState(() => new Date());
 
   const running = useRef(false);
-  useEffect(()=>{if(!loggedIn||!user?.character_id){setAnemiaPolicy(null);return;}let live=true;const read=()=>api('/public/anemia').then(r=>{if(live)setAnemiaPolicy(r.settings);}).catch(()=>{if(live)setAnemiaPolicy(null);});read();window.addEventListener('focus',read);const timer=setInterval(read,60000);return()=>{live=false;clearInterval(timer);window.removeEventListener('focus',read);};},[loggedIn,user?.character_id,revision]);
+
+  useEffect(()=>{
+    if(!loggedIn||!user?.character_id){
+      setAnemiaPolicy(null);
+      return;
+    }
+
+    let live=true;
+    const read=()=>api('/public/anemia').then(r=>{
+      if(live)setAnemiaPolicy(r.settings);
+    }).catch(()=>{
+      if(live)setAnemiaPolicy(null);
+    });
+
+    read();
+    window.addEventListener('focus',read);
+    const timer=setInterval(read,60000);
+
+    return()=>{
+      live=false;
+      clearInterval(timer);
+      window.removeEventListener('focus',read);
+    };
+  },[loggedIn,user?.character_id,revision]);
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(new Date()), 1000);
@@ -185,6 +209,7 @@ export default function App() {
       ['storage', '/inventory/storage', data => setStorage(data.items)],
       ['areas', '/investigation/areas', data => {
         setAreas(data.areas);
+        setGlobalInvestigationRate(data.globalInvestigationRate);
         setInvestigationApCost(data.investigationApCost);
       }]
     ].filter(([name]) => name !== 'logs' || authProvider !== 'mastodon');
@@ -238,6 +263,7 @@ export default function App() {
       setInventory([]);
       setStorage([]);
       setAreas([]);
+      setGlobalInvestigationRate(null);
       setLogs([]);
       setProducts([]);
       setCooking(null);
@@ -307,6 +333,7 @@ export default function App() {
           {canAdmin?<AdminPanel route={route} onNavigate={next=>go({...route,...next})} onBack={back} onExit={()=>go({admin:false,tab:view})} onLogout={()=>run(logout)} onAccessLost={()=>setUser(current=>current?{...current,role:null}:null)}/>:
               <section className="admin-gate"><h1>운영진 전용 페이지</h1><p role="alert">{provider===null?'인증 확인 중…':loggedIn?'관리자 권한이 필요합니다.':'로그인 후 관리자 권한을 확인합니다.'}</p><button onClick={()=>setAdminOpen(false)}>게임으로 돌아가기</button></section>}
         </main>}
+
         <div className="survival-app" hidden={adminOpen}>
           <aside className={`survival-sidebar ${menuOpen ? 'is-open' : ''}`}>
             <button type="button" className="survival-logo survival-logo-link" onClick={() => navigate('home')} aria-label="생존밥 홈으로 이동">
@@ -361,6 +388,7 @@ export default function App() {
               </div>
 
               {loggedIn && character?.initial_setup_complete===false && <section role="status"><h2>캐릭터 연결 완료</h2><p>{character.name}의 게임 초기 능력치가 아직 설정되지 않았습니다. 운영진이 캐릭터 관리에서 헌터 등급·이능·능력치를 설정하면 이용할 수 있습니다.</p></section>}
+
               {loggedIn && user?.character_id && (
                   <div className="survival-home" style={{ display: view === 'home' ? 'grid' : 'none' }}>
                     <DashboardCard title="SURVIVOR ID" subtitle={`#${String(character?.id ?? '---').padStart(3, '0')}`} className="survival-profile">
@@ -506,7 +534,7 @@ export default function App() {
                     </div>
 
                     <div className="survival-page" style={display('investigation')}>
-                      <InvestigationPanel activeBattle={character?.in_active_battle} battleError={errors.character} investigationApCost={investigationApCost} areas={areas} character={character} error={errors.areas} characterError={errors.character} busy={busy} run={run} refresh={refreshAll} notify={setMessage} />
+                      <InvestigationPanel activeBattle={character?.in_active_battle} battleError={errors.character} investigationApCost={investigationApCost} areas={areas} globalInvestigationRate={globalInvestigationRate} character={character} error={errors.areas} characterError={errors.character} busy={busy} run={run} refresh={refreshAll} notify={setMessage} />
                     </div>
 
                     {provider === 'dev' && (

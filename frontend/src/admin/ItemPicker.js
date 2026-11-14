@@ -2,12 +2,21 @@ import {useRef, useState} from 'react';
 import {api} from '../api/client';
 
 // Selection stores only the ID. Names never identify a game item.
-export default function ItemPicker({value, onChange, disabled = false, label = '아이템', onDenied = () => {}, rpOnly = false}) {
+export default function ItemPicker({
+                                     value, onChange, disabled = false, label = '아이템',
+                                     onDenied = () => {}, rpOnly = false, type = 'all'
+                                   }) {
   const [query, setQuery] = useState('');
   const [rows, setRows] = useState([]);
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const sequence = useRef(0);
+
+  const typeNames = {
+    all: '아이템',
+    food: '완성 음식',
+    'failure-food': '실패 요리'
+  };
 
   async function search() {
     const version = ++sequence.current;
@@ -22,17 +31,23 @@ export default function ItemPicker({value, onChange, disabled = false, label = '
     setMessage('');
 
     try {
-      const data = await api(`/admin/items/search?q=${encodeURIComponent(query.trim())}${rpOnly ? '&rp=true' : ''}`);
+      const params = new URLSearchParams({q: query.trim()});
+      if (rpOnly) params.set('rp', 'true');
+      if (type !== 'all') params.set('type', type);
+
+      const data = await api(`/admin/items/search?${params.toString()}`);
 
       if (version === sequence.current) {
         setRows(data.records);
-        setMessage(data.records.length ? '최대 30건입니다. 이름을 더 입력하여 좁힐 수 있습니다.' : '검색 결과가 없습니다.');
+        setMessage(data.records.length
+            ? '최대 30건입니다. 이름을 더 입력하여 좁힐 수 있습니다.'
+            : `${typeNames[type] || '아이템'} 검색 결과가 없습니다.`);
       }
     } catch (e) {
       if (version === sequence.current) {
         setRows([]);
-        setMessage(`${e.code}: ${e.message}`);
-        if ([401, 403].includes(e.status)) onDenied(e.message);
+        setMessage(`${e.code || 'SEARCH_FAILED'}: ${e.message}`);
+        if ([401,403].includes(e.status)) onDenied(e.message);
       }
     } finally {
       if (version === sequence.current) setBusy(false);
@@ -44,6 +59,7 @@ export default function ItemPicker({value, onChange, disabled = false, label = '
     setBusy(false);
     setQuery(value);
     setRows([]);
+    setMessage('');
   }
 
   function selectItem(row) {
@@ -64,14 +80,19 @@ export default function ItemPicker({value, onChange, disabled = false, label = '
           }}/>
         </label>
 
-        <button type="button" disabled={disabled || busy} onClick={search}>{busy ? '검색 중…' : '아이템 검색'}</button>
+        <button type="button" disabled={disabled || busy} onClick={search}>
+          {busy ? '검색 중…' : `${typeNames[type] || '아이템'} 검색`}
+        </button>
+
         <p role="status">{message}</p>
 
         <ul>
           {rows.map(row => (
               <li key={row.id}>
-                {row.name} · ID {row.id} · {row.category} · {row.is_active ? '활성' : '비활성'}
-                <button type="button" disabled={disabled} onClick={() => selectItem(row)}>선택</button>
+                {row.name} · ID {row.id} · {row.category}
+                {row.is_food && ` · ${row.food_type === 'FAILURE' ? '실패요리' : row.food_type === 'LEGACY_FAILURE' ? '기존 실패요리 참조' : '일반 음식'}`}
+                {' · '}{row.is_active ? '활성' : '비활성'}
+                <button type="button" disabled={disabled || (type !== 'all' && !row.is_active)} onClick={() => selectItem(row)}>선택</button>
               </li>
           ))}
         </ul>

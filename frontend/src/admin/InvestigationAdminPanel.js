@@ -2,7 +2,7 @@ import {useEffect,useRef,useState} from 'react';
 import {api} from '../api/client';
 import ItemPicker from './ItemPicker';
 
-const empty=()=>({is_failure:false,failure_selectable:true,result_grade:'NORMAL',result_text:'',weight:1,is_unique:false,clue_id:null,is_active:true,rewards:[]});
+const empty=()=>({result_text:'',weight:1,is_unique:false,clue_id:null,is_active:true,rewards:[]});
 
 const clean=r=>({
   ...Object.fromEntries(Object.keys(empty()).map(k=>[k,r[k]??empty()[k]])),
@@ -156,7 +156,7 @@ export default function InvestigationAdminPanel({onDenied,route,onNavigate}) {
 
   return <section>
     <h2>조사 결과·보상 관리</h2>
-    <p>조사 결과는 가중치에 따라 선택됩니다. 고유 조사결과와 마물·레시피 최초 발견 기록을 기준으로 조사율이 자동 계산됩니다. 아이템 보상 확률은 각각 독립 판정하며, 실패 분류는 AP·보상·조우 규칙에 영향을 주지 않습니다.</p>
+    <p>조사 결과는 가중치에 따라 선택됩니다. 성공·대성공·실패 등급을 구분하지 않고 결과 내용과 보상을 처리합니다. 고유 조사결과와 마물·레시피 최초 발견 기록을 기준으로 조사율이 자동 계산됩니다. 아이템 보상 확률은 각각 독립 판정합니다.</p>
     <p role="alert">{message}</p>
 
     <label>지역
@@ -240,10 +240,6 @@ export default function InvestigationAdminPanel({onDenied,route,onNavigate}) {
 
         <h3>{id?`결과 ${id} 수정`:'신규 결과'}</h3>
 
-        <label>결과 등급
-          <input required maxLength={30} value={draft.result_grade} disabled={busy} onChange={e=>change('result_grade',e.target.value)}/>
-        </label>
-
         <label>결과 내용
           <textarea required value={draft.result_text} disabled={busy} onChange={e=>change('result_text',e.target.value)}/>
         </label>
@@ -252,8 +248,8 @@ export default function InvestigationAdminPanel({onDenied,route,onNavigate}) {
           <input required type="number" min="1" max="2147483647" step="1" value={draft.weight} disabled={busy} onChange={e=>change('weight',e.target.value===''?'':Number(e.target.value))}/>
         </label>
 
-        {['is_active','is_unique','is_failure','failure_selectable'].map(k=><label key={k}>
-          {{is_active:'활성',is_unique:'서버 전체 고유 결과',is_failure:'실패 결과',failure_selectable:'실패 결과도 선택에 포함'}[k]}
+        {['is_active','is_unique'].map(k=><label key={k}>
+          {{is_active:'활성',is_unique:'서버 전체 고유 결과'}[k]}
           <input type="checkbox" checked={draft[k]} disabled={busy} onChange={e=>change(k,e.target.checked)}/>
         </label>)}
 
