@@ -1,19 +1,11 @@
-import RecipePicker from './RecipePicker';
 import {useEffect, useRef, useState} from 'react';
 import {api} from '../api/client';
 import ItemPicker from './ItemPicker';
 
 const emptyMonster = () => ({
-  name: '',
-  description: '',
-  image_url: '',
-  max_hp: 1,
-  atk: 0,
-  def: 0,
-  agi: 0,
-  is_active: false,
-  areas: [],
-  drops: [],
+  name: '', description: '', image_url: '',
+  max_hp: 1, atk: 0, def: 0, agi: 0, is_active: false,
+  areas: [], drops: [],
   actions: [
     {name: '일반공격', action_type: 'ATTACK', probability: 100, multiplier: 1, is_active: true, sort_order: 0}
   ]
@@ -24,26 +16,19 @@ const fields = ['name', 'description', 'image_url', 'max_hp', 'atk', 'def', 'agi
 const cleanMonster = m => ({
   ...Object.fromEntries(fields.map(k => [k, m[k]])),
   areas: m.areas.map(a => ({
-    area_id: String(a.area_id),
-    weight: a.weight
+    area_id: String(a.area_id), weight: a.weight
   })),
   actions: m.actions.map(a => ({
-    name: a.name,
-    action_type: a.action_type,
-    probability: Number(a.probability),
-    multiplier: Number(a.multiplier),
-    is_active: a.is_active,
-    sort_order: a.sort_order,
-    condition_type: a.condition_type ?? null,
-    condition_value: a.condition_value ?? null
+    name: a.name, action_type: a.action_type,
+    probability: Number(a.probability), multiplier: Number(a.multiplier),
+    is_active: a.is_active, sort_order: a.sort_order,
+    condition_type: a.condition_type ?? null, condition_value: a.condition_value ?? null
   })),
-  drops: m.drops.map(d => ({
-    item_id: d.item_id == null ? null : String(d.item_id),
-    ...(d.recipe_id != null ? {recipe_id: String(d.recipe_id)} : {}),
-    drop_rate: Number(d.drop_rate),
-    min_quantity: d.min_quantity,
-    max_quantity: d.max_quantity,
-    is_ingredient: d.is_ingredient
+  drops: m.drops.filter(d=>d.item_id!=null).map(d => ({
+    item_id: String(d.item_id), drop_rate: Number(d.drop_rate),
+    min_quantity: d.min_quantity, max_quantity: d.max_quantity,
+    ingredient_role: d.ingredient_role ?? null,
+    is_ingredient: d.ingredient_role != null
   }))
 });
 
@@ -158,9 +143,21 @@ export default function BattleAdminPanel({onDenied, recordId, onOpen}) {
 
     await work(async () => {
       const sum = draft.actions.filter(a => a.is_active).reduce((n, a) => n + Number(a.probability), 0);
-
       if (Math.abs(sum - 100) > 0.000001) {
         throw Error('활성 행동 확률 합계는 100%여야 합니다.');
+      }
+
+      const baseCount=draft.drops.filter(d=>d.ingredient_role==='BASE').length;
+      const bonusTotal=draft.drops.filter(d=>d.ingredient_role==='BONUS').reduce((n,d)=>n+Number(d.drop_rate),0);
+
+      if (draft.is_active && baseCount!==1) {
+        throw Error('활성 마물은 기본 식재료를 정확히 하나 등록해야 합니다.');
+      }
+      if (baseCount>1) {
+        throw Error('기본 식재료는 하나만 등록할 수 있습니다.');
+      }
+      if (bonusTotal>100.000001) {
+        throw Error('추가 식재료의 확률 합계는 100% 이하여야 합니다.');
       }
 
       if (!window.confirm('드롭을 포함한 마물 설정의 변경 전후를 확인하고 저장합니까?')) return;
@@ -171,7 +168,6 @@ export default function BattleAdminPanel({onDenied, recordId, onOpen}) {
       });
 
       const fresh = await api(`/admin/monsters/${saved.record.id}`);
-
       setId(fresh.record.id);
       setDraft(cleanMonster(fresh.record));
       setOriginal(cleanMonster(fresh.record));
@@ -193,7 +189,6 @@ export default function BattleAdminPanel({onDenied, recordId, onOpen}) {
       setId(null);
       setDraft(emptyMonster());
       setOriginal(null);
-
       await reload();
       setMessage('마물 삭제 완료');
     });
@@ -214,24 +209,25 @@ export default function BattleAdminPanel({onDenied, recordId, onOpen}) {
 
     work(async () => {
       const data = await api(`/admin/monsters/${record.id}`);
-
       setId(record.id);
       setDraft(cleanMonster(data.record));
       setOriginal(cleanMonster(data.record));
     });
   }
 
-  function changeDropType(index, type) {
+  function changeDropRole(index,role) {
     setDraft(old => ({
       ...old,
       drops: old.drops.map((r, n) => {
         if (n !== index) return r;
-
-        if (type === 'recipe') {
-          return {...r, item_id: null, recipe_id: '', min_quantity: 1, max_quantity: 1, is_ingredient: false};
-        }
-
-        return {item_id: '', drop_rate: r.drop_rate, min_quantity: 1, max_quantity: 1, is_ingredient: false};
+        return {
+          ...r,
+          ingredient_role:role,
+          is_ingredient:role!==null,
+          drop_rate:role==='BASE'?100:r.drop_rate,
+          min_quantity:role!==null?1:r.min_quantity,
+          max_quantity:role!==null?1:r.max_quantity
+        };
       })
     }));
   }
@@ -246,7 +242,7 @@ export default function BattleAdminPanel({onDenied, recordId, onOpen}) {
   function addDrop() {
     change('drops', [
       ...draft.drops,
-      {item_id: '', drop_rate: 100, min_quantity: 1, max_quantity: 1, is_ingredient: false}
+      {item_id: '', drop_rate: 100, min_quantity: 1, max_quantity: 1, is_ingredient: false, ingredient_role: null}
     ]);
   }
 
@@ -265,6 +261,7 @@ export default function BattleAdminPanel({onDenied, recordId, onOpen}) {
   }
 
   const actionProbability = draft.actions.filter(a => a.is_active).reduce((n, a) => n + Number(a.probability), 0);
+  const bonusProbability = draft.drops.filter(d=>d.ingredient_role==='BONUS').reduce((n,d)=>n+Number(d.drop_rate||0),0);
 
   return (
       <section>
@@ -281,10 +278,8 @@ export default function BattleAdminPanel({onDenied, recordId, onOpen}) {
             {rows.map(r => (
                 <li key={r.id}>
                   {r.name} · ID {r.id}
-                  <span>
-                                {' · 레시피: '}
-                    {(r.recipe_drops || []).map(d => `${d.name} ${d.dropRate}%${d.discovered ? ' (발견 완료·드롭 제외)' : ''}`).join(', ') || '없음'}
-                            </span>
+                  <span> · 기본 식재료: {r.base_ingredient_name||'미설정'}</span>
+                  <span> · 추가 식재료: {(r.bonus_ingredients||[]).map(d=>`${d.name} ${d.dropRate}%`).join(', ')||'없음'}</span>
                   <button disabled={busy} onClick={() => openMonster(r)}>상세/수정</button>
                 </li>
             ))}
@@ -352,42 +347,44 @@ export default function BattleAdminPanel({onDenied, recordId, onOpen}) {
                 <button type="button" disabled={busy} onClick={addAction}>행동 추가</button>
                 <p>활성 확률 합계: {actionProbability}%</p>
 
-                <h3>드롭</h3>
+                <h3>마물 보상</h3>
+                <p>기본 식재료는 1개 확정 지급합니다. 추가 식재료는 확률 합계 100% 이내에서 최대 1개만 지급하며, 일반 아이템은 별도로 추첨합니다.</p>
+
                 {draft.drops.map((d, i) => (
                     <fieldset key={i}>
+                      <legend>보상 {i+1}</legend>
                       <label>
-                        드롭 대상 종류
-                        <select disabled={busy} value={d.recipe_id != null ? 'recipe' : 'item'} onChange={e => changeDropType(i, e.target.value)}>
-                          <option value="item">아이템·식재료</option>
-                          <option value="recipe">레시피</option>
+                        보상 구분
+                        <select disabled={busy} value={d.ingredient_role??'ITEM'} onChange={e=>changeDropRole(i,e.target.value==='ITEM'?null:e.target.value)}>
+                          <option value="ITEM">일반 아이템</option>
+                          <option value="BASE">기본 식재료 (1개 확정)</option>
+                          <option value="BONUS">추가 식재료 (확률 지급)</option>
                         </select>
                       </label>
 
-                      {d.recipe_id != null ? (
-                          <RecipePicker label="드롭 레시피" value={d.recipe_id} disabled={busy} onDenied={onDenied} onChange={v => rowChange('drops', i, 'recipe_id', v)}/>
-                      ) : (
-                          <ItemPicker label="드롭 아이템" value={d.item_id} disabled={busy} onDenied={onDenied} onChange={v => rowChange('drops', i, 'item_id', v)}/>
-                      )}
+                      <ItemPicker label={d.ingredient_role?'식재료':'드롭 아이템'} value={d.item_id} disabled={busy} onDenied={onDenied} onChange={v=>rowChange('drops',i,'item_id',v)}/>
 
-                      {number('드롭 확률 %', d.drop_rate, v => rowChange('drops', i, 'drop_rate', v))}
-                      {d.recipe_id == null && number('최소 수량', d.min_quantity, v => rowChange('drops', i, 'min_quantity', v))}
-                      {d.recipe_id == null && number('최대 수량', d.max_quantity, v => rowChange('drops', i, 'max_quantity', v))}
+                      {d.ingredient_role==='BASE'?
+                          <p>지급 확률: 100% 확정 · 수량: 1개</p>:
+                          number(d.ingredient_role==='BONUS'?'추가 지급 확률 (%)':'드롭 확률 (%)',d.drop_rate,v=>rowChange('drops',i,'drop_rate',v))
+                      }
 
-                      <label>
-                        식재료
-                        <input type="checkbox" checked={d.is_ingredient} disabled={busy || d.recipe_id != null} onChange={e => rowChange('drops', i, 'is_ingredient', e.target.checked)}/>
-                      </label>
-                      <button type="button" disabled={busy} onClick={() => remove('drops', i)}>드롭 제거</button>
+                      {d.ingredient_role===null?<>
+                        {number('최소 수량',d.min_quantity,v=>rowChange('drops',i,'min_quantity',v))}
+                        {number('최대 수량',d.max_quantity,v=>rowChange('drops',i,'max_quantity',v))}
+                      </>:d.ingredient_role==='BONUS'&&<p>지급 수량: 1개</p>}
+
+                      <button type="button" disabled={busy} onClick={() => remove('drops', i)}>보상 제거</button>
                     </fieldset>
                 ))}
-                <button type="button" disabled={busy} onClick={addDrop}>드롭 추가</button>
+                <button type="button" disabled={busy} onClick={addDrop}>보상 추가</button>
+                <p>추가 식재료 확률 합계: {bonusProbability}% (최대 100%)</p>
 
                 <details className="admin-wide">
                   <summary>변경 전후 비교</summary>
                   <pre>{JSON.stringify({before: original, after: draft}, null, 2)}</pre>
                 </details>
 
-                <p>최초 발견된 레시피는 실제 전투 보상 후보에서 제외됩니다.</p>
                 <button disabled={busy}>마물 저장</button>
               </form>
           )}
