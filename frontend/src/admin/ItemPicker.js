@@ -1,16 +1,25 @@
-import {useRef, useState} from 'react';
+import {useEffect, useRef, useState} from 'react';
 import {api} from '../api/client';
 
-// Selection stores only the ID. Names never identify a game item.
+const itemCache = new Map();
+
 export default function ItemPicker({
-                                     value, onChange, disabled = false, label = '아이템',
-                                     onDenied = () => {}, rpOnly = false, type = 'all'
+                                     value,
+                                     onChange,
+                                     disabled = false,
+                                     label = '아이템',
+                                     onDenied = () => {},
+                                     rpOnly = false,
+                                     type = 'all'
                                    }) {
   const [query, setQuery] = useState('');
   const [rows, setRows] = useState([]);
+  const [selected, setSelected] = useState(null);
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
+
   const sequence = useRef(0);
+  const selectionSequence = useRef(0);
 
   const typeNames = {
     all: '아이템',
@@ -18,12 +27,54 @@ export default function ItemPicker({
     'failure-food': '실패 요리'
   };
 
+  useEffect(() => {
+    const token = ++selectionSequence.current;
+
+    if (!value) {
+      setSelected(null);
+      return;
+    }
+
+    const key = String(value);
+
+    if (itemCache.has(key)) {
+      setSelected(itemCache.get(key));
+      return;
+    }
+
+    setSelected(null);
+
+    api(`/admin/items/${encodeURIComponent(key)}`)
+        .then(data => {
+          if (token !== selectionSequence.current) return;
+
+          const item = data.record;
+          itemCache.set(key, item);
+          setSelected(item);
+        })
+        .catch(error => {
+          if (token !== selectionSequence.current) return;
+
+          setMessage(`선택된 ${label}의 이름을 불러오지 못했습니다: ${error.message}`);
+
+          if ([401, 403].includes(error.status)) {
+            onDenied(error.message);
+          }
+        });
+
+    return () => {
+      selectionSequence.current++;
+    };
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+
   async function search() {
-    const version = ++sequence.current;
+    const token = ++sequence.current;
 
     if (!query.trim()) {
       setRows([]);
-      setMessage('이름을 입력하세요.');
+      setMessage('검색할 이름을 입력하세요.');
       return;
     }
 
@@ -32,80 +83,153 @@ export default function ItemPicker({
 
     try {
       const params = new URLSearchParams({q: query.trim()});
+
       if (rpOnly) params.set('rp', 'true');
       if (type !== 'all') params.set('type', type);
 
       const data = await api(`/admin/items/search?${params.toString()}`);
 
-      if (version === sequence.current) {
-        setRows(data.records);
-        setMessage(data.records.length
-            ? '최대 30건입니다. 이름을 더 입력하여 좁힐 수 있습니다.'
-            : `${typeNames[type] || '아이템'} 검색 결과가 없습니다.`);
-      }
-    } catch (e) {
-      if (version === sequence.current) {
-        setRows([]);
-        setMessage(`${e.code || 'SEARCH_FAILED'}: ${e.message}`);
-        if ([401,403].includes(e.status)) onDenied(e.message);
+      if (token !== sequence.current) return;
+
+      const records = data.records || [];
+      setRows(records);
+
+      setMessage(
+          records.length
+              ? `${records.length}건 검색되었습니다. 사용할 항목을 선택하세요.`
+              : `${typeNames[type] || '아이템'} 검색 결과가 없습니다.`
+      );
+    } catch (error) {
+      if (token !== sequence.current) return;
+
+      setRows([]);
+      setMessage(`${error.code || 'SEARCH_FAILED'}: ${error.message}`);
+
+      if ([401, 403].includes(error.status)) {
+        onDenied(error.message);
       }
     } finally {
-      if (version === sequence.current) setBusy(false);
+      if (token === sequence.current) setBusy(false);
     }
   }
 
-  function changeQuery(value) {
+  function changeQuery(next) {
     sequence.current++;
+    setQuery(next);
+    setRows([]);
+    setMessage('');
     setBusy(false);
-    setQuery(value);
+  }
+
+  function selectItem(item) {
+    itemCache.set(String(item.id), item);
+    setSelected(item);
+    onChange(String(item.id), item);
+    setQuery('');
     setRows([]);
     setMessage('');
   }
 
-  function selectItem(row) {
-    onChange(String(row.id), row);
+  function clearItem() {
+    setSelected(null);
+    onChange(null, null);
+    setQuery('');
     setRows([]);
-    setMessage(`${row.name} · ID ${row.id} · ${row.category} 선택됨`);
+    setMessage('');
+  }
+
+  function itemDescription(item) {
+    const categoryNames = {
+      MATERIAL: '재료',
+      CONSUMABLE: '소모품',
+      FOOD: '음식',
+      ETC: '기타'
+    };
+
+    const category = categoryNames[item.category] || item.category;
+
+    if (item.is_food) {
+      const foodType = item.food_type === 'FAILURE'
+          ? '실패 요리'
+          : item.food_type === 'LEGACY_FAILURE'
+              ? '기존 실패 요리'
+              : '일반 음식';
+
+      return `${category} · ${foodType}`;
+    }
+
+    return category;
   }
 
   return (
       <div className="admin-item-picker">
         <label>
           {label} 이름 검색
-          <input value={query} maxLength={100} disabled={disabled} onChange={e => changeQuery(e.target.value)} onKeyDown={e => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              search();
-            }
-          }}/>
+          <input
+              type="search"
+              value={query}
+              maxLength={100}
+              placeholder={`${typeNames[type] || '아이템'} 이름 입력`}
+              disabled={disabled}
+              onChange={event => changeQuery(event.target.value)}
+              onKeyDown={event => {
+                if (event.key === 'Enter') {
+                  event.preventDefault();
+                  search();
+                }
+              }}
+          />
         </label>
 
         <button type="button" disabled={disabled || busy} onClick={search}>
-          {busy ? '검색 중…' : `${typeNames[type] || '아이템'} 검색`}
+          {busy ? '검색 중…' : '이름 검색'}
         </button>
 
-        <p role="status">{message}</p>
+        {message && <p role="status">{message}</p>}
 
-        <ul>
-          {rows.map(row => (
-              <li key={row.id}>
-                {row.name} · ID {row.id} · {row.category}
-                {row.is_food && ` · ${row.food_type === 'FAILURE' ? '실패요리' : row.food_type === 'LEGACY_FAILURE' ? '기존 실패요리 참조' : '일반 음식'}`}
-                {' · '}{row.is_active ? '활성' : '비활성'}
-                <button type="button" disabled={disabled || (type !== 'all' && !row.is_active)} onClick={() => selectItem(row)}>선택</button>
-              </li>
-          ))}
-        </ul>
+        {rows.length > 0 && (
+            <ul className="admin-item-search-results">
+              {rows.map(item => (
+                  <li key={item.id}>
+                    <div>
+                      <strong>{item.name}</strong>
+                      <small>
+                        {itemDescription(item)}
+                        {' · '}
+                        {item.is_active ? '활성' : '비활성'}
+                      </small>
+                    </div>
 
-        <details>
-          <summary>선택 ID 확인 / 직접 입력</summary>
-          <label>
-            {label} ID
-            <input value={value ?? ''} disabled={disabled} onChange={e => onChange(e.target.value || null)}/>
-          </label>
-        </details>
+                    <button
+                        type="button"
+                        disabled={disabled || (type !== 'all' && !item.is_active)}
+                        onClick={() => selectItem(item)}
+                    >
+                      선택
+                    </button>
+                  </li>
+              ))}
+            </ul>
+        )}
 
-        <span>선택 ID: {value || '없음'}</span>
+        <div className="admin-selected-item">
+          {selected && String(selected.id) === String(value) ? (
+              <>
+                <div>
+                  <strong>{selected.name}</strong>
+                  <small>{itemDescription(selected)}</small>
+                </div>
+
+                <button type="button" disabled={disabled} onClick={clearItem}>
+                  선택 해제
+                </button>
+              </>
+          ) : value ? (
+              <span>선택된 항목의 이름을 확인하는 중…</span>
+          ) : (
+              <span>선택된 {label}이 없습니다.</span>
+          )}
+        </div>
       </div>
   );
 }
