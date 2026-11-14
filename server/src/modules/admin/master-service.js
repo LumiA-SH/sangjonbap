@@ -4,7 +4,7 @@ import {validateStockChange} from '../gacha/rules.js';
 
 export const masterFields = {
     areas: ['name','description','image_url','sort_order','encounter_rate','is_open','unlock_at'],
-    'food-grades': ['name','blood_recovery','is_active'],
+    'food-grades': ['name','blood_recovery','stat_growth_rate','is_active'],
     foods: ['grade_id','is_failure','item_id','blood_recovery','stat_growth_enabled','stat_growth_rate','stat_growth_target','stat_growth_value','rp_effect_text','rp_effect_texts'],
     recipes: ['name','description','discovery_grade','learn_cost','success_rate','result_quantity','result_item_id','failure_item_id','is_active','ingredients'],
     gachas: ['name','price','is_active','start_at','end_at','period_enabled','start_inclusive','end_inclusive','rewards']
@@ -108,7 +108,12 @@ export function validateMasterInput(kind,body,create) {
 
 export function validateMasterState(kind,row) {
     if (kind==='foods') {
-        if (row.stat_growth_enabled ? !row.stat_growth_target||row.stat_growth_value<=0 : row.stat_growth_target!==null||row.stat_growth_value!==0) invalid('성장 활성 시 대상과 양수 성장량, 비활성 시 대상 NULL과 성장량 0이 필요합니다.');
+        if (row.stat_growth_enabled ? !row.stat_growth_target||row.stat_growth_value<=0 : row.stat_growth_target!==null||row.stat_growth_value!==0) {
+            invalid('성장 활성 시 대상과 양수 성장량, 비활성 시 대상 NULL과 성장량 0이 필요합니다.');
+        }
+        if (row.stat_growth_enabled && row.grade_id!=null && row.stat_growth_value!==1) {
+            invalid('음식 등급을 사용하는 성장량은 +1로 고정됩니다.');
+        }
     }
 
     if (kind==='recipes' && (!Number.isInteger(row.result_quantity)||row.result_quantity<1||!row.failure_item_id)) invalid('양수 성공 수량과 실패 음식이 필요합니다.');
