@@ -25,7 +25,7 @@ export function createInteractionRepository(pool){
   if(!result.rowCount)fail('CHARACTER_NOT_FOUND','조회할 수 있는 캐릭터가 없습니다.',404);
   const {inventory,...character}=result.rows[0];return {character,inventory};
  }
- const visitorColumns='c.id::text,c.name,c.hunter_grade,c.has_ability,c.ability_grade,c.status';
+ const visitorColumns='c.id::text,c.name,c.hunter_grade,c.has_ability,c.ability_grade,c.status,c.profile_image_url';
  const visible="c.is_active and exists(select 1 from public.auth_user u where u.character_id=c.id and u.is_active)";
  return {getPublicCharacter,
   async listVisitorCharacters(query='',after='0'){return (await pool.query(`select ${visitorColumns} from public.game_character c where ${visible} and c.id>$2 and strpos(lower(c.name),lower($1))>0 order by c.id limit 31`,[query,after])).rows;},
