@@ -17,7 +17,7 @@ export function validateCharacterOperation(body, inventory = false) {
     const key = requestKey(body);
     const fields = inventory
         ? ['itemId', 'quantity']
-        : ['hp', 'blood', 'ap', 'currency', 'atk', 'def', 'agi'];
+        : ['hp', 'blood', 'ap', 'currency', 'atk', 'def', 'agi', 'status'];
 
     if (Object.keys(body).some(k => !fields.includes(k) && k !== 'requestKey')) {
         invalid('허용되지 않은 캐릭터 수정 필드입니다.');
@@ -32,11 +32,16 @@ export function validateCharacterOperation(body, inventory = false) {
     }
 
     for (const [key, value] of Object.entries(patch)) {
-        if (key === 'itemId') continue;
+        if (key === 'itemId' || key === 'status') continue;
 
         if (!Number.isInteger(value) || value < 0 || value > 2147483647) {
             invalid('수정값은 비음수 정수입니다.');
         }
+    }
+
+    if (Object.hasOwn(patch, 'status') &&
+        !['ALIVE', 'NEAR_DEATH', 'DEAD'].includes(patch.status)) {
+        invalid('상태는 생존(ALIVE), 빈사(NEAR_DEATH), 사망(DEAD) 중 선택하세요.');
     }
 
     if (inventory && (!validId(body.itemId) || !Object.hasOwn(body, 'quantity'))) {
@@ -60,7 +65,7 @@ export function createAdminCharacterOperations(pool) {
         const inventory = (await client.query(
             `select i.item_id, i.quantity, m.name, m.category
              from public.inventory i
-             join public.item m on m.id=i.item_id
+                      join public.item m on m.id=i.item_id
              where i.character_id=$1
              order by i.item_id`,
             [id]
@@ -171,11 +176,11 @@ export function createAdminCharacterOperations(pool) {
                         u.id as user_id,
                         u.role as user_role
                  from public.game_character c
-                 left join public.auth_user u on u.character_id=c.id
+                          left join public.auth_user u on u.character_id=c.id
                  where c.id>$2
                    and strpos(lower(c.name), lower($1))>0
                  order by c.id
-                 limit 50`,
+                     limit 50`,
                 [query, after]
             );
 
@@ -215,7 +220,7 @@ export function createAdminCharacterOperations(pool) {
                         `select quantity
                          from public.inventory
                          where character_id=$1 and item_id=$2
-                         for update`,
+                             for update`,
                         [id, patch.itemId]
                     )).rows[0];
 
@@ -239,11 +244,39 @@ export function createAdminCharacterOperations(pool) {
                     };
                 } else {
                     // 관리자 HP 수정은 일반 부활 처리와 구분한다.
-                    // 부활 횟수 증가 및 마스토돈 공지 발송 없이 상태만 복구한다.
+                    // 부활 횟수 증가 및 마스토돈 공지 발송 없이 상태를 복구한다.
                     const adminHpRecovery =
                         before.status === 'DEAD' &&
                         Object.hasOwn(patch, 'hp') &&
                         patch.hp > 0;
+
+                    const explicitStatus = Object.hasOwn(patch, 'status');
+                    const stateCorrection = explicitStatus && patch.status !== before.status;
+
+                    const nextHp = Object.hasOwn(patch, 'hp')
+                        ? patch.hp
+                        : Number(before.hp);
+
+                    const nextBlood = Object.hasOwn(patch, 'blood')
+                        ? patch.blood
+                        : Number(before.blood);
+
+                    // 관리자가 직접 상태를 지정한 경우 HP·혈량과 일치하는지 확인
+                    if (explicitStatus) {
+                        const validStatus = patch.status === 'DEAD'
+                            ? nextHp === 0
+                            : patch.status === 'NEAR_DEATH'
+                                ? nextHp > 0 && nextBlood === 0
+                                : nextHp > 0 && nextBlood > 0;
+
+                        if (!validStatus) {
+                            throw new AppError(
+                                400,
+                                'ADMIN_STATUS_RESOURCE_CONFLICT',
+                                '생존은 HP·혈량 1 이상, 빈사는 HP 1 이상·혈량 0, 사망은 HP 0이어야 합니다.'
+                            );
+                        }
+                    }
 
                     const limits = {
                         hp: Number(before.max_hp),
@@ -285,20 +318,47 @@ export function createAdminCharacterOperations(pool) {
                             .map(key => [key, patch[key] - Number(before[key])])
                     );
 
-                    // 기존 공용 자원 변경 로직 유지
-                    await changeCharacterResources(c, before, deltas);
-
-                    // 사망 캐릭터의 HP를 관리자가 1 이상으로 수정한 경우
-                    if (adminHpRecovery) {
+                    if (stateCorrection) {
+                        // 관리자가 상태를 직접 정정한 경우 일반 사망·부활 판정은 실행하지 않는다.
+                        // death_count, revive_count 및 마스토돈 이벤트는 변경하지 않는다.
                         await c.query(
                             `update public.game_character
-                             set status=case
-                                 when blood=0 then 'NEAR_DEATH'
-                                 else 'ALIVE'
-                             end
+                             set hp=$2,
+                                 blood=$3,
+                                 ap=$4,
+                                 currency=$5,
+                                 status=$6
                              where id=$1`,
-                            [id]
+                            [
+                                id,
+                                nextHp,
+                                nextBlood,
+                                Object.hasOwn(patch, 'ap')
+                                    ? patch.ap
+                                    : Number(before.ap),
+                                Object.hasOwn(patch, 'currency')
+                                    ? patch.currency
+                                    : Number(before.currency),
+                                patch.status
+                            ]
                         );
+                    } else {
+                        // 기존 공용 자원 변경 로직 유지
+                        await changeCharacterResources(c, before, deltas);
+
+                        if (adminHpRecovery) {
+                            // HP가 복구된 사망 캐릭터의 상태를 갱신한다.
+                            // 일반 부활 함수는 호출하지 않는다.
+                            await c.query(
+                                `update public.game_character
+                                 set status=case
+                                     when blood=0 then 'NEAR_DEATH'
+                                     else 'ALIVE'
+                                 end
+                                 where id=$1`,
+                                [id]
+                            );
+                        }
                     }
 
                     // 능력치 변경
@@ -325,6 +385,9 @@ export function createAdminCharacterOperations(pool) {
                     detail = {
                         before,
                         after,
+                        ...(stateCorrection
+                            ? {adminStatusCorrectionWithoutLifecycleEvent: true}
+                            : {}),
                         ...(adminHpRecovery
                             ? {adminHpRecoveryWithoutRevive: true}
                             : {})

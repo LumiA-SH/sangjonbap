@@ -1,8 +1,435 @@
-.public-content { padding:clamp(16px,3vw,28px); min-width:0; }
-.public-content article { margin-block:20px; border-bottom:1px solid #d5cebf; }
-.public-prose { white-space:pre-wrap; overflow-wrap:anywhere; line-height:1.8; }
-.public-content ul { padding-left:20px; }
-.public-content form { display:flex; flex-wrap:wrap; gap:12px; align-items:end; }
-.public-content input { max-width:100%; }
-.public-content p,.public-content h3 { overflow-wrap:anywhere; }
-@media(max-width:640px){.public-content form { flex-direction:column; align-items:stretch; }.public-content input{box-sizing:border-box;width:100%;}}
+
+/* ========================================
+   01. PUBLIC COMMON
+======================================== */
+
+.public-content {
+    min-width: 0;
+    padding: clamp(16px, 3vw, 28px);
+}
+
+.public-content article {
+    margin-block: 20px;
+    border-bottom: 1px solid #d5cebf;
+}
+
+.public-prose {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    line-height: 1.8;
+}
+
+.public-content ul {
+    padding-left: 20px;
+}
+
+.public-content form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: 12px;
+}
+
+.public-content input {
+    max-width: 100%;
+}
+
+.public-content p,
+.public-content h3 {
+    overflow-wrap: anywhere;
+}
+
+/* ========================================
+   02. CHARACTER DIRECTORY HEADING
+======================================== */
+
+.public-directory-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 22px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #d8d8da;
+}
+
+.public-directory-heading .badge {
+    font-size: 11px;
+    letter-spacing: 1.2px;
+}
+
+.public-directory-heading h2 {
+    margin: 6px 0 0;
+    font-size: clamp(20px, 2vw, 26px);
+    font-weight: 850;
+}
+
+.public-directory-count {
+    color: #77777b;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+/* ========================================
+   03. CHARACTER SEARCH
+======================================== */
+
+.public-content .public-character-search {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: 12px;
+    margin-bottom: 22px;
+}
+
+.public-character-search label {
+    flex: 1 1 240px;
+    min-width: 0;
+}
+
+.public-character-search input {
+    width: 100%;
+    min-width: 0;
+    min-height: 42px;
+}
+
+.public-character-search button {
+    flex: 0 0 auto;
+    min-height: 42px;
+    padding: 10px 22px;
+}
+
+/* ========================================
+   04. CHARACTER LIST - DESKTOP
+======================================== */
+
+.public-content .public-character-list {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 1px solid #d6d6d8;
+    border-radius: 9px;
+    background: #fffefa;
+    list-style: none;
+    overflow: hidden;
+}
+
+.public-character-list::before {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    z-index: 1;
+    width: 1px;
+    background: #d6d6d9;
+    content: '';
+    pointer-events: none;
+}
+
+.public-content .public-character-item {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    min-width: 0;
+    min-height: 112px;
+    margin: 0;
+    padding: 14px 18px;
+    border: 0;
+    border-bottom: 1px solid #e5e5e7;
+}
+
+.public-character-item:last-child,
+.public-character-item:nth-last-child(2):nth-child(odd) {
+    border-bottom: 0;
+}
+
+/* ========================================
+   05. CHARACTER AVATAR
+======================================== */
+
+.public-character-avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 78px;
+    height: 88px;
+    flex: 0 0 78px;
+    border: 1px solid #d1d1d3;
+    border-radius: 7px;
+    background: #e9e9eb;
+    overflow: hidden;
+}
+
+.public-character-avatar img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 20%;
+}
+
+.public-character-avatar.is-fallback img {
+    width: 45%;
+    height: 45%;
+    object-fit: contain;
+    opacity: 0.45;
+}
+
+.public-character-avatar.is-large {
+    width: 125px;
+    height: 145px;
+    flex: 0 0 125px;
+    border-radius: 9px;
+}
+
+/* ========================================
+   06. CHARACTER INFORMATION
+======================================== */
+
+.public-character-info {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 9px;
+    min-width: 0;
+}
+
+.public-content .public-character-name {
+    display: block;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: #242428;
+    text-align: left;
+    font-size: 17px;
+    font-weight: 850;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+
+.public-content .public-character-name:hover:not(:disabled) {
+    background: transparent;
+    color: #650c13;
+    text-decoration: underline;
+}
+
+.public-character-information {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    column-gap: 11px;
+    row-gap: 5px;
+    color: #66666b;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.public-character-information strong {
+    color: #650c13;
+    font-weight: 800;
+}
+
+.public-character-information > span {
+    white-space: nowrap;
+}
+
+.public-character-status.status-dead strong {
+    color: #777777;
+}
+
+.public-character-status.status-near_death strong {
+    color: #ad6817;
+}
+
+/* ========================================
+   07. DETAIL BUTTON
+======================================== */
+
+.public-content .public-character-detail-button {
+    flex: 0 0 auto;
+    min-width: 84px;
+    min-height: 40px;
+    margin: 0 0 0 auto;
+    padding: 10px 12px;
+    border: 1px solid #650c13;
+    border-radius: 6px;
+    background: #650c13;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 750;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.public-content .public-character-detail-button:hover:not(:disabled) {
+    border-color: #80141e;
+    background: #80141e;
+    color: #ffffff;
+}
+
+/* ========================================
+   08. CHARACTER DETAIL
+======================================== */
+
+.public-character-detail-actions {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.public-character-detail-profile {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    min-width: 0;
+    padding: 20px;
+    border: 1px solid #d6d6d8;
+    border-radius: 9px;
+    background: #fffefa;
+}
+
+.public-character-detail-information {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    min-width: 0;
+}
+
+.public-character-detail-information h3 {
+    margin: 0;
+    font-size: clamp(21px, 2.5vw, 29px);
+    font-weight: 850;
+}
+
+.public-character-detail-content {
+    margin-top: 20px;
+}
+
+.public-character-login-guide {
+    margin-top: 20px;
+    padding: 16px;
+    border: 1px solid #dedee0;
+    border-radius: 8px;
+    background: #f7f7f8;
+    color: #666666;
+    font-size: 13px;
+}
+
+.public-directory-empty {
+    padding: 40px 16px;
+    color: #77777b;
+    text-align: center;
+}
+
+.public-directory-pagination {
+    display: flex;
+    justify-content: center;
+    margin-top: 22px;
+}
+
+/* ========================================
+   09. TABLET / SMALL WINDOW
+======================================== */
+
+@media (max-width: 1180px) {
+    .public-content .public-character-list {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .public-character-list::before {
+        display: none;
+    }
+
+    .public-content .public-character-item {
+        border-bottom: 1px solid #e5e5e7;
+    }
+
+    .public-content .public-character-item:last-child {
+        border-bottom: 0;
+    }
+}
+
+/* ========================================
+   10. MOBILE
+======================================== */
+
+@media (max-width: 640px) {
+    .public-content form {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .public-content input {
+        box-sizing: border-box;
+        width: 100%;
+    }
+
+    .public-content .public-character-search {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .public-character-search label {
+        flex: 0 0 auto;
+        width: 100%;
+    }
+
+    .public-character-search button {
+        width: 100%;
+    }
+
+    .public-content .public-character-item {
+        gap: 10px;
+        min-height: 98px;
+        padding: 12px 10px;
+    }
+
+    .public-character-avatar {
+        width: 64px;
+        height: 75px;
+        flex-basis: 64px;
+    }
+
+    .public-content .public-character-name {
+        font-size: 15px;
+    }
+
+    .public-character-information {
+        gap: 4px 8px;
+        font-size: 11px;
+    }
+
+    .public-content .public-character-detail-button {
+        min-width: 70px;
+        padding: 9px 8px;
+        font-size: 11px;
+    }
+
+    .public-character-detail-profile {
+        gap: 14px;
+        padding: 14px;
+    }
+
+    .public-character-avatar.is-large {
+        width: 95px;
+        height: 112px;
+        flex-basis: 95px;
+    }
+
+    .public-character-detail-information h3 {
+        font-size: 20px;
+    }
+}
