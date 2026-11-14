@@ -396,7 +396,7 @@ export default function App() {
                       <div className="survival-today-details">
                         <div><span>현재 시간</span><strong>{currentTime}</strong></div>
                         <div><span>현재 날짜</span><strong>{currentDate}</strong></div>
-                        <div><span>보유 재화</span><strong>{character?.currency ?? '-'}</strong></div>
+                        <div><span>보유 코인</span><strong>{character?.currency ?? '-'}</strong></div>
                         <div><span>진행 중 전투</span><strong>{character?.in_active_battle ? '있음' : '없음'}</strong></div>
                       </div>
                     </div>
