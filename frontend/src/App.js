@@ -12,7 +12,6 @@ import { api, apiUrl, setToken } from './api/client';
 import AdminPanel from './admin/AdminPanel';
 import {useNavigation} from './admin/navigation';
 import TrainingBloodPanel from './dev/TrainingBloodPanel';
-import DonationPanel from './dev/DonationPanel';
 import CharacterCarePanel from './dev/CharacterCarePanel';
 import ActionLogPanel from './dev/ActionLogPanel';
 import ShopPanel from './dev/ShopPanel';
@@ -28,7 +27,7 @@ import { HomeHeaderDecor } from './HomeDecor';
 const FALLBACK_IMAGE = publicAsset('test.png');
 
 function NavIcon({ name, className = '' }) {
-    return <img src={publicAsset(`assets/decor/icon-${name}.svg`)} alt="" aria-hidden="true" className={className} />;
+  return <img src={publicAsset(`assets/decor/icon-${name}.svg`)} alt="" aria-hidden="true" className={className} />;
 }
 
 function GameImage({ src, alt, className }) {
@@ -302,253 +301,250 @@ export default function App() {
   const currentTime = now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false });
   const currentDate = now.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' });
 
-
   return (
       <AnemiaPolicyContext.Provider value={anemiaPolicy}>
-      {adminOpen&&<main className="admin-workspace">
-        {canAdmin?<AdminPanel route={route} onNavigate={next=>go({...route,...next})} onBack={back} onExit={()=>go({admin:false,tab:view})} onLogout={()=>run(logout)} onAccessLost={()=>setUser(current=>current?{...current,role:null}:null)}/>:
-        <section className="admin-gate"><h1>운영진 전용 페이지</h1><p role="alert">{provider===null?'인증 확인 중…':loggedIn?'관리자 권한이 필요합니다.':'로그인 후 관리자 권한을 확인합니다.'}</p><button onClick={()=>setAdminOpen(false)}>게임으로 돌아가기</button></section>}
-      </main>}
-      <div className="survival-app" hidden={adminOpen}>
-        <aside className={`survival-sidebar ${menuOpen ? 'is-open' : ''}`}>
-          <button type="button" className="survival-logo survival-logo-link" onClick={() => navigate('home')} aria-label="생존밥 홈으로 이동">
-            <img src={publicAsset('saengjonbap_logo.png')} alt="생존밥" />
-          </button>
-
-          <nav aria-label="주 메뉴">
-            {canAdmin&&<button type="button" onClick={()=>setAdminOpen(true)}>운영 관리</button>}
-            {navigation.map(([id, label, symbol]) => (
-                <button key={id} type="button" className={view === id ? 'is-active' : ''} onClick={() => navigate(id)}>
-                  <NavIcon name={symbol} className="survival-nav-icon" />
-                  {label}
-                </button>
-            ))}
-          </nav>
-
-          <div className="survival-sidebar-foot">
-            <img className="survival-sidebar-cutlery" src={publicAsset('assets/decor/side-cutlery.svg')} alt="" aria-hidden="true" />
-            REVIVAL COMPLETE
-            <br />
-            OF THE CORPSE
-            <div className="survival-barcode" />
-          </div>
-        </aside>
-
-        <div className="survival-main">
-          <header className="survival-topbar">
-            <button className="survival-menu-toggle" type="button" onClick={() => setMenuOpen(!menuOpen)} aria-label="전체 메뉴" aria-expanded={menuOpen}>☰</button>
-
-            <button type="button" className="survival-mobile-logo survival-logo-link" onClick={() => navigate('home')} aria-label="생존밥 홈으로 이동">
+        {adminOpen&&<main className="admin-workspace">
+          {canAdmin?<AdminPanel route={route} onNavigate={next=>go({...route,...next})} onBack={back} onExit={()=>go({admin:false,tab:view})} onLogout={()=>run(logout)} onAccessLost={()=>setUser(current=>current?{...current,role:null}:null)}/>:
+              <section className="admin-gate"><h1>운영진 전용 페이지</h1><p role="alert">{provider===null?'인증 확인 중…':loggedIn?'관리자 권한이 필요합니다.':'로그인 후 관리자 권한을 확인합니다.'}</p><button onClick={()=>setAdminOpen(false)}>게임으로 돌아가기</button></section>}
+        </main>}
+        <div className="survival-app" hidden={adminOpen}>
+          <aside className={`survival-sidebar ${menuOpen ? 'is-open' : ''}`}>
+            <button type="button" className="survival-logo survival-logo-link" onClick={() => navigate('home')} aria-label="생존밥 홈으로 이동">
               <img src={publicAsset('saengjonbap_logo.png')} alt="생존밥" />
             </button>
 
-            <span className="survival-top-caption">SURVIVAL COOKING SYSTEM</span>
-            <span className="survival-account">{character?.name || user?.username || 'SURVIVOR'}</span>
-          </header>
+            <nav aria-label="주 메뉴">
+              {canAdmin&&<button type="button" onClick={()=>setAdminOpen(true)}>운영 관리</button>}
+              {navigation.map(([id, label, symbol]) => (
+                  <button key={id} type="button" className={view === id ? 'is-active' : ''} onClick={() => navigate(id)}>
+                    <NavIcon name={symbol} className="survival-nav-icon" />
+                    {label}
+                  </button>
+              ))}
+            </nav>
 
-          <div className="survival-warning" aria-hidden="true">
-            <span>WARNING!</span>
-            <span>WARNING!</span>
-            <span>WARNING!</span>
-            <span>WARNING!</span>
-            <span>WARNING!</span>
-          </div>
+            <div className="survival-sidebar-foot">
+              <img className="survival-sidebar-cutlery" src={publicAsset('assets/decor/side-cutlery.svg')} alt="" aria-hidden="true" />
+              REVIVAL COMPLETE
+              <br />
+              OF THE CORPSE
+              <div className="survival-barcode" />
+            </div>
+          </aside>
 
-          <main className="survival-content">
-            <div className="survival-heading">
-              {view === 'home' && <HomeHeaderDecor />}
-              <small>SURVIVOR TERMINAL</small>
-              <h1>{view === 'home' ? `${character?.name ? `${character.name}, ` : ''}오늘도 생존을 이어가세요.` : navigation.find(([id]) => id === view)?.[1]}</h1>
-              <p>{pageDescriptions[view]}</p>
+          <div className="survival-main">
+            <header className="survival-topbar">
+              <button className="survival-menu-toggle" type="button" onClick={() => setMenuOpen(!menuOpen)} aria-label="전체 메뉴" aria-expanded={menuOpen}>☰</button>
+
+              <button type="button" className="survival-mobile-logo survival-logo-link" onClick={() => navigate('home')} aria-label="생존밥 홈으로 이동">
+                <img src={publicAsset('saengjonbap_logo.png')} alt="생존밥" />
+              </button>
+
+              <span className="survival-top-caption">SURVIVAL COOKING SYSTEM</span>
+              <span className="survival-account">{character?.name || user?.username || 'SURVIVOR'}</span>
+            </header>
+
+            <div className="survival-warning" aria-hidden="true">
+              <span>WARNING!</span>
+              <span>WARNING!</span>
+              <span>WARNING!</span>
+              <span>WARNING!</span>
+              <span>WARNING!</span>
             </div>
 
-            {loggedIn && character?.initial_setup_complete===false && <section role="status"><h2>캐릭터 연결 완료</h2><p>{character.name}의 게임 초기 능력치가 아직 설정되지 않았습니다. 운영진이 캐릭터 관리에서 헌터 등급·이능·능력치를 설정하면 이용할 수 있습니다.</p></section>}
-            {loggedIn && user?.character_id && (
-                <div className="survival-home" style={{ display: view === 'home' ? 'grid' : 'none' }}>
-                  <DashboardCard title="SURVIVOR ID" subtitle={`#${String(character?.id ?? '---').padStart(3, '0')}`} className="survival-profile">
-                    <div className="survival-profile-body">
-                      <div className="survival-identity">
-                        <GameImage src={characterImage} alt={`${character?.name || '생존자'} 프로필`} className="survival-avatar" />
+            <main className="survival-content">
+              <div className="survival-heading">
+                {view === 'home' && <HomeHeaderDecor />}
+                <small>SURVIVOR TERMINAL</small>
+                <h1>{view === 'home' ? `${character?.name ? `${character.name}, ` : ''}오늘도 생존을 이어가세요.` : navigation.find(([id]) => id === view)?.[1]}</h1>
+                <p>{pageDescriptions[view]}</p>
+              </div>
 
-                        <div className="survival-identity-info">
-                          <div className="survival-identity-name">{character?.name || '불러오는 중'}</div>
-                          <span className="survival-role-badge">{character?.role || '생존자'}</span>
-                          <p>헌터등급 <b>{character?.hunter_grade ?? '-'}</b> <span className="survival-divider">|</span> 이능등급 <b>{character?.ability_grade ?? '-'}</b></p>
-                          <p>상태: {character?.status ?? '-'}</p>
+              {loggedIn && character?.initial_setup_complete===false && <section role="status"><h2>캐릭터 연결 완료</h2><p>{character.name}의 게임 초기 능력치가 아직 설정되지 않았습니다. 운영진이 캐릭터 관리에서 헌터 등급·이능·능력치를 설정하면 이용할 수 있습니다.</p></section>}
+              {loggedIn && user?.character_id && (
+                  <div className="survival-home" style={{ display: view === 'home' ? 'grid' : 'none' }}>
+                    <DashboardCard title="SURVIVOR ID" subtitle={`#${String(character?.id ?? '---').padStart(3, '0')}`} className="survival-profile">
+                      <div className="survival-profile-body">
+                        <div className="survival-identity">
+                          <GameImage src={characterImage} alt={`${character?.name || '생존자'} 프로필`} className="survival-avatar" />
+
+                          <div className="survival-identity-info">
+                            <div className="survival-identity-name">{character?.name || '불러오는 중'}</div>
+                            <span className="survival-role-badge">{character?.role || '생존자'}</span>
+                            <p>헌터등급 <b>{character?.hunter_grade ?? '-'}</b> <span className="survival-divider">|</span> 이능등급 <b>{character?.ability_grade ?? '-'}</b></p>
+                            <p>상태: {character?.status ?? '-'}</p>
+                          </div>
+                        </div>
+
+                        <div className="survival-resource-list">
+                          {resourceStats.map(([label, value, max]) => (
+                              <ResourceBar key={label} label={label} value={value} max={max} character={character} />
+                          ))}
                         </div>
                       </div>
+                    </DashboardCard>
 
-                      <div className="survival-resource-list">
-                        {resourceStats.map(([label, value, max]) => (
-                            <ResourceBar key={label} label={label} value={value} max={max} character={character} />
+                    <DashboardCard title="오늘의 상황" subtitle="TODAY'S STATUS" className="survival-today">
+                      <div className="survival-today-body">
+                        <div className="survival-calendar">
+                          <span>DAY</span>
+                          <strong>{String(now.getDate()).padStart(2, '0')}</strong>
+                        </div>
+
+                        <div className="survival-today-details">
+                          <div><span>현재 시간</span><strong>{currentTime}</strong></div>
+                          <div><span>현재 날짜</span><strong>{currentDate}</strong></div>
+                          <div><span>보유 코인</span><strong>{character?.currency ?? '-'}</strong></div>
+                          <div><span>진행 중 전투</span><strong>{character?.in_active_battle ? '있음' : '없음'}</strong></div>
+                        </div>
+                      </div>
+                    </DashboardCard>
+
+                    <DashboardCard title="주요 행동" subtitle="QUICK ACCESS" className="survival-actions-card">
+                      <div className="survival-quick">
+                        {quickNavigation.map(([id, label, symbol, description]) => (
+                            <button key={id} type="button" onClick={() => navigate(id)}>
+                              <NavIcon name={symbol} className="survival-quick-icon" />
+                              <b>{label}</b>
+                              <small>{description}</small>
+                            </button>
                         ))}
                       </div>
-                    </div>
-                  </DashboardCard>
+                    </DashboardCard>
 
-                  <DashboardCard title="오늘의 상황" subtitle="TODAY'S STATUS" className="survival-today">
-                    <div className="survival-today-body">
-                      <div className="survival-calendar">
-                        <span>DAY</span>
-                        <strong>{String(now.getDate()).padStart(2, '0')}</strong>
+                    <DashboardCard title="최근 기록" subtitle="ACTIVITY LOG" action={<button type="button" className="survival-card-link" onClick={() => navigate('records')}>더보기 ›</button>} className="survival-activity">
+                      <div className="survival-empty">
+                        <span>MASTODON FEED</span>
+                        <p>생존밥 자동 공지 기록 연동 예정</p>
                       </div>
+                    </DashboardCard>
 
-                      <div className="survival-today-details">
-                        <div><span>현재 시간</span><strong>{currentTime}</strong></div>
-                        <div><span>현재 날짜</span><strong>{currentDate}</strong></div>
-                        <div><span>보유 코인</span><strong>{character?.currency ?? '-'}</strong></div>
-                        <div><span>진행 중 전투</span><strong>{character?.in_active_battle ? '있음' : '없음'}</strong></div>
+                    <DashboardCard title="현재 진행 중인 이벤트" subtitle="EVENT" className="survival-event">
+                      <div className="survival-event-banner">
+                        <GameImage alt="이벤트 배너 임시 이미지" className="survival-event-image" />
+                        <div className="survival-event-overlay">
+                          <span>EVENT</span>
+                          <strong>스토리 이벤트 준비 중</strong>
+                          <small>운영진 이벤트 등록 기능 연동 예정</small>
+                        </div>
                       </div>
-                    </div>
-                  </DashboardCard>
+                    </DashboardCard>
 
-                  <DashboardCard title="주요 행동" subtitle="QUICK ACCESS" className="survival-actions-card">
-                    <div className="survival-quick">
-                      {quickNavigation.map(([id, label, symbol, description]) => (
-                          <button key={id} type="button" onClick={() => navigate(id)}>
-                            <NavIcon name={symbol} className="survival-quick-icon" />
-                            <b>{label}</b>
-                            <small>{description}</small>
-                          </button>
-                      ))}
-                    </div>
-                  </DashboardCard>
-
-                  <DashboardCard title="최근 기록" subtitle="ACTIVITY LOG" action={<button type="button" className="survival-card-link" onClick={() => navigate('records')}>더보기 ›</button>} className="survival-activity">
-                    <div className="survival-empty">
-                      <span>MASTODON FEED</span>
-                      <p>생존밥 자동 공지 기록 연동 예정</p>
-                    </div>
-                  </DashboardCard>
-
-                  <DashboardCard title="현재 진행 중인 이벤트" subtitle="EVENT" className="survival-event">
-                    <div className="survival-event-banner">
-                      <GameImage alt="이벤트 배너 임시 이미지" className="survival-event-image" />
-                      <div className="survival-event-overlay">
-                        <span>EVENT</span>
-                        <strong>스토리 이벤트 준비 중</strong>
-                        <small>운영진 이벤트 등록 기능 연동 예정</small>
+                    <DashboardCard title="공지사항" subtitle="NOTICE" className="survival-notice">
+                      <div className="survival-empty">
+                        <span>OFFICIAL NOTICE</span>
+                        <p>운영진 공지사항 연동 예정</p>
                       </div>
-                    </div>
-                  </DashboardCard>
-
-                  <DashboardCard title="공지사항" subtitle="NOTICE" className="survival-notice">
-                    <div className="survival-empty">
-                      <span>OFFICIAL NOTICE</span>
-                      <p>운영진 공지사항 연동 예정</p>
-                    </div>
-                  </DashboardCard>
-                </div>
-            )}
-
-
-            <div className="survival-auth" style={{ display: loggedIn && view !== 'home' ? 'none' : 'block' }}>
-              <section aria-labelledby="login-title">
-                <OAuthErrorNotice />
-                <h2 id="login-title">{provider === 'mastodon' ? 'Mastodon 로그인' : provider === 'dev' ? '개발 로그인' : '로그인 연결'}</h2>
-
-                {provider === 'dev' && (
-                    <p>서버의 DEV_LOGIN_KEY를 입력하세요. 토큰은 메모리에만 보관되며 새로고침하면 다시 로그인해야 합니다.</p>
-                )}
-
-                {!loggedIn ? (
-                    provider === 'mastodon' ? (
-                        <>
-                        <a href={apiUrl('/auth/mastodon/login')}>Mastodon으로 로그인</a>
-                        <MobileLoginHelp />
-                        </>
-                    ) : provider === 'dev' ? (
-                        <form onSubmit={login}>
-                          <label htmlFor="key">개발 로그인 키</label>
-                          <input id="key" type="password" value={key} onChange={event => setKey(event.target.value)} required autoComplete="off" disabled={busy} />
-                          <button disabled={busy}>로그인</button>
-                        </form>
-                    ) : (
-                        authError ? <div role="alert">
-                          <p>{authError.code?.startsWith('VERIFICATION_') ? 'API는 연결되었지만 현재 검증 제한 중입니다. 로그인은 아직 공개되지 않았습니다.' : authError.message}</p>
-                          <p>{authError.code}{authError.status ? ` (HTTP ${authError.status})` : ''}</p>
-                          <button onClick={() => setAuthAttempt(value => value + 1)}>연결 다시 시도</button>
-                        </div> : <p>인증 방식 확인 중…</p>
-                    )
-                ) : (
-                    <div className="actions">
-                      <span>로그인됨</span>
-                      {canAdmin && <button disabled={busy} onClick={() => setAdminOpen(true)}>관리자 영역</button>}
-                      <button disabled={busy} onClick={() => run(refreshAll)}>전체 상태 새로고침</button>
-                      <button disabled={busy} onClick={() => run(logout)}>로그아웃</button>
-                    </div>
-                )}
-              </section>
-            </div>
-
-            {(busy || message) && <p className="dev-message" role="status" aria-live="polite">{busy ? '처리 중…' : message}</p>}
-            {['world','system','schedule'].includes(view)&&<GuidePage key={view} kind={view}/>}
-            {view==='roster'&&<CharacterDirectory recordId={route.record} onOpen={record=>go({admin:false,tab:'roster',record})} onBack={()=>go({admin:false,tab:'roster'})} canReadDetails={loggedIn&&!!user?.character_id}/>}
-            {loggedIn && !user?.character_id && <CharacterCreationPanel />}
-
-            {loggedIn && user?.character_id && (
-                <>
-                  <div className="survival-page" style={display('character')}>
-                    <CharacterPanel character={character} error={errors.character} busy={busy} run={run} onCharacter={setCharacter} refresh={refreshAll} notify={setMessage} dev={provider === 'dev'} />
-                    <PublicCharacterPanel />
-                    <CoinTransferPanel character={character} busy={busy} refresh={refreshAll} />
-                    <DonationPanel character={character} busy={busy} refresh={refreshAll} />
-                    <CharacterCarePanel character={character} busy={busy} run={run} refresh={refreshAll} notify={setMessage} />
-                    <TrainingBloodPanel character={character} inventory={inventory} busy={busy} run={run} refresh={refreshAll} />
+                    </DashboardCard>
                   </div>
+              )}
 
-                  <div className="survival-page" style={display('battle')}>
-                    <BattlePanel inventory={inventory} busy={busy} run={run} refresh={refreshAll} revision={revision} />
-                  </div>
-
-                  <div className="survival-page" style={display('records')}>
-                    <RecordsPanel />
-                  </div>
-
-                  <div className="survival-page" style={display('inventory')}>
-                    <InventoryPanel character={character} inventory={inventory} storage={storage} errors={errors} busy={busy} run={run} refresh={refreshAll} notify={setMessage} />
-                  </div>
-
-                  <div className="survival-page" style={display('investigation')}>
-                    <InvestigationPanel activeBattle={character?.in_active_battle} battleError={errors.character} investigationApCost={investigationApCost} areas={areas} character={character} error={errors.areas} characterError={errors.character} busy={busy} run={run} refresh={refreshAll} notify={setMessage} />
-                  </div>
+              <div className="survival-auth" style={{ display: loggedIn && view !== 'home' ? 'none' : 'block' }}>
+                <section aria-labelledby="login-title">
+                  <OAuthErrorNotice />
+                  <h2 id="login-title">{provider === 'mastodon' ? 'Mastodon 로그인' : provider === 'dev' ? '개발 로그인' : '로그인 연결'}</h2>
 
                   {provider === 'dev' && (
-                      <div className="survival-page" style={display('records')}>
-                        <ActionLogPanel logs={logs} error={errors.logs} busy={busy} run={run} refresh={refreshAll} />
-                      </div>
+                      <p>서버의 DEV_LOGIN_KEY를 입력하세요. 토큰은 메모리에만 보관되며 새로고침하면 다시 로그인해야 합니다.</p>
                   )}
 
-                  <div className="survival-page" style={display('shop')}>
-                    <ShopPanel products={products} character={character} error={errors.products} busy={busy} run={run} refresh={refreshAll} notify={setMessage} />
-                  </div>
+                  {!loggedIn ? (
+                      provider === 'mastodon' ? (
+                          <>
+                            <a href={apiUrl('/auth/mastodon/login')}>Mastodon으로 로그인</a>
+                            <MobileLoginHelp />
+                          </>
+                      ) : provider === 'dev' ? (
+                          <form onSubmit={login}>
+                            <label htmlFor="key">개발 로그인 키</label>
+                            <input id="key" type="password" value={key} onChange={event => setKey(event.target.value)} required autoComplete="off" disabled={busy} />
+                            <button disabled={busy}>로그인</button>
+                          </form>
+                      ) : (
+                          authError ? <div role="alert">
+                            <p>{authError.code?.startsWith('VERIFICATION_') ? 'API는 연결되었지만 현재 검증 제한 중입니다. 로그인은 아직 공개되지 않았습니다.' : authError.message}</p>
+                            <p>{authError.code}{authError.status ? ` (HTTP ${authError.status})` : ''}</p>
+                            <button onClick={() => setAuthAttempt(value => value + 1)}>연결 다시 시도</button>
+                          </div> : <p>인증 방식 확인 중…</p>
+                      )
+                  ) : (
+                      <div className="actions">
+                        <span>로그인됨</span>
+                        {canAdmin && <button disabled={busy} onClick={() => setAdminOpen(true)}>관리자 영역</button>}
+                        <button disabled={busy} onClick={() => run(refreshAll)}>전체 상태 새로고침</button>
+                        <button disabled={busy} onClick={() => run(logout)}>로그아웃</button>
+                      </div>
+                  )}
+                </section>
+              </div>
 
-                  <div className="survival-page" style={display('cooking')}>
-                    <CookingPanel activeBattle={character?.in_active_battle} battleError={errors.character} inventory={inventory} catalog={cooking} character={character} error={errors.cooking} busy={busy} run={run} refresh={refreshAll} notify={setMessage} />
-                  </div>
+              {(busy || message) && <p className="dev-message" role="status" aria-live="polite">{busy ? '처리 중…' : message}</p>}
+              {['world','system','schedule'].includes(view)&&<GuidePage key={view} kind={view}/>}
+              {view==='roster'&&<CharacterDirectory recordId={route.record} onOpen={record=>go({admin:false,tab:'roster',record})} onBack={()=>go({admin:false,tab:'roster'})} canReadDetails={loggedIn&&!!user?.character_id}/>}
+              {loggedIn && !user?.character_id && <CharacterCreationPanel />}
 
-                  <div className="survival-page" style={display('gacha')}>
-                    <GachaPanel gachas={gachas} character={character} error={errors.gachas} busy={busy} run={run} refresh={refreshAll} notify={setMessage} />
-                  </div>
-                </>
-            )}
-          </main>
+              {loggedIn && user?.character_id && (
+                  <>
+                    <div className="survival-page" style={display('character')}>
+                      <CharacterPanel character={character} error={errors.character} busy={busy} run={run} onCharacter={setCharacter} refresh={refreshAll} notify={setMessage} dev={provider === 'dev'} />
+                      <PublicCharacterPanel />
+                      <CoinTransferPanel character={character} busy={busy} refresh={refreshAll} />
+                      <CharacterCarePanel character={character} busy={busy} run={run} refresh={refreshAll} notify={setMessage} />
+                      <TrainingBloodPanel character={character} inventory={inventory} busy={busy} run={run} refresh={refreshAll} />
+                    </div>
 
-          <nav className="survival-bottom-nav" aria-label="모바일 메뉴">
-            {navigation.filter(([id]) => ['home', 'character', 'investigation', 'battle'].includes(id)).map(([id, label, symbol]) => (
-                <button type="button" key={id} className={view === id ? 'is-active' : ''} onClick={() => navigate(id)}>
-                  <NavIcon name={symbol} className="survival-nav-icon" />
-                  {label}
-                </button>
-            ))}
+                    <div className="survival-page" style={display('battle')}>
+                      <BattlePanel inventory={inventory} busy={busy} run={run} refresh={refreshAll} revision={revision} />
+                    </div>
 
-            <button type="button" onClick={() => setMenuOpen(!menuOpen)}>
-              <span>☰</span>
-              더보기
-            </button>
-          </nav>
+                    <div className="survival-page" style={display('records')}>
+                      <RecordsPanel />
+                    </div>
+
+                    <div className="survival-page" style={display('inventory')}>
+                      <InventoryPanel character={character} inventory={inventory} storage={storage} errors={errors} busy={busy} run={run} refresh={refreshAll} notify={setMessage} />
+                    </div>
+
+                    <div className="survival-page" style={display('investigation')}>
+                      <InvestigationPanel activeBattle={character?.in_active_battle} battleError={errors.character} investigationApCost={investigationApCost} areas={areas} character={character} error={errors.areas} characterError={errors.character} busy={busy} run={run} refresh={refreshAll} notify={setMessage} />
+                    </div>
+
+                    {provider === 'dev' && (
+                        <div className="survival-page" style={display('records')}>
+                          <ActionLogPanel logs={logs} error={errors.logs} busy={busy} run={run} refresh={refreshAll} />
+                        </div>
+                    )}
+
+                    <div className="survival-page" style={display('shop')}>
+                      <ShopPanel products={products} character={character} error={errors.products} busy={busy} run={run} refresh={refreshAll} notify={setMessage} />
+                    </div>
+
+                    <div className="survival-page" style={display('cooking')}>
+                      <CookingPanel activeBattle={character?.in_active_battle} battleError={errors.character} inventory={inventory} catalog={cooking} character={character} error={errors.cooking} busy={busy} run={run} refresh={refreshAll} notify={setMessage} />
+                    </div>
+
+                    <div className="survival-page" style={display('gacha')}>
+                      <GachaPanel gachas={gachas} character={character} error={errors.gachas} busy={busy} run={run} refresh={refreshAll} notify={setMessage} />
+                    </div>
+                  </>
+              )}
+            </main>
+
+            <nav className="survival-bottom-nav" aria-label="모바일 메뉴">
+              {navigation.filter(([id]) => ['home', 'character', 'investigation', 'battle'].includes(id)).map(([id, label, symbol]) => (
+                  <button key={id} type="button" className={view === id ? 'is-active' : ''} onClick={() => navigate(id)}>
+                    <NavIcon name={symbol} className="survival-nav-icon" />
+                    {label}
+                  </button>
+              ))}
+
+              <button type="button" onClick={() => setMenuOpen(!menuOpen)}>
+                <span>☰</span>
+                더보기
+              </button>
+            </nav>
+          </div>
         </div>
-      </div>
       </AnemiaPolicyContext.Provider>
   );
 }

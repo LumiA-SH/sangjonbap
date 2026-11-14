@@ -6,9 +6,8 @@ import {requestKey} from './master-service.js';
 export const eventNames=['death','revive','area_unlock','monster_discovery','clue_discovery','investigation_progress','story','raid','gacha','failure_food'];
 export const policyDefaults={
  anemia:{enabled:false,stages:[]},
- donation:{enabled:false,cost:null,recovery:null,minimumRemaining:null,maximum:null,dailyLimitEnabled:false,dailyLimit:null},
  announcements:{events:Object.fromEntries(eventNames.map(name=>[name,{enabled:false,template:'',visibility:null,deduplicate:true,retryEnabled:false,maxAttempts:null,retryMinutes:null,thresholds:[]}]))},
- homepage:{enabled:false,accountId:null,noticeTag:null,eventTag:null,limit:null,publicOnly:true,excludeReplies:true,excludeBoosts:true},
+ homepage:{enabled:false,accountId:null,noticeTag:null,eventTag:null,limit:null,publicOnly:true,excludeReplies:true},
  recovery:{recipe:'HOLD',gacha:'HOLD',battle:'HOLD'}
 };
 const invalid=()=>{throw new AppError(400,'INVALID_POLICY','정책의 필수값과 범위를 확인하세요.');};
@@ -24,13 +23,6 @@ export function validatePolicy(kind,v){
    if(stage.min>stage.max||!Number.isInteger(stage.order)||stage.order<0||stage.order>2147483647)invalid();
   }
   if(v.enabled||v.stages.length){const sorted=[...v.stages].sort((a,b)=>a.min-b.min);let next=1;for(const s of sorted){if(s.min!==next)invalid();next=s.max+1;}if(next!==101)invalid();}
- }else if(kind==='donation'){
-  bool(v.enabled);bool(v.dailyLimitEnabled);
-  for(const k of ['cost','recovery','maximum'])number(v[k],1,100);
-  number(v.minimumRemaining,0,100);number(v.dailyLimit,1,2147483647);
-  if(v.enabled&&(['cost','recovery','maximum','minimumRemaining'].some(k=>v[k]===null)||(v.dailyLimitEnabled&&v.dailyLimit===null)))invalid();
-  if(v.cost!==null&&v.maximum!==null&&v.cost>v.maximum)invalid();
-  if(v.cost!==null&&v.minimumRemaining!==null&&v.cost+v.minimumRemaining>100)invalid();
  }else if(kind==='announcements'){
   object(v.events,eventNames.filter(name=>!['gacha','failure_food'].includes(name)||Object.hasOwn(v.events,name)));
   for(const [name,e] of Object.entries(v.events)){
@@ -61,7 +53,7 @@ export async function readPolicy(client,kind,lock=false){
 }
 export function createOperatingPolicyRepository(pool){return {
  async getAnemiaPolicy(){const row=(await pool.query("select config_value from public.system_config where config_key='operating_anemia'")).rows[0];if(!row)return {settings:null};return {settings:validatePolicy('anemia',row.config_value)};},
- async getOperatingPolicy(kind){return {settings:await readPolicy(pool,kind),executionReady:kind==='donation'};},
+ async getOperatingPolicy(kind){return {settings:await readPolicy(pool,kind),executionReady:false};},
  async saveOperatingPolicy(actor,kind,body){
   object(body,['settings','before','requestKey']);const key=requestKey(body),settings=validatePolicy(kind,body.settings);
   return adminTransaction(pool,async c=>{
@@ -71,7 +63,7 @@ export function createOperatingPolicyRepository(pool){return {
    if(!row.unchanged)throw new AppError(409,'POLICY_CHANGED','다른 관리자가 변경했습니다. 다시 조회하세요.');
    await c.query('update public.system_config set config_value=$2::jsonb where config_key=$1',['operating_'+kind,JSON.stringify(settings)]);
    await writeActionLog(c,{adminUserId:actor,category:'ADMIN',actionType:'OPERATING_POLICY_UPDATE',description:'운영 정책 변경',detail:{kind,before:row.config_value,after:settings},requestKey:key});
-   return {settings,executionReady:kind==='donation'};
+   return {settings,executionReady:false};
   });
  }
 };}

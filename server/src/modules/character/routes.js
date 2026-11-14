@@ -69,7 +69,5 @@ export function characterRoutes(repository, sessions,config={}) {
   router.get('/:characterId/public',async(req,res)=>ok(res,await interaction('getPublicCharacter')(req.auth.user.id,req.params.characterId)));
   router.get('/:characterId/care-preview',async(req,res)=>ok(res,await interaction('previewCare')(req.auth.user.id,req.params.characterId,req.query.action)));
   router.post('/:characterId/coins',async(req,res)=>ok(res,await interaction('transferCoins')(req.auth.user.id,req.params.characterId,req.body)));
-  router.get('/:characterId/donation-preview',async(req,res)=>ok(res,await repository.previewDonation(req.auth.user.id,req.params.characterId)));
-  router.post('/:characterId/donate',async(req,res)=>ok(res,await repository.donateBlood(req.auth.user.id,req.params.characterId,req.body)));
   return router;
 }

@@ -3,7 +3,6 @@ import {api} from '../api/client';
 
 const names = {
  anemia: '빈혈 RP 단계',
- donation: '직접 헌혈',
  announcements: '시스템 공지 정책',
  homepage: '홈페이지 공지·이벤트',
  recovery: '과거 데이터 복구 정책'
@@ -11,12 +10,6 @@ const names = {
 
 const labels = {
  enabled: '활성화',
- cost: '헌혈자 소비 혈량',
- recovery: '수혜자 회복 혈량',
- minimumRemaining: '헌혈 후 최소 혈량',
- maximum: '1회 최대 헌혈량',
- dailyLimitEnabled: '일일 횟수 제한 사용',
- dailyLimit: '일일 횟수',
  template: '게시 문구 ({character}, {provider}, {reward}, {quantity}, {rp}, {area}, {monster}, {clue}, {progress}, {event})',
  visibility: '공개 범위',
  deduplicate: '중복 게시 방지',
@@ -45,10 +38,10 @@ const labels = {
  failure_food: '실패 음식 섭취 RP'
 };
 
-const numbers = ['cost', 'recovery', 'minimumRemaining', 'maximum', 'dailyLimit', 'maxAttempts', 'retryMinutes', 'limit'];
+const numbers = ['maxAttempts', 'retryMinutes', 'limit'];
 
 export default function OperatingPolicyPanel({onDenied}) {
- const [kind, setKind] = useState('donation');
+ const [kind, setKind] = useState('anemia');
  const [draft, setDraft] = useState(null);
  const [before, setBefore] = useState(null);
  const [message, setMessage] = useState('');
@@ -198,7 +191,6 @@ export default function OperatingPolicyPanel({onDenied}) {
 
  function getDescription() {
   if (kind === 'anemia') return '표시 전용입니다. 활성화 시 혈량 1~100을 빠짐없이 한 번씩 포함해야 합니다. 혈량 0과 사망 상태는 변경할 수 없습니다.';
-  if (kind === 'donation') return '미확정 수치는 비워 두세요. 활성화하려면 필수 수치를 모두 설정해야 합니다. 1회 고정 소비·회복량이며 최대 헌혈량 이내로 제한합니다.';
   if (kind === 'recovery') return '조회·미리보기 정책만 저장합니다. 복구 실행 및 과거 데이터 변경은 차단됩니다.';
   return '연동 준비용 정책입니다. 저장해도 실제 게시·수집은 실행되지 않으며 기존 홈페이지 안내를 유지합니다. 게시 실패 기록·재시도 실행은 연동 단계에서 구현합니다.';
  }
