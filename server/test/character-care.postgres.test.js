@@ -79,14 +79,14 @@ test('PostgreSQL character care, rollback and concurrency', {
     const heal = (provider = 0, target = 1, key = randomUUID()) => service.heal(users[provider], ids[target], {requestKey: key});
     const revive = (provider = 0, target = 1, key = randomUUID()) => service.revive(users[provider], ids[target], {requestKey: key});
     const rejects = (promise, code) => assert.rejects(promise, error => error.code === code);
-    async function scenario(name, fn) { await t.test(name, async () => { await reset(); await fn(); }); }
+    async function scenario(name, fn) {await t.test(name, async () => {await reset(); await fn();});}
 
     try {
-        await scenario('ACTIVE battle forbids self healing and provider healing another character',async()=>{
-            await pool.query("update public.battle set battle_status='ACTIVE' where id=$1",[battleId]);
-            await rejects(heal(1,1),'TARGET_IN_ACTIVE_BATTLE');
-            await rejects(heal(1,0),'PROVIDER_IN_ACTIVE_BATTLE');
-            assert.equal((await logs('HEAL')).length,0);
+        await scenario('ACTIVE battle forbids self healing and provider healing another character', async () => {
+            await pool.query("update public.battle set battle_status='ACTIVE' where id=$1", [battleId]);
+            await rejects(heal(1, 1), 'TARGET_IN_ACTIVE_BATTLE');
+            await rejects(heal(1, 0), 'PROVIDER_IN_ACTIVE_BATTLE');
+            assert.equal((await logs('HEAL')).length, 0);
         });
         await scenario('ACTIVE battle rejects external healing with no resource or log changes', async () => {
             await pool.query("update public.battle set battle_status='ACTIVE' where id=$1", [battleId]);
@@ -120,13 +120,17 @@ test('PostgreSQL character care, rollback and concurrency', {
             assert.equal((await get(2)).revive_count, 0);
         });
         await scenario('death log failure rolls back death transition and count', async () => {
-            const failingCore = createPostgresRepository({async connect() {
-                const client = await pool.connect();
-                return {query(sql, params) {
-                    if (sql.includes('insert into public.action_log')) throw new Error('injected death log error');
-                    return client.query(sql, params);
-                }, release: () => client.release()};
-            }});
+            const failingCore = createPostgresRepository({                
+async connect() {
+                    const client = await pool.connect();
+                    return {                        
+query(sql, params) {
+                            if (sql.includes('insert into public.action_log')) throw new Error('injected death log error');
+                            return client.query(sql, params);
+                        }, release: () => client.release()                    
+};
+                }            
+});
             await assert.rejects(failingCore.changeResources(users[1], {hp: -50}, 'death rollback'), /injected death log error/);
             assert.equal((await get(1)).hp, 50);
             assert.equal((await get(1)).status, 'ALIVE');
@@ -134,7 +138,7 @@ test('PostgreSQL character care, rollback and concurrency', {
         });
         await scenario('DEAD remains DEAD when blood falls to zero', async () => {
             await dead(1);
-            await assert.rejects(core.changeResources(users[1], {blood: -100}, 'dead blood test'),{code:'CHARACTER_DEAD'});
+            await assert.rejects(core.changeResources(users[1], {blood: -100}, 'dead blood test'), {code: 'CHARACTER_DEAD'});
             const target = await get(1);
             assert.equal(target.status, 'DEAD');
             assert.equal(target.death_count, 1);
@@ -142,7 +146,7 @@ test('PostgreSQL character care, rollback and concurrency', {
         });
         await scenario('HP zero dies once, logs once and preserves inventory', async () => {
             await core.changeResources(users[1], {hp: -50}, 'death test');
-            await assert.rejects(core.changeResources(users[1], {hp: -10}, 'repeated death test'),{code:'CHARACTER_DEAD'});
+            await assert.rejects(core.changeResources(users[1], {hp: -10}, 'repeated death test'), {code: 'CHARACTER_DEAD'});
             const target = await get(1);
             assert.equal(target.status, 'DEAD');
             assert.equal(target.death_count, 1);
@@ -282,13 +286,17 @@ test('PostgreSQL character care, rollback and concurrency', {
             assert.equal((await get(0)).hp + (await get(2)).hp, 120);
         });
         await scenario('log error rolls back both heal and revive mutations', async () => {
-            const failingPool = {async connect() {
-                const client = await pool.connect();
-                return {query(sql, params) {
-                    if (sql.includes('insert into public.action_log')) throw new Error('injected log error');
-                    return client.query(sql, params);
-                }, release: () => client.release()};
-            }};
+            const failingPool = {                
+async connect() {
+                    const client = await pool.connect();
+                    return {                        
+query(sql, params) {
+                            if (sql.includes('insert into public.action_log')) throw new Error('injected log error');
+                            return client.query(sql, params);
+                        }, release: () => client.release()                    
+};
+                }            
+};
             const failing = createCharacterCareService(createCharacterCareRepository(failingPool));
             await assert.rejects(failing.heal(users[0], ids[1], {requestKey: randomUUID()}), /injected log error/);
             assert.equal((await get(0)).blood, 100);
@@ -331,8 +339,8 @@ test('PostgreSQL character care, rollback and concurrency', {
                 await cleanup.query('delete from public.game_character where id=any($1::bigint[])', [ids]);
                 await cleanup.query('delete from public.item where id=$1', [itemId]);
                 await cleanup.query('commit');
-            } catch (error) { await cleanup.query('rollback'); throw error; }
-            finally { cleanup.release(); await pool.end(); }
+            } catch (error) {await cleanup.query('rollback'); throw error;}
+            finally {cleanup.release(); await pool.end();}
         }
     }
 });

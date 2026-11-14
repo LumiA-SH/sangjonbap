@@ -20,7 +20,7 @@ test('unconfigured start never invents historical dates; catch-up advances one d
     assert.equal(nextPendingDate('2026-10-06', '2026-10-08', '2026-10-08'), null);
 });
 
-const settings = value => ({async query() { return {rows: [{config_key: 'permanent_stat_cap', config_value: value}]}; }});
+const settings = value => ({async query() {return {rows: [{config_key: 'permanent_stat_cap', config_value: value}]};} });
 test('training candidates exclude capped stats and growth clamps without altering input', async () => {
     const character = {atk: 20, def: 19, agi: 21};
     const context = await loadTrainingGrowthContext(settings(20), character);

@@ -26,5 +26,5 @@ test('DEV logs SQL returns own latest 30 with stable sorting and exact request f
         assert.equal(logs[29].description, '2');
         assert.ok(logs.every(log => log.character_id === ids[0]));
         assert.equal((await repo.getDevActionLogs(user.id, key)).length, 1);
-    } finally { await client.query('rollback'); client.release(); await pool.end(); }
+    } finally {await client.query('rollback'); client.release(); await pool.end();}
 });

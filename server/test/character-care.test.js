@@ -7,7 +7,7 @@ import {createApp} from '../src/app.js';
 
 test('care input validation rejects forged providers, malformed keys and unsafe IDs', async () => {
     let called = false;
-    const service = createCharacterCareService({performCharacterCare() { called = true; }});
+    const service = createCharacterCareService({performCharacterCare() {called = true;} });
     for (const target of ['0', '-1', '1e2', '9223372036854775808', '01']) {
         await assert.rejects(service.heal('1', target, {requestKey: randomUUID()}), {code: 'INVALID_CHARACTER_ID'});
     }
@@ -30,9 +30,11 @@ test('care routes authenticate, pass session ownership and return the common env
     t.after(() => new Promise(resolve => server.close(resolve)));
     const base = `http://127.0.0.1:${server.address().port}/api`;
     async function post(path, body, token) {
-        const response = await fetch(base + path, {method: 'POST', headers: {
-            'Content-Type': 'application/json', ...(token ? {Authorization: `Bearer ${token}`} : {})
-        }, body: JSON.stringify(body)});
+        const response = await fetch(base + path, {            
+method: 'POST', headers: {
+                'Content-Type': 'application/json', ...(token ? {Authorization: `Bearer ${token}`} : {})
+            }, body: JSON.stringify(body)        
+});
         return {status: response.status, ...await response.json()};
     }
     assert.equal((await post('/characters/2/heal', {requestKey: randomUUID()})).status, 401);

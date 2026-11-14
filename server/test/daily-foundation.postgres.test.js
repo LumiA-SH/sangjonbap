@@ -17,10 +17,12 @@ test('daily transaction engine: real PostgreSQL isolated history and fixture-onl
     // public reset state/history or existing characters/settings are modified.
     const rewrite = sql => sql.replaceAll('public.daily_reset_', `${schema}.daily_reset_`)
         .replaceAll('public.system_config', `${schema}.system_config`);
-    const scoped = {query: (sql, params) => pool.query(rewrite(sql), params), async connect() {
-        const client = await pool.connect();
-        return {query: (sql, params) => client.query(rewrite(sql), params), release: () => client.release()};
-    }};
+    const scoped = {        
+query: (sql, params) => pool.query(rewrite(sql), params), async connect() {
+            const client = await pool.connect();
+            return {query: (sql, params) => client.query(rewrite(sql), params), release: () => client.release()};
+        }    
+};
     const repo = createDailyResetRepository(scoped);
     try {
         await pool.query(`create schema ${schema}`);
@@ -53,8 +55,10 @@ test('daily transaction engine: real PostgreSQL isolated history and fixture-onl
                     ap: Number(before.max_ap) - Number(before.ap)
                 });
                 await client.query('update public.game_character set daily_meal_count=0,daily_training_done=false where id=$1', [before.id]);
-                await writeActionLog(client, {characterId: before.id, category: 'CHARACTER', actionType: 'DAILY_RESET_TEST',
-                    description: 'Isolated daily foundation test', detail: {day, before, after}});
+                await writeActionLog(client, {                    
+characterId: before.id, category: 'CHARACTER', actionType: 'DAILY_RESET_TEST',
+                    description: 'Isolated daily foundation test', detail: {day, before, after}                
+});
             }
             return {testPolicy: true, bloodDecay: currentSettings.daily_blood_decay};
         };
@@ -71,7 +75,7 @@ test('daily transaction engine: real PostgreSQL isolated history and fixture-onl
                 await client.query("set local time zone 'America/Los_Angeles'");
                 const status = await createDailyResetRepository({query: (...args) => client.query(...args)}).getStatus();
                 assert.equal(status.today, today);
-            } finally { await client.query('rollback'); client.release(); }
+            } finally {await client.query('rollback'); client.release();}
         });
         await t.test('one missed date and duplicate execution apply only once', async () => {
             await reset(today);
@@ -98,7 +102,7 @@ test('daily transaction engine: real PostgreSQL isolated history and fixture-onl
         });
         await t.test('failure after mutations rolls back history, resources and logs; retry succeeds', async () => {
             await reset(today);
-            await assert.rejects(repo.runNextDay(async context => { await applyFixtureDay(context); throw new Error('injected failure'); }), /injected failure/);
+            await assert.rejects(repo.runNextDay(async context => {await applyFixtureDay(context); throw new Error('injected failure');}), /injected failure/);
             assert.equal((await get(0)).blood, 35);
             assert.equal((await scoped.query('select * from public.daily_reset_run')).rowCount, 0);
             assert.equal((await pool.query('select * from public.action_log where character_id=any($1::bigint[])', [ids])).rowCount, 0);
@@ -132,6 +136,6 @@ test('daily transaction engine: real PostgreSQL isolated history and fixture-onl
             await pool.query('delete from public.action_log where character_id=any($1::bigint[])', [ids]);
             await pool.query('delete from public.game_character where id=any($1::bigint[])', [ids]);
             if (created) await pool.query(`drop schema ${schema} cascade`);
-        } finally { await pool.end(); }
+        } finally {await pool.end();}
     }
 });

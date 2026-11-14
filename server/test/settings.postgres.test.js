@@ -51,8 +51,8 @@ test('PostgreSQL configuration changes are transaction-isolated and drive game r
             await t.test(name, async () => {
                 await client.query('savepoint scenario');
                 configReads = 0;
-                try { await fn(); }
-                finally { await client.query('rollback to savepoint scenario'); await client.query('release savepoint scenario'); }
+                try {await fn();}
+                finally {await client.query('rollback to savepoint scenario'); await client.query('release savepoint scenario');}
             });
         }
         await scenario('actual JSONB numeric setting is read', async () => {
@@ -129,6 +129,6 @@ test('PostgreSQL configuration changes are transaction-isolated and drive game r
         await client.query('rollback');
         try {
             assert.deepEqual((await client.query('select config_key,config_value from public.system_config order by config_key')).rows, baseline);
-        } finally { client.release(); await pool.end(); }
+        } finally {client.release(); await pool.end();}
     }
 });

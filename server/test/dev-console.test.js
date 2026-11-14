@@ -5,21 +5,25 @@ import {createMemoryRepository} from '../src/db/memory.js';
 import {manageDevCareAccount} from '../scripts/dev-care-account.js';
 
 async function setup(t, overrides = {}) {
-    const config = {nodeEnv: 'development', provider: 'dev', userId: '1',
-        loginKey: 'dev-test-only-key', origin: 'http://localhost:3000', ...overrides};
+    const config = {        
+nodeEnv: 'development', provider: 'dev', userId: '1',
+        loginKey: 'dev-test-only-key', origin: 'http://localhost:3000', ...overrides    
+};
     const repository = createMemoryRepository();
     const calls = [];
-    repository.getDevActionLogs = async (...args) => { calls.push(args); return [{id: '3', action_type: 'HEAL'}]; };
+    repository.getDevActionLogs = async (...args) => {calls.push(args); return [{id: '3', action_type: 'HEAL'}];};
     const server = createApp(config, repository).listen(0, '127.0.0.1');
     await new Promise(resolve => server.once('listening', resolve));
     t.after(() => new Promise(resolve => server.close(resolve)));
     const base = `http://127.0.0.1:${server.address().port}/api`;
     const signed = await fetch(base + '/auth/dev/login', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({key: config.loginKey})});
     const token = (await signed.json()).data?.token;
-    return {repository, calls, async get(query = '', authenticated = true) {
-        const response = await fetch(base + '/dev/action-logs' + query, {headers: authenticated ? {Authorization: `Bearer ${token}`} : {}});
-        return {status: response.status, body: await response.json()};
-    }};
+    return {        
+repository, calls, async get(query = '', authenticated = true) {
+            const response = await fetch(base + '/dev/action-logs' + query, {headers: authenticated ? {Authorization: `Bearer ${token}`} : {}});
+            return {status: response.status, body: await response.json()};
+        }    
+};
 }
 
 test('DEV logs require login, server-owned identity and valid scoped query', async t => {
@@ -44,12 +48,14 @@ for (const config of [{nodeEnv: 'production'}, {nodeEnv: 'test'}, {provider: 'oa
 test('DEV care seed reuses its marked account without changing resources; conflict rejects', async () => {
     const queries = [];
     const character = {id: '8', profile_image_url: 'urn:sangjonbap:dev:care-account:v1', is_active: true};
-    const client = {async query(sql) {
-        queries.push(sql);
-        if (sql.startsWith('select * from public.game_character')) return {rowCount: 1, rows: [character]};
-        if (sql.startsWith('select id,role')) return {rowCount: 1, rows: [{id: '9', role: 'USER', is_active: true}]};
-        return {rowCount: 0, rows: []};
-    }};
+    const client = {        
+async query(sql) {
+            queries.push(sql);
+            if (sql.startsWith('select * from public.game_character')) return {rowCount: 1, rows: [character]};
+            if (sql.startsWith('select id,role')) return {rowCount: 1, rows: [{id: '9', role: 'USER', is_active: true}]};
+            return {rowCount: 0, rows: []};
+        }    
+};
     assert.equal((await manageDevCareAccount(client)).characterId, '8');
     assert.equal((await manageDevCareAccount(client)).characterId, '8');
     assert.equal(queries.some(sql => /^(insert|update|delete)/.test(sql)), false);

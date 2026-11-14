@@ -2,11 +2,15 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readNumberSettings, resourceNumber} from '../src/shared/settings.js';
 
-const clientFor = entries => ({async query(sql, params) {
-    assert.match(sql, /where config_key=any\(\$1::text\[\]\)/);
-    return {rows: Object.entries(entries).filter(([key]) => params[0].includes(key))
-        .map(([config_key, config_value]) => ({config_key, config_value}))};
-}});
+const clientFor = entries => ({    
+async query(sql, params) {
+        assert.match(sql, /where config_key=any\(\$1::text\[\]\)/);
+        return {            
+rows: Object.entries(entries).filter(([key]) => params[0].includes(key))
+                .map(([config_key, config_value]) => ({config_key, config_value}))        
+};
+    }
+});
 
 test('settings reads JSONB numbers with independent number/integer requirements', async () => {
     assert.deepEqual(await readNumberSettings(clientFor({cost: 7, factor: 2.5}), {
