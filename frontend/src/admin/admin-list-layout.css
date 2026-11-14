@@ -1,9 +1,10 @@
 /* ========================================
-   MONSTER / CLUE LIST TOOLBARS
+   01. ADMIN COMMON TOOLBAR
 ======================================== */
 
-.admin-monster-actions,
-.admin-clue-actions {
+.admin-panel .admin-content .admin-toolbar-actions,
+.admin-panel .admin-content .admin-monster-actions,
+.admin-panel .admin-content .admin-clue-actions {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -11,152 +12,313 @@
     margin: 16px 0 20px;
 }
 
-.admin-panel .admin-monster-actions button,
-.admin-panel .admin-clue-actions button {
+.admin-panel .admin-content .admin-toolbar-actions button,
+.admin-panel .admin-content .admin-monster-actions button,
+.admin-panel .admin-content .admin-clue-actions button {
     margin: 0;
 }
 
 /* ========================================
-   TWO-COLUMN ADMIN LIST
+   02. ALL TWO-COLUMN RECORD LISTS
+
+   적용 대상
+   - 아이템 / 상점 상품
+   - 음식 / 음식 등급
+   - 레시피 / 가챠
+   - 구역
+   - 마물 / 단서
 ======================================== */
 
-.admin-panel .admin-two-column-list {
+.admin-panel .admin-content :is(
+    ul.admin-records,
+    ul.admin-master-records,
+    ul.admin-two-column-list,
+    section[aria-label="마스터 관리"] > ul
+) {
     position: relative;
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
     gap: 0;
     width: 100%;
     min-width: 0;
-    margin: 16px 0;
-    padding: 0;
-    border: 1px solid #dedee1;
+    margin: 18px 0;
+    padding: 0 !important;
+    border: 1px solid #d8d8dc;
     border-radius: 9px;
     background: #ffffff;
     list-style: none;
     overflow: hidden;
 }
 
-/* 가운데 구분선은 각 행이 아닌 목록 전체에 적용 */
-.admin-panel .admin-two-column-list::before {
+/* 행별 border-left 대신 목록 전체에 세로선 1개 */
+
+.admin-panel .admin-content :is(
+    ul.admin-records,
+    ul.admin-master-records,
+    ul.admin-two-column-list,
+    section[aria-label="마스터 관리"] > ul
+)::before {
     position: absolute;
     z-index: 1;
     top: 0;
     bottom: 0;
     left: 50%;
+    display: block;
     width: 1px;
-    background: #d4d4d7;
+    height: auto;
+    background: #d4d4d8;
     content: '';
     pointer-events: none;
 }
 
-.admin-panel .admin-two-column-list > li {
+/* ========================================
+   03. RECORD ROWS
+======================================== */
+
+.admin-panel .admin-content :is(
+    ul.admin-records,
+    ul.admin-master-records,
+    ul.admin-two-column-list,
+    section[aria-label="마스터 관리"] > ul
+) > li {
     display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
     align-items: center;
     justify-content: space-between;
-    gap: 16px;
+    gap: 14px;
     min-width: 0;
-    min-height: 92px;
+    min-height: 82px;
     margin: 0;
-    padding: 17px 20px;
-    border: 0;
-    border-bottom: 1px solid #e5e5e7;
+    padding: 14px 18px;
+    border: 0 !important;
+    border-bottom: 1px solid #e5e5e8 !important;
     background: transparent;
+    overflow-wrap: anywhere;
 }
 
-.admin-panel .admin-two-column-list > li:last-child {
-    border-bottom: 0;
+/* 기존 짝수 항목의 border-left 제거 */
+
+.admin-panel .admin-content :is(
+    ul.admin-records,
+    ul.admin-master-records,
+    ul.admin-two-column-list,
+    section[aria-label="마스터 관리"] > ul
+) > li:nth-child(even) {
+    border-left: 0 !important;
 }
 
-.admin-panel .admin-two-column-list > li:nth-child(odd):last-child,
-.admin-panel .admin-two-column-list > li:nth-last-child(2):nth-child(odd) {
-    border-bottom: 0;
-}
+/*
+   마지막 줄만 아래쪽 선 제거
 
-.admin-panel .admin-two-column-list > li:nth-child(even):last-child {
-    border-bottom: 0;
+   짝수 개: 마지막 2개
+   홀수 개: 마지막 1개
+
+   기존 nth-last-child(-n+2) 문제 해결
+*/
+
+.admin-panel .admin-content :is(
+    ul.admin-records,
+    ul.admin-master-records,
+    ul.admin-two-column-list,
+    section[aria-label="마스터 관리"] > ul
+) > li:last-child,
+.admin-panel .admin-content :is(
+    ul.admin-records,
+    ul.admin-master-records,
+    ul.admin-two-column-list,
+    section[aria-label="마스터 관리"] > ul
+) > li:nth-last-child(2):nth-child(odd) {
+    border-bottom: 0 !important;
 }
 
 /* ========================================
-   LIST ITEM CONTENT
+   04. RECORD INFORMATION
 ======================================== */
 
-.admin-list-detail {
+.admin-panel .admin-content .admin-record-summary,
+.admin-panel .admin-content .admin-list-detail {
     display: flex;
     flex: 1 1 auto;
     flex-direction: column;
     align-items: flex-start;
-    gap: 6px;
+    justify-content: center;
+    gap: 5px;
     min-width: 0;
+    text-align: left;
     overflow-wrap: anywhere;
 }
 
-.admin-list-detail strong {
+.admin-panel .admin-content .admin-record-summary strong,
+.admin-panel .admin-content .admin-list-detail strong {
+    display: block;
+    max-width: 100%;
     color: #242428;
     font-size: 14px;
     font-weight: 800;
     line-height: 1.5;
+    overflow-wrap: anywhere;
 }
 
-.admin-list-detail small {
+.admin-panel .admin-content .admin-record-summary small,
+.admin-panel .admin-content .admin-list-detail small {
     display: block;
-    color: #6e6e73;
+    max-width: 100%;
+    color: #727277;
     font-size: 12px;
     line-height: 1.6;
 }
 
-.admin-panel .admin-two-column-list > li > button {
-    flex: 0 0 auto;
-    min-width: 80px;
-    margin: 0;
-    white-space: nowrap;
+.admin-panel .admin-content .admin-record-summary details {
+    width: fit-content;
+    max-width: 100%;
+    padding: 2px 0;
+    border: 0;
+    background: transparent;
+    color: #77777b;
+    font-size: 11px;
 }
 
-.admin-panel .admin-two-column-list > li > button:hover:not(:disabled) {
+.admin-panel .admin-content .admin-record-summary summary {
+    cursor: pointer;
+}
+
+/* ========================================
+   05. RECORD BUTTONS
+======================================== */
+
+.admin-panel .admin-content :is(
+    ul.admin-records,
+    ul.admin-master-records,
+    ul.admin-two-column-list,
+    section[aria-label="마스터 관리"] > ul
+) > li > button {
+    flex: 0 0 auto;
+    min-width: 82px;
+    min-height: 40px;
+    margin: 0 0 0 auto !important;
+    padding: 9px 12px;
+    white-space: nowrap;
+    text-align: center;
+}
+
+.admin-panel .admin-content :is(
+    ul.admin-records,
+    ul.admin-master-records,
+    ul.admin-two-column-list,
+    section[aria-label="마스터 관리"] > ul
+) > li > button:hover:not(:disabled) {
     border-color: #650c13;
     background: #f7eded;
     color: #650c13;
 }
 
 /* ========================================
-   RESPONSIVE
+   06. EMPTY / SINGLE RECORD
 ======================================== */
 
-@media (max-width: 1080px) {
-    .admin-panel .admin-two-column-list {
+.admin-panel .admin-content :is(
+    ul.admin-records,
+    ul.admin-master-records,
+    ul.admin-two-column-list,
+    section[aria-label="마스터 관리"] > ul
+):empty {
+    display: none;
+}
+
+.admin-panel .admin-content :is(
+    ul.admin-records,
+    ul.admin-master-records,
+    ul.admin-two-column-list,
+    section[aria-label="마스터 관리"] > ul
+) > li:only-child {
+    border-bottom: 0 !important;
+}
+
+/* ========================================
+   07. TABLET / SMALL WINDOW
+======================================== */
+
+@media (max-width: 1150px) {
+    .admin-panel .admin-content :is(
+        ul.admin-records,
+        ul.admin-master-records,
+        ul.admin-two-column-list,
+        section[aria-label="마스터 관리"] > ul
+    ) {
         grid-template-columns: minmax(0, 1fr);
     }
 
-    .admin-panel .admin-two-column-list::before {
+    .admin-panel .admin-content :is(
+        ul.admin-records,
+        ul.admin-master-records,
+        ul.admin-two-column-list,
+        section[aria-label="마스터 관리"] > ul
+    )::before {
         display: none;
     }
 
-    .admin-panel .admin-two-column-list > li {
-        border-bottom: 1px solid #e5e5e7 !important;
+    .admin-panel .admin-content :is(
+        ul.admin-records,
+        ul.admin-master-records,
+        ul.admin-two-column-list,
+        section[aria-label="마스터 관리"] > ul
+    ) > li {
+        border-left: 0 !important;
+        border-bottom: 1px solid #e5e5e8 !important;
     }
 
-    .admin-panel .admin-two-column-list > li:last-child {
+    .admin-panel .admin-content :is(
+        ul.admin-records,
+        ul.admin-master-records,
+        ul.admin-two-column-list,
+        section[aria-label="마스터 관리"] > ul
+    ) > li:last-child {
         border-bottom: 0 !important;
     }
 }
 
+/* ========================================
+   08. MOBILE
+======================================== */
+
 @media (max-width: 600px) {
-    .admin-panel .admin-two-column-list > li {
+    .admin-panel .admin-content :is(
+        ul.admin-records,
+        ul.admin-master-records,
+        ul.admin-two-column-list,
+        section[aria-label="마스터 관리"] > ul
+    ) > li {
         gap: 10px;
-        min-height: 75px;
+        min-height: 70px;
         padding: 13px 12px;
     }
 
-    .admin-panel .admin-two-column-list > li > button {
-        min-width: 72px;
+    .admin-panel .admin-content :is(
+        ul.admin-records,
+        ul.admin-master-records,
+        ul.admin-two-column-list,
+        section[aria-label="마스터 관리"] > ul
+    ) > li > button {
+        min-width: 74px;
         padding: 9px 10px;
         font-size: 12px;
     }
 
-    .admin-list-detail strong {
+    .admin-panel .admin-content .admin-record-summary strong,
+    .admin-panel .admin-content .admin-list-detail strong {
         font-size: 13px;
     }
 
-    .admin-list-detail small {
+    .admin-panel .admin-content .admin-record-summary small,
+    .admin-panel .admin-content .admin-list-detail small {
         font-size: 11px;
+    }
+
+    .admin-panel .admin-content .admin-toolbar-actions,
+    .admin-panel .admin-content .admin-monster-actions,
+    .admin-panel .admin-content .admin-clue-actions {
+        gap: 8px;
     }
 }
