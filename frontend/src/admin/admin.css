@@ -1,36 +1,749 @@
-.survival-app[hidden] { display:none !important; }
-.admin-workspace { min-height:100vh; padding:clamp(12px,3vw,40px); background:#f3f0e8; color:var(--survival-ink,#242428); }
-.admin-panel,.admin-gate { max-width:1280px; margin:auto; }
-.admin-heading { display:flex; justify-content:space-between; align-items:center; gap:20px; border-bottom:3px solid var(--survival-red,#650c13); padding-bottom:20px; }
-.admin-heading h1 { margin:4px 0; }
-.admin-heading small { letter-spacing:.1em; }
-.admin-panel button { min-height:42px; cursor:pointer; border:1px solid #c8c0b2; border-radius:5px; padding:9px 14px; background:#fffdf8; color:inherit; }
-.admin-panel button:disabled { cursor:wait; opacity:.55; }
-.admin-panel button:focus-visible,.admin-panel input:focus-visible,.admin-panel select:focus-visible { outline:3px solid #9a7650; outline-offset:2px; }
-.admin-navigation { display:flex; flex-wrap:wrap; gap:8px; margin:24px 0; }
-.admin-navigation button[aria-current=page] { background:var(--survival-red,#650c13); color:white; border-color:transparent; }
-.admin-content { background:#fffdf8; border:1px solid #d5cebf; border-radius:10px; padding:clamp(16px,3vw,28px); min-width:0; }
-.admin-dashboard { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:14px; }
-.admin-dashboard button { display:flex; flex-direction:column; text-align:left; gap:14px; padding:24px; }
-.admin-dashboard span { font-size:.85rem; color:#655b50; }
-.admin-panel .actions,.admin-toolbar { display:flex; flex-wrap:wrap; gap:12px; align-items:center; }
-.admin-toolbar { margin:20px 0; }
-.admin-panel label { display:flex; flex-direction:column; gap:6px; }
-.admin-panel input:not([type=checkbox]),.admin-panel textarea,.admin-panel select { max-width:100%; min-height:40px; padding:8px; border:1px solid #b8b0a4; border-radius:4px; background:white; color:#242428; }
-.admin-panel textarea { min-height:88px; }
-.admin-panel form { display:grid; gap:14px; margin-top:20px; }
-.admin-panel ul { list-style:none; padding:0; }
-.admin-panel li { border-bottom:1px solid #e2dbd0; padding:12px 0; overflow-wrap:anywhere; }
-.admin-panel li button { margin-left:12px; }
-.admin-panel [role=alert] { color:#8b2028; overflow-wrap:anywhere; }
-.admin-panel table { display:block; max-width:100%; overflow-x:auto; }
-@media(max-width:640px) {
- .admin-heading { align-items:flex-start; flex-direction:column; }
- .admin-heading .actions { width:100%; }
- .admin-navigation { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); }
- .admin-navigation button { padding:9px 6px; font-size:.9rem; }
- .admin-dashboard { grid-template-columns:1fr; }
- .admin-toolbar { align-items:stretch; flex-direction:column; }
- .admin-panel form,.admin-content { min-width:0; }
- .admin-panel input,.admin-panel select { min-width:0; }
+/* ========================================
+   01. ADMIN WORKSPACE
+======================================== */
+
+.survival-app[hidden] {
+ display: none !important;
+}
+
+.admin-workspace {
+ --admin-red: #650c13;
+ --admin-dark: #242428;
+ --admin-border: #d0d0d3;
+ --admin-muted: #77777b;
+
+ width: 100%;
+ min-height: 100vh;
+ padding: 20px clamp(20px, 1.5vw, 36px);
+ background: #ededee;
+ color: var(--admin-dark);
+}
+
+.admin-panel,
+.admin-gate {
+ width: 100%;
+ max-width: none;
+ margin: 0;
+}
+
+.admin-panel {
+ display: grid;
+ grid-template-columns: 280px minmax(0, 1fr);
+ grid-template-areas:
+        "heading heading"
+        "access access"
+        "message message"
+        "navigation content";
+ align-items: start;
+ column-gap: 20px;
+ row-gap: 12px;
+ min-width: 0;
+}
+
+/* ========================================
+   02. HEADER
+======================================== */
+
+.admin-heading {
+ grid-area: heading;
+ position: relative;
+ display: flex;
+ align-items: center;
+ justify-content: space-between;
+ gap: 24px;
+ min-width: 0;
+ padding: 22px 30px 29px;
+ border: 1px solid var(--admin-border);
+ border-radius: 12px;
+ background: #f8f8f8;
+ box-shadow: 0 3px 8px #00000012;
+ overflow: hidden;
+}
+
+.admin-heading::after {
+ position: absolute;
+ right: 0;
+ bottom: 0;
+ left: 0;
+ height: 7px;
+ background: repeating-linear-gradient(
+         125deg,
+         #650c13 0,
+         #650c13 12px,
+         #ffffff 12px,
+         #ffffff 19px,
+         #242428 19px,
+         #242428 31px,
+         #ffffff 31px,
+         #ffffff 38px
+ );
+ content: '';
+}
+
+.admin-heading small {
+ display: block;
+ color: var(--admin-muted);
+ font-size: 11px;
+ font-weight: 700;
+ letter-spacing: 1.5px;
+}
+
+.admin-heading h1 {
+ margin: 5px 0 0;
+ font-size: clamp(26px, 2vw, 38px);
+ font-weight: 900;
+ letter-spacing: -1.5px;
+}
+
+.admin-heading .actions {
+ display: flex;
+ flex-wrap: wrap;
+ align-items: center;
+ justify-content: flex-end;
+ gap: 8px;
+ margin: 0;
+}
+
+/* ========================================
+   03. ACCESS STATUS
+======================================== */
+
+.admin-panel > p {
+ margin: 0;
+ overflow-wrap: anywhere;
+}
+
+.admin-panel > p:not([role]) {
+ grid-area: access;
+ padding: 3px 4px;
+ color: var(--admin-muted);
+ font-size: 12px;
+}
+
+.admin-panel > p[role="alert"] {
+ grid-area: message;
+}
+
+.admin-panel > p[role="alert"]:not(:empty) {
+ padding: 10px 14px;
+ border-left: 4px solid var(--admin-red);
+ border-radius: 5px;
+ background: #fff1f1;
+ color: #8b2028;
+ font-size: 13px;
+}
+
+/* ========================================
+   04. COMMON BUTTONS
+======================================== */
+
+.admin-panel button {
+ min-height: 40px;
+ padding: 9px 14px;
+ border: 1px solid #c9c9cc;
+ border-radius: 6px;
+ background: #ffffff;
+ color: var(--admin-dark);
+ font: inherit;
+ font-size: 13px;
+ font-weight: 650;
+ cursor: pointer;
+ transition:
+         background-color 0.15s ease,
+         border-color 0.15s ease,
+         color 0.15s ease;
+}
+
+.admin-panel button:hover:not(:disabled) {
+ border-color: var(--admin-red);
+ background: #f7eded;
+ color: var(--admin-red);
+}
+
+.admin-panel button:disabled {
+ opacity: 0.5;
+ cursor: not-allowed;
+}
+
+.admin-panel button:focus-visible,
+.admin-panel input:focus-visible,
+.admin-panel select:focus-visible,
+.admin-panel textarea:focus-visible {
+ outline: 2px solid var(--admin-red);
+ outline-offset: 2px;
+}
+
+.admin-heading .actions button:last-child {
+ border-color: var(--admin-red);
+ background: var(--admin-red);
+ color: #ffffff;
+}
+
+.admin-heading .actions button:last-child:hover:not(:disabled) {
+ background: #80141e;
+ color: #ffffff;
+}
+
+/* ========================================
+   05. DESKTOP SIDEBAR
+======================================== */
+
+.admin-navigation {
+ grid-area: navigation;
+ position: sticky;
+ top: 20px;
+ display: flex;
+ flex-direction: column;
+ gap: 3px;
+ min-width: 0;
+ max-height: calc(100vh - 40px);
+ margin: 0;
+ padding: 18px 12px;
+ border: 1px solid #303034;
+ border-radius: 12px;
+ background: linear-gradient(160deg, #303034, #222225);
+ box-shadow: 0 3px 9px #00000020;
+ overflow-x: hidden;
+ overflow-y: auto;
+ scrollbar-width: thin;
+ scrollbar-color: #77777b #303034;
+}
+
+.admin-navigation::before {
+ display: block;
+ margin: 4px 12px 13px;
+ padding-bottom: 14px;
+ border-bottom: 1px solid #ffffff25;
+ color: #bdbdc1;
+ font-size: 11px;
+ font-weight: 800;
+ letter-spacing: 2px;
+ content: 'OPERATIONS / MENU';
+}
+
+.admin-navigation button {
+ display: block;
+ width: 100%;
+ min-height: 43px;
+ padding: 11px 14px;
+ border: 0;
+ border-left: 3px solid transparent;
+ border-radius: 5px;
+ background: transparent;
+ color: #dedee0;
+ text-align: left;
+ font-size: 13px;
+ font-weight: 550;
+ white-space: normal;
+}
+
+.admin-navigation button:hover:not(:disabled) {
+ border-left-color: #b9575d;
+ background: #ffffff16;
+ color: #ffffff;
+}
+
+.admin-navigation button[aria-current="page"] {
+ border-left-color: #f3b1b5;
+ background: linear-gradient(90deg, #650c13, #79151c);
+ color: #ffffff;
+ font-weight: 800;
+}
+
+.admin-navigation button[aria-current="page"]:hover:not(:disabled) {
+ background: #80141e;
+ color: #ffffff;
+}
+
+/* ========================================
+   06. FULL WIDTH CONTENT
+======================================== */
+
+.admin-content {
+ grid-area: content;
+ width: 100%;
+ min-width: 0;
+ min-height: 600px;
+ margin: 0;
+ padding: clamp(22px, 2vw, 40px);
+ border: 1px solid var(--admin-border);
+ border-radius: 12px;
+ background: #fafafa;
+ box-shadow: 0 3px 8px #00000012;
+}
+
+.admin-content > h2 {
+ position: relative;
+ margin: 0 0 26px;
+ padding: 0 0 17px 17px;
+ border-bottom: 1px solid #dedee0;
+ font-size: clamp(21px, 1.6vw, 28px);
+ font-weight: 850;
+ letter-spacing: -0.7px;
+}
+
+.admin-content > h2::before {
+ position: absolute;
+ top: 4px;
+ left: 0;
+ width: 5px;
+ height: 25px;
+ background: var(--admin-red);
+ transform: skew(-15deg);
+ content: '';
+}
+
+.admin-content h3 {
+ margin-top: 12px;
+ font-size: 18px;
+}
+
+.admin-content p {
+ overflow-wrap: anywhere;
+}
+
+/* ========================================
+   07. DASHBOARD GRID
+======================================== */
+
+.admin-dashboard {
+ display: grid;
+ grid-template-columns: repeat(
+        auto-fit,
+        minmax(min(100%, 240px), 1fr)
+    );
+ gap: 16px;
+ width: 100%;
+ min-width: 0;
+}
+
+.admin-dashboard button {
+ position: relative;
+ display: flex;
+ flex-direction: column;
+ justify-content: space-between;
+ align-items: flex-start;
+ gap: 20px;
+ min-width: 0;
+ min-height: 128px;
+ padding: 22px;
+ border: 1px solid #ceced1;
+ border-radius: 9px;
+ background: linear-gradient(145deg, #ffffff, #f1f1f2);
+ box-shadow: 0 2px 5px #0000000c;
+ text-align: left;
+ overflow: hidden;
+}
+
+.admin-dashboard button::after {
+ position: absolute;
+ top: 0;
+ right: 0;
+ width: 0;
+ height: 0;
+ border-top: 23px solid var(--admin-red);
+ border-left: 23px solid transparent;
+ content: '';
+}
+
+.admin-dashboard button:hover:not(:disabled) {
+ border-color: var(--admin-red);
+ background: #f8eff0;
+ color: var(--admin-red);
+}
+
+.admin-dashboard strong {
+ font-size: 16px;
+ font-weight: 800;
+}
+
+.admin-dashboard span {
+ color: var(--admin-muted);
+ font-size: 12px;
+}
+
+/* ========================================
+   08. TOOLBAR / SEARCH
+======================================== */
+
+.admin-panel .actions,
+.admin-toolbar {
+ display: flex;
+ flex-wrap: wrap;
+ align-items: center;
+ gap: 12px;
+}
+
+.admin-toolbar {
+ width: 100%;
+ margin: 20px 0;
+ padding: 16px;
+ border: 1px solid #e0e0e2;
+ border-radius: 8px;
+ background: #f3f3f4;
+}
+
+.admin-toolbar label {
+ flex: 1;
+ min-width: 200px;
+}
+
+.admin-panel label {
+ display: flex;
+ flex-direction: column;
+ gap: 7px;
+ font-size: 13px;
+ font-weight: 600;
+}
+
+.admin-panel label > span {
+ display: flex;
+ align-items: center;
+ gap: 7px;
+}
+
+/* ========================================
+   09. INPUT / FORM
+======================================== */
+
+.admin-panel input:not([type="checkbox"]),
+.admin-panel textarea,
+.admin-panel select {
+ width: 100%;
+ min-width: 0;
+ max-width: 100%;
+ min-height: 40px;
+ padding: 9px 12px;
+ border: 1px solid #c7c7cb;
+ border-radius: 6px;
+ background: #ffffff;
+ color: var(--admin-dark);
+ font: inherit;
+ font-size: 13px;
+}
+
+.admin-panel input[type="checkbox"] {
+ width: 16px;
+ height: 16px;
+ min-width: 16px;
+ margin: 0;
+ accent-color: var(--admin-red);
+}
+
+.admin-panel textarea {
+ min-height: 105px;
+ resize: vertical;
+}
+
+.admin-panel input:disabled,
+.admin-panel textarea:disabled,
+.admin-panel select:disabled {
+ background: #eeeeef;
+ color: #88888b;
+}
+
+.admin-panel form {
+ display: grid;
+ grid-template-columns: minmax(0, 1fr);
+ gap: 14px;
+ width: 100%;
+ min-width: 0;
+ margin-top: 18px;
+}
+
+.admin-panel .admin-form {
+ padding: 22px;
+ border: 1px solid #dedee1;
+ border-radius: 9px;
+ background: #ffffff;
+}
+
+/* ========================================
+   10. RECORD LIST
+======================================== */
+
+.admin-panel ul {
+ list-style: none;
+ margin: 16px 0;
+ padding: 0;
+}
+
+.admin-panel li {
+ padding: 14px 0;
+ border-bottom: 1px solid #e4e4e6;
+ overflow-wrap: anywhere;
+}
+
+.admin-panel li:last-child {
+ border-bottom: 0;
+}
+
+.admin-panel li button {
+ margin-left: 12px;
+}
+
+.admin-records {
+ width: 100%;
+ padding: 6px 18px !important;
+ border: 1px solid #dedee1;
+ border-radius: 8px;
+ background: #ffffff;
+}
+
+.admin-records li {
+ display: flex;
+ flex-wrap: wrap;
+ align-items: center;
+ justify-content: space-between;
+ gap: 12px;
+}
+
+/* ========================================
+   11. TABLE / DETAIL
+======================================== */
+
+.admin-panel table {
+ display: block;
+ width: 100%;
+ max-width: 100%;
+ overflow-x: auto;
+ border-collapse: collapse;
+}
+
+.admin-panel th,
+.admin-panel td {
+ padding: 12px 14px;
+ border-bottom: 1px solid #e2e2e4;
+ text-align: left;
+ font-size: 13px;
+}
+
+.admin-panel th {
+ background: #efeff1;
+ font-weight: 800;
+}
+
+.admin-panel details {
+ min-width: 0;
+ padding: 12px;
+ border: 1px solid #dedee1;
+ border-radius: 7px;
+ background: #f7f7f8;
+}
+
+.admin-panel summary {
+ cursor: pointer;
+ font-weight: 700;
+}
+
+.admin-panel pre {
+ max-width: 100%;
+ padding: 12px;
+ border-radius: 6px;
+ background: #29292c;
+ color: #eeeeee;
+ font-size: 12px;
+ white-space: pre-wrap;
+ overflow-wrap: anywhere;
+ overflow-x: auto;
+}
+
+.admin-panel [role="alert"] {
+ color: #9a2029;
+ overflow-wrap: anywhere;
+}
+
+.admin-panel [role="status"] {
+ font-size: 13px;
+ overflow-wrap: anywhere;
+}
+
+/* ========================================
+   12. ADMIN GATE
+======================================== */
+
+.admin-gate {
+ padding: 35px;
+ border: 1px solid var(--admin-border);
+ border-radius: 12px;
+ background: #ffffff;
+ box-shadow: 0 3px 8px #00000012;
+}
+
+.admin-gate h1 {
+ margin-top: 0;
+ color: var(--admin-red);
+}
+
+/* ========================================
+   13. SMALL DESKTOP / TABLET
+======================================== */
+
+@media (max-width: 1200px) {
+ .admin-panel {
+  grid-template-columns: 230px minmax(0, 1fr);
+  column-gap: 14px;
+ }
+
+ .admin-navigation {
+  padding: 14px 9px;
+ }
+
+ .admin-navigation button {
+  padding: 10px 12px;
+ }
+
+ .admin-content {
+  padding: 24px;
+ }
+}
+
+@media (max-width: 900px) {
+ .admin-workspace {
+  padding: 14px;
+ }
+
+ .admin-panel {
+  grid-template-columns: 200px minmax(0, 1fr);
+  column-gap: 12px;
+ }
+
+ .admin-navigation button {
+  font-size: 12px;
+ }
+
+ .admin-content {
+  padding: 18px;
+ }
+
+ .admin-dashboard {
+  gap: 12px;
+ }
+
+ .admin-dashboard button {
+  min-height: 110px;
+  padding: 16px;
+ }
+}
+
+/* ========================================
+   14. MOBILE
+======================================== */
+
+@media (max-width: 768px) {
+ .admin-workspace {
+  padding: 10px;
+ }
+
+ .admin-panel {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+            "heading"
+            "access"
+            "message"
+            "navigation"
+            "content";
+  gap: 12px;
+ }
+
+ .admin-heading {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 15px;
+  padding: 18px 16px 24px;
+ }
+
+ .admin-heading .actions {
+  width: 100%;
+  justify-content: flex-start;
+ }
+
+ .admin-heading .actions button {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 8px;
+  font-size: 12px;
+ }
+
+ .admin-navigation {
+  position: static;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  width: 100%;
+  max-height: 230px;
+  padding: 12px;
+  overflow-x: hidden;
+  overflow-y: auto;
+ }
+
+ .admin-navigation::before {
+  grid-column: 1 / -1;
+  margin: 0 4px 6px;
+  padding-bottom: 8px;
+ }
+
+ .admin-navigation button {
+  width: 100%;
+  min-height: 40px;
+  padding: 9px 10px;
+  font-size: 12px;
+ }
+
+ .admin-content {
+  min-height: 0;
+  padding: 18px 14px;
+ }
+
+ .admin-dashboard {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+ }
+
+ .admin-dashboard button {
+  min-height: 100px;
+  padding: 14px;
+ }
+
+ .admin-dashboard strong {
+  font-size: 13px;
+ }
+
+ .admin-dashboard span {
+  font-size: 11px;
+ }
+
+ .admin-toolbar {
+  flex-direction: column;
+  align-items: stretch;
+ }
+
+ .admin-toolbar label {
+  flex: none;
+  min-width: 0;
+  width: 100%;
+ }
+
+ .admin-panel .admin-form {
+  padding: 14px;
+ }
+
+ .admin-records li {
+  flex-direction: column;
+  align-items: flex-start;
+ }
+
+ .admin-records li button {
+  margin-left: 0;
+ }
+}
+
+/* ========================================
+   15. ACCESSIBILITY
+======================================== */
+
+@media (prefers-reduced-motion: reduce) {
+ .admin-panel button {
+  transition: none;
+ }
 }

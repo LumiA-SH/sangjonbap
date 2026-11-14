@@ -147,6 +147,11 @@ export default function BattleAdminPanel({onDenied, recordId, onOpen}) {
         throw Error('활성 행동 확률 합계는 100%여야 합니다.');
       }
 
+      // 마물당 출현 지역은 최대 한 곳만 허용한다.
+      if (draft.areas.length > 1) {
+        throw Error('마물은 한 구역에만 배치할 수 있습니다.');
+      }
+
       const baseCount=draft.drops.filter(d=>d.ingredient_role==='BASE').length;
       const bonusTotal=draft.drops.filter(d=>d.ingredient_role==='BONUS').reduce((n,d)=>n+Number(d.drop_rate),0);
 
@@ -319,7 +324,7 @@ export default function BattleAdminPanel({onDenied, recordId, onOpen}) {
                       <button type="button" disabled={busy} onClick={() => remove('areas', i)}>지역 제거</button>
                     </fieldset>
                 ))}
-                <button type="button" disabled={busy} onClick={() => change('areas', [...draft.areas, {area_id: '', weight: 1}])}>지역 추가</button>
+                <button type="button" disabled={busy || draft.areas.length >= 1} onClick={() => change('areas', [...draft.areas, {area_id: '', weight: 1}])}>지역 추가</button>
 
                 <h3>마물 행동</h3>
                 {draft.actions.map((a, i) => (

@@ -46,6 +46,11 @@ export function validateMonster(body) {
         if (rows.some(r=>!validId(r[key]))||new Set(rows.map(r=>r[key])).size!==rows.length) invalid('참조 ID 중복 또는 형식 오류입니다.');
     }
 
+    // 하나의 마물은 하나의 구역에만 배치할 수 있다.
+    if (body.areas.length > 1) {
+        invalid('하나의 마물은 하나의 구역에만 배치할 수 있습니다.');
+    }
+
     for (const a of body.areas) {
         if (Object.keys(a).some(k=>!['area_id','weight'].includes(k))||!integer(a.weight,1)) invalid('지역 가중치를 확인하세요.');
     }
@@ -99,7 +104,7 @@ export function createAdminBattleRepository(pool) {
 
         async getAdminVerifiedAccount(id) {
             const row=(await pool.query(`select id,mastodon_instance,mastodon_account_id,oauth_verified_at,character_id,is_active
-                from public.auth_user where id=$1`,[id])).rows[0];
+                                         from public.auth_user where id=$1`,[id])).rows[0];
             if (!row) fail('USER_NOT_FOUND','계정이 없습니다.',404);
             return row;
         },
@@ -107,9 +112,9 @@ export function createAdminBattleRepository(pool) {
         async listAdminMonsters() {
             return (await pool.query(
                 `select m.*,
-                    (select i.name from public.monster_drop d
-                     join public.item i on i.id=d.item_id
-                     where d.monster_id=m.id and d.ingredient_role='BASE' limit 1) as base_ingredient_name,
+                        (select i.name from public.monster_drop d
+                                                join public.item i on i.id=d.item_id
+                         where d.monster_id=m.id and d.ingredient_role='BASE' limit 1) as base_ingredient_name,
                     coalesce((select jsonb_agg(jsonb_build_object('name',i.name,'dropRate',d.drop_rate) order by d.id)
                      from public.monster_drop d join public.item i on i.id=d.item_id
                      where d.monster_id=m.id and d.ingredient_role='BONUS'),'[]'::jsonb) as bonus_ingredients
@@ -196,12 +201,12 @@ export function createAdminBattleRepository(pool) {
 
                 for (const a of body.actions) {
                     await c.query(`insert into public.monster_action(monster_id,name,action_type,probability,multiplier,is_active,sort_order)
-                        values($1,$2,$3,$4,$5,$6,$7)`,[row.id,a.name,a.action_type,a.probability,a.multiplier,a.is_active,a.sort_order]);
+                                   values($1,$2,$3,$4,$5,$6,$7)`,[row.id,a.name,a.action_type,a.probability,a.multiplier,a.is_active,a.sort_order]);
                 }
 
                 for (const d of body.drops) {
                     await c.query(`insert into public.monster_drop(monster_id,item_id,drop_rate,min_quantity,max_quantity,is_ingredient,ingredient_role)
-                        values($1,$2,$3,$4,$5,$6,$7)`,
+                                   values($1,$2,$3,$4,$5,$6,$7)`,
                         [row.id,d.item_id,d.drop_rate,d.min_quantity,d.max_quantity,d.is_ingredient,d.ingredient_role??null]);
                 }
 
@@ -239,7 +244,7 @@ export function createAdminBattleRepository(pool) {
                 if (user.character_id) fail('CHARACTER_ALREADY_LINKED','이미 캐릭터가 연결되어 있습니다.');
 
                 const character=(await c.query(`insert into public.game_character(name,hunter_grade,atk,def,agi,has_ability,ability_grade,
-                    hp,max_hp,blood,max_blood,ap,max_ap) values($1,$2,$3,$4,$5,$6,$7,100,100,100,100,10,10) returning *`,
+                                                                                  hp,max_hp,blood,max_blood,ap,max_ap) values($1,$2,$3,$4,$5,$6,$7,100,100,100,100,10,10) returning *`,
                     [body.name.trim(),body.hunter_grade,body.atk,body.def,body.agi,body.has_ability,body.ability_grade])).rows[0];
 
                 await c.query('update public.auth_user set character_id=$1 where id=$2',[character.id,target]);

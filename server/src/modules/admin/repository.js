@@ -29,11 +29,25 @@ export function createAdminRepository(pool) {
         ...createAdminMasterRepository(pool),
         ...createAdminRoleRepository(pool),
 
-        async searchAdminItems(query,rpOnly=false) {
-            return (await pool.query(`select id::text,name,category,is_active,effect_type,blood_pack_kind
-                                      from public.item where strpos(lower(name),lower($1))>0
-                                          ${rpOnly?"and is_active and transferable and not usable and not battle_usable and effect_type is null and effect_value is null and use_target='NONE' and category<>'FOOD' and not exists(select 1 from public.food_config f where f.item_id=item.id)":''}
-                                      order by name,id limit 30`, [query])).rows;
+        async searchAdminItems(query,rpOnly=false,type='all') {
+            return (await pool.query(
+                `select i.id::text,i.name,i.category,i.is_active,i.effect_type,i.blood_pack_kind,
+                        f.item_id is not null as is_food,
+                        case when f.item_id is null then null
+                             when f.is_failure then 'FAILURE'
+                             when exists(select 1 from public.recipe r where r.failure_item_id=i.id) then 'LEGACY_FAILURE'
+                             else 'NORMAL' end as food_type
+                 from public.item i
+                          left join public.food_config f on f.item_id=i.id
+                 where strpos(lower(i.name),lower($1))>0
+                   and ($2='all'
+                     or ($2='food' and f.item_id is not null and not f.is_failure
+                         and not exists(select 1 from public.recipe r where r.failure_item_id=i.id))
+                     or ($2='failure-food' and f.item_id is not null and f.is_failure))
+                     ${rpOnly?"and i.is_active and i.transferable and not i.usable and not i.battle_usable and i.effect_type is null and i.effect_value is null and i.use_target='NONE' and i.category<>'FOOD' and f.item_id is null":''}
+                 order by i.name,i.id limit 30`,
+                [query,type]
+            )).rows;
         },
 
         async listAdminRecords(kind,after='0') {
@@ -75,7 +89,10 @@ export function createAdminRepository(pool) {
 
                 if (kind==='products') {
                     const merged={...before,...patch};
-                    const sold=id?Number((await c.query('select coalesce(sum(quantity),0) quantity from public.shop_purchase where product_id=$1',[id])).rows[0].quantity):0;
+                    const sold=id?Number((await c.query(
+                        'select coalesce(sum(quantity),0) quantity from public.shop_purchase where product_id=$1',
+                        [id]
+                    )).rows[0].quantity):0;
 
                     if (sold && merged.item_id!==before.item_id) {
                         fail('PRODUCT_ITEM_CHANGE_HOLD','판매 이력이 있는 상품의 아이템 교체는 보류합니다. 새 상품을 등록하세요.');
@@ -85,7 +102,11 @@ export function createAdminRepository(pool) {
                         fail('STOCK_LIMIT_CONFLICT','전체 한도는 누적 판매 수량보다 작을 수 없습니다.');
                     }
 
-                    const item=(await c.query('select * from public.item where id=$1 for update',[merged.item_id])).rows[0];
+                    const item=(await c.query(
+                        'select * from public.item where id=$1 for update',
+                        [merged.item_id]
+                    )).rows[0];
+
                     if (!item)fail('ITEM_NOT_FOUND','아이템이 없습니다.',404);
 
                     if(item.effect_type==='BLOOD_PACK') {
@@ -107,7 +128,8 @@ export function createAdminRepository(pool) {
                     if(merged.effect_type==='BLOOD_PACK') {
                         const correctValue=merged.blood_pack_kind==='FREE'?10:merged.blood_pack_kind==='STANDARD'?30:null;
 
-                        if(!correctValue||merged.effect_value!==correctValue||merged.category!=='CONSUMABLE'||!merged.usable||merged.use_target!=='SELF'||!merged.transferable||!merged.battle_usable) {
+                        if(!correctValue||merged.effect_value!==correctValue||merged.category!=='CONSUMABLE'||
+                            !merged.usable||merged.use_target!=='SELF'||!merged.transferable||!merged.battle_usable) {
                             fail('BLOOD_PACK_CONFIG_INVALID','무료팩은 +10, 일반팩은 +30이며 사용·양도·전투 사용이 가능해야 합니다.');
                         }
                     } else if(merged.blood_pack_kind!==null&&merged.blood_pack_kind!==undefined) {
