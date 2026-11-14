@@ -1,23 +1,19 @@
 import GuidePage from './public/GuidePage';
 import CharacterDirectory from './public/CharacterDirectory';
 import AnemiaNotice, {AnemiaPolicyContext} from './public/AnemiaNotice';
-import CoinTransferPanel from './dev/CoinTransferPanel';
-import PublicCharacterPanel from './dev/PublicCharacterPanel';
 import MobileLoginHelp from './MobileLoginHelp';
 import {publicAsset} from './publicAsset';
 import OAuthErrorNotice from './OAuthErrorNotice';
 import {useEffect, useRef, useState} from 'react';
 import CharacterCreationPanel from './dev/CharacterCreationPanel';
+import CharacterWorkspace from './dev/CharacterWorkspace';
 import {api, apiUrl, setToken} from './api/client';
 import AdminPanel from './admin/AdminPanel';
 import {useNavigation} from './admin/navigation';
-import TrainingBloodPanel from './dev/TrainingBloodPanel';
-import CharacterCarePanel from './dev/CharacterCarePanel';
 import ActionLogPanel from './dev/ActionLogPanel';
 import ShopPanel from './dev/ShopPanel';
 import CookingPanel from './dev/CookingPanel';
 import GachaPanel from './dev/GachaPanel';
-import CharacterPanel from './dev/CharacterPanel';
 import InventoryPanel from './dev/InventoryPanel';
 import InvestigationPanel from './dev/InvestigationPanel';
 import RecordsPanel from './dev/RecordsPanel';
@@ -650,11 +646,17 @@ export default function App() {
               {loggedIn && user?.character_id && (
                   <>
                     <div className="survival-page" style={display('character')}>
-                      <CharacterPanel character={character} error={errors.character} busy={busy} run={run} onCharacter={setCharacter} refresh={refreshAll} notify={setMessage} dev={provider === 'dev'}/>
-                      <PublicCharacterPanel/>
-                      <CoinTransferPanel character={character} busy={busy} refresh={refreshAll}/>
-                      <CharacterCarePanel character={character} busy={busy} run={run} refresh={refreshAll} notify={setMessage}/>
-                      <TrainingBloodPanel character={character} inventory={inventory} busy={busy} run={run} refresh={refreshAll}/>
+                      <CharacterWorkspace
+                          character={character}
+                          inventory={inventory}
+                          error={errors.character}
+                          busy={busy}
+                          run={run}
+                          onCharacter={setCharacter}
+                          refresh={refreshAll}
+                          notify={setMessage}
+                          dev={provider === 'dev'}
+                      />
                     </div>
 
                     <div className="survival-page" style={display('battle')}>

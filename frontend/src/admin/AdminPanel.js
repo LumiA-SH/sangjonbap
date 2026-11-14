@@ -16,6 +16,7 @@ import ItemPicker from './ItemPicker';
 import BalancePanel from './BalancePanel';
 import CharacterOperationsPanel from './CharacterOperationsPanel';
 import InvestigationAdminPanel from './InvestigationAdminPanel';
+import AreaHubPanel from './AreaHubPanel';
 import ImageUploadField from './ImageUploadField';
 import AdminReferenceName, {invalidateAdminNames} from './AdminReferenceName';
 
@@ -646,6 +647,10 @@ export default function AdminPanel({
 
         if (kind.startsWith('guide-')) {
             return <ContentAdminPanel key={kind} kind={kind.slice(6)} onDenied={denied}/>;
+        }
+
+        if (kind==='area-hub') {
+            return <AreaHubPanel route={route} onNavigate={onNavigate} onDenied={denied}/>;
         }
 
         if (kind==='storage') return <StorageAdminPanel onDenied={denied}/>;

@@ -1,0 +1,705 @@
+/* ========================================
+   01. CHARACTER PAGE LAYOUT
+======================================== */
+
+.survival-character-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+    width: 100%;
+    min-width: 0;
+}
+
+.survival-character-layout > section,
+.survival-character-action-grid > section {
+    min-width: 0;
+    margin: 0;
+    padding: clamp(18px, 2vw, 28px);
+    border: 1px solid #cccccf;
+    border-radius: 10px;
+    background: #fffefa;
+    box-shadow: 0 3px 6px #00000018;
+}
+
+.survival-character-layout button {
+    min-height: 40px;
+}
+
+.survival-character-layout button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+/* ========================================
+   02. PROFILE HEADING
+======================================== */
+
+.survival-character-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 22px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #dddddf;
+}
+
+.survival-character-heading .badge {
+    font-size: 11px;
+    letter-spacing: 1.4px;
+}
+
+.survival-character-heading h2 {
+    margin: 6px 0 0;
+    color: #242428;
+    font-size: clamp(22px, 2vw, 28px);
+    font-weight: 850;
+}
+
+.survival-character-heading > button {
+    flex: 0 0 auto;
+    padding: 9px 15px;
+    border: 1px solid #c8c8cc;
+    border-radius: 6px;
+    background: #ffffff;
+    color: #242428;
+    font-size: 13px;
+}
+
+.survival-character-heading > button:hover:not(:disabled) {
+    border-color: #650c13;
+    background: #f7eeee;
+    color: #650c13;
+}
+
+/* ========================================
+   03. CHARACTER PROFILE
+======================================== */
+
+.survival-character-profile {
+    display: grid;
+    grid-template-columns: 146px minmax(0, 1fr) minmax(250px, 0.9fr);
+    align-items: center;
+    gap: 22px;
+    min-width: 0;
+}
+
+.survival-character-portrait {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 146px;
+    height: 175px;
+    border: 1px solid #d1d1d3;
+    border-radius: 9px;
+    background: #e5e5e7;
+    overflow: hidden;
+}
+
+.survival-character-portrait img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 20%;
+}
+
+.survival-character-portrait.is-fallback img {
+    width: 40%;
+    height: 40%;
+    object-fit: contain;
+    opacity: 0.5;
+}
+
+.survival-character-identity {
+    min-width: 0;
+}
+
+.survival-character-caption {
+    display: block;
+    margin-bottom: 6px;
+    color: #77777b;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
+.survival-character-identity h3 {
+    margin: 0 0 10px;
+    color: #1f1f22;
+    font-size: clamp(23px, 2.2vw, 32px);
+    font-weight: 900;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+}
+
+.survival-character-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+}
+
+.survival-character-badge,
+.survival-character-state {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 11px;
+    border: 1px solid #650c13;
+    border-radius: 20px;
+    color: #650c13;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.survival-character-state.state-dead {
+    border-color: #777777;
+    color: #666666;
+}
+
+.survival-character-state.state-near_death {
+    border-color: #ad6817;
+    color: #ad6817;
+}
+
+.survival-character-grades {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    margin-top: 14px;
+    font-size: 13px;
+}
+
+.survival-character-grades strong {
+    margin-left: 4px;
+    color: #650c13;
+    font-size: 15px;
+}
+
+.survival-character-battle-warning {
+    margin: 12px 0 0;
+    color: #9b2828;
+    font-size: 12px;
+}
+
+/* ========================================
+   04. RESOURCE BARS
+======================================== */
+
+.survival-character-resources {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 13px;
+    min-width: 0;
+    padding-left: 22px;
+    border-left: 1px dashed #c9c9cc;
+}
+
+.character-resource-meter {
+    min-width: 0;
+}
+
+.character-resource-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+    font-size: 12px;
+}
+
+.character-resource-label strong {
+    font-weight: 800;
+}
+
+.character-resource-label span {
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.character-resource-meter progress {
+    display: block;
+    width: 100%;
+    height: 9px;
+    accent-color: #650c13;
+}
+
+/* ========================================
+   05. CORE STATS
+======================================== */
+
+.survival-character-stat-section {
+    margin-top: 25px;
+    padding-top: 20px;
+    border-top: 1px solid #dedee0;
+}
+
+.survival-character-section-label {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.survival-character-section-label strong {
+    font-size: 15px;
+    font-weight: 850;
+}
+
+.survival-character-section-label span {
+    color: #77777b;
+    font-size: 11px;
+}
+
+.survival-character-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.survival-character-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-width: 0;
+    min-height: 91px;
+    padding: 14px;
+    border: 1px solid #dddddf;
+    border-radius: 8px;
+    background: #f3f3f4;
+    text-align: center;
+}
+
+.survival-character-stat span {
+    color: #77777b;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.survival-character-stat strong {
+    color: #242428;
+    font-size: clamp(24px, 2.2vw, 32px);
+    font-weight: 900;
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ========================================
+   06. CURRENCY / EXTRA INFORMATION
+======================================== */
+
+.survival-character-bottom-info {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 18px;
+    padding-bottom: 15px;
+}
+
+.survival-character-currency {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    font-size: 13px;
+}
+
+.survival-character-currency strong {
+    color: #650c13;
+    font-size: 19px;
+    font-weight: 900;
+}
+
+.survival-character-setup-state {
+    color: #77777b;
+    font-size: 12px;
+}
+
+.survival-character-extra {
+    margin-top: 10px;
+    padding: 14px 16px;
+    border: 1px solid #e0e0e2;
+    border-radius: 8px;
+    background: #f8f8f9;
+}
+
+.survival-character-extra summary {
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.survival-character-extra[open] summary {
+    margin-bottom: 16px;
+    color: #650c13;
+}
+
+.survival-character-extra-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin: 0;
+}
+
+.survival-character-extra-grid > div {
+    min-width: 0;
+}
+
+.survival-character-extra-grid dt {
+    color: #77777b;
+    font-size: 12px;
+}
+
+.survival-character-extra-grid dd {
+    margin: 5px 0 0;
+    font-size: 13px;
+    overflow-wrap: anywhere;
+}
+
+.survival-character-name-form {
+    display: flex;
+    align-items: end;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.survival-character-name-form label {
+    flex: 0 0 100%;
+    font-weight: 700;
+}
+
+.survival-character-name-form input {
+    flex: 1 1 250px;
+    min-width: 0;
+}
+
+.survival-character-name-form button {
+    flex: 0 0 auto;
+}
+
+/* ========================================
+   07. TRAINING / CARE
+======================================== */
+
+.survival-character-action-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    gap: 18px;
+    min-width: 0;
+}
+
+.survival-character-action-grid > section {
+    height: 100%;
+}
+
+.survival-character-action-grid > section > h2 {
+    position: relative;
+    margin: 0 0 16px;
+    padding: 0 0 14px 13px;
+    border-bottom: 1px solid #dedee0;
+    font-size: 19px;
+    font-weight: 850;
+}
+
+.survival-character-action-grid > section > h2::before {
+    position: absolute;
+    top: 3px;
+    left: 0;
+    width: 4px;
+    height: 18px;
+    background: #650c13;
+    content: '';
+}
+
+.survival-character-action-grid > section > p {
+    color: #66666b;
+    font-size: 13px;
+}
+
+.survival-character-action-grid > section > label {
+    display: block;
+    margin: 14px 0 7px;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.survival-character-action-grid > section > label select,
+.survival-character-action-grid > section > input {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    margin-top: 7px;
+}
+
+.survival-character-action-grid > section > button {
+    margin: 8px 10px 8px 0;
+}
+
+.survival-character-action-grid .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 9px;
+    margin: 15px 0;
+}
+
+.survival-character-action-grid .actions button {
+    flex: 1 1 auto;
+    margin: 0;
+}
+
+.survival-character-action-grid form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 9px;
+    margin-top: 12px;
+}
+
+.survival-character-action-grid form input {
+    min-width: 0;
+}
+
+.survival-character-action-grid form label {
+    flex: 1 1 100%;
+}
+
+.survival-character-action-grid [role="group"] {
+    margin: 15px 0;
+    padding: 16px;
+    border: 1px solid #d7c7c9;
+    border-radius: 8px;
+    background: #fbf4f4;
+}
+
+.survival-character-action-grid [role="group"] button {
+    margin: 5px 8px 5px 0;
+}
+
+/* ========================================
+   08. COIN TRANSFER
+======================================== */
+
+.survival-character-secondary {
+    min-width: 0;
+    border: 1px solid #cccccf;
+    border-radius: 10px;
+    background: #fffefa;
+    box-shadow: 0 3px 6px #00000012;
+}
+
+.survival-character-secondary > summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 19px 24px;
+    cursor: pointer;
+    list-style: none;
+}
+
+.survival-character-secondary > summary::-webkit-details-marker {
+    display: none;
+}
+
+.survival-character-secondary > summary::after {
+    color: #650c13;
+    font-size: 16px;
+    font-weight: 800;
+    content: '+';
+}
+
+.survival-character-secondary[open] > summary::after {
+    content: '−';
+}
+
+.survival-character-secondary > summary strong {
+    font-size: 16px;
+    font-weight: 850;
+}
+
+.survival-character-secondary > summary span {
+    margin-left: auto;
+    color: #77777b;
+    font-size: 12px;
+}
+
+.survival-character-secondary > section {
+    margin: 0;
+    padding: 8px 24px 24px;
+    border: 0;
+    border-top: 1px solid #dedee0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.survival-character-secondary > section > h3 {
+    margin: 15px 0;
+    font-size: 17px;
+}
+
+.survival-character-secondary > section > label {
+    display: block;
+    margin: 12px 0 7px;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.survival-character-secondary > section > input {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+}
+
+.survival-character-secondary > section > button {
+    margin: 10px 10px 10px 0;
+}
+
+.survival-character-secondary [role="group"] {
+    margin: 14px 0;
+    padding: 15px;
+    border: 1px solid #dedee0;
+    border-radius: 7px;
+    background: #f8f8f9;
+}
+
+.survival-character-secondary [role="group"] button {
+    margin: 5px 8px 5px 0;
+}
+
+/* ========================================
+   09. SMALL DESKTOP
+======================================== */
+
+@media (max-width: 1200px) {
+    .survival-character-profile {
+        grid-template-columns: 120px minmax(0, 1fr);
+        gap: 16px;
+    }
+
+    .survival-character-portrait {
+        width: 120px;
+        height: 145px;
+    }
+
+    .survival-character-resources {
+        grid-column: 1 / -1;
+        padding: 16px 0 0;
+        border-left: 0;
+        border-top: 1px dashed #c9c9cc;
+    }
+
+    .survival-character-action-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+/* ========================================
+   10. TABLET / MOBILE
+======================================== */
+
+@media (max-width: 700px) {
+    .survival-character-layout {
+        gap: 12px;
+    }
+
+    .survival-character-layout > section,
+    .survival-character-action-grid > section {
+        padding: 16px 13px;
+    }
+
+    .survival-character-profile {
+        grid-template-columns: 90px minmax(0, 1fr);
+        gap: 13px;
+    }
+
+    .survival-character-portrait {
+        width: 90px;
+        height: 110px;
+    }
+
+    .survival-character-identity h3 {
+        font-size: 22px;
+    }
+
+    .survival-character-grades {
+        font-size: 12px;
+    }
+
+    .survival-character-stat-grid {
+        gap: 7px;
+    }
+
+    .survival-character-stat {
+        min-height: 80px;
+        padding: 10px 5px;
+    }
+
+    .survival-character-stat strong {
+        font-size: 23px;
+    }
+
+    .survival-character-extra-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .survival-character-name-form {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .survival-character-name-form input,
+    .survival-character-name-form button {
+        width: 100%;
+        flex: 0 0 auto;
+    }
+
+    .survival-character-secondary > summary {
+        padding: 16px;
+    }
+
+    .survival-character-secondary > section {
+        padding: 8px 16px 20px;
+    }
+}
+
+@media (max-width: 440px) {
+    .survival-character-heading {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .survival-character-heading > button {
+        width: 100%;
+    }
+
+    .survival-character-badges {
+        gap: 5px;
+    }
+
+    .survival-character-badge,
+    .survival-character-state {
+        padding: 3px 8px;
+        font-size: 10px;
+    }
+
+    .survival-character-grades {
+        flex-direction: column;
+        gap: 4px;
+    }
+}
+
+/* ========================================
+   11. REDUCED MOTION
+======================================== */
+
+@media (prefers-reduced-motion: reduce) {
+    .survival-character-layout button {
+        transition: none;
+    }
+}

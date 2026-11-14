@@ -16,6 +16,7 @@ export const adminMenus = [
  ['food-grades', '음식 등급'],
  ['recipes', '레시피'],
  ['gachas', '가챠'],
+ ['area-hub', '구역 통합 관리'],
  ['areas', '지역 공개·조우'],
  ['investigation', '조사 결과·보상'],
  ['storage', '공용창고 재고'],
@@ -38,18 +39,31 @@ export function readLocation() {
   return {
    admin: true,
    tab,
-   menu: adminMenus.some(([id]) => id === path.split('/')[1]) ? path.split('/')[1] : 'dashboard',
-   area: /^[1-9][0-9]*$/.test(params.get('area') || '') ? params.get('area') : null,
-   after: /^[1-9][0-9]*$/.test(params.get('after') || '') ? params.get('after') : null,
-   record: /^(new|[1-9][0-9]*)$/.test(params.get('record') || '') ? params.get('record') : null
+   menu: adminMenus.some(([id]) => id === path.split('/')[1])
+       ? path.split('/')[1]
+       : 'dashboard',
+   area: /^[1-9][0-9]*$/.test(params.get('area') || '')
+       ? params.get('area')
+       : null,
+   after: /^[1-9][0-9]*$/.test(params.get('after') || '')
+       ? params.get('after')
+       : null,
+   record: /^(new|[1-9][0-9]*)$/.test(params.get('record') || '')
+       ? params.get('record')
+       : null
   };
  }
 
  return {
   admin: false,
-  tab: gameTabs.includes(path.split('/')[1]) ? path.split('/')[1] : 'home',
+  tab: gameTabs.includes(path.split('/')[1])
+      ? path.split('/')[1]
+      : 'home',
   menu: 'dashboard',
-  record: path === 'game/roster' && /^[1-9][0-9]*$/.test(params.get('record') || '') ? params.get('record') : null
+  record: path === 'game/roster' &&
+  /^[1-9][0-9]*$/.test(params.get('record') || '')
+      ? params.get('record')
+      : null
  };
 }
 
