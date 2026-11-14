@@ -1,6 +1,7 @@
 import {useEffect, useRef, useState} from 'react';
 import {api} from '../api/client';
 import ItemPicker from './ItemPicker';
+import ImageUploadField from './ImageUploadField';
 
 const emptyMonster = () => ({
   name: '', description: '', image_url: '',
@@ -42,6 +43,7 @@ export default function BattleAdminPanel({onDenied, recordId, onOpen}) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const pending = useRef(false);
+  const [imageUploading,setImageUploading]=useState(false);
 
   async function work(fn) {
     if (pending.current) return;
@@ -264,6 +266,7 @@ export default function BattleAdminPanel({onDenied, recordId, onOpen}) {
       setMessage('이능 설정 저장 성공');
     });
   }
+  if (imageUploading) return;
 
   const actionProbability = draft.actions.filter(a => a.is_active).reduce((n, a) => n + Number(a.probability), 0);
   const bonusProbability = draft.drops.filter(d=>d.ingredient_role==='BONUS').reduce((n,d)=>n+Number(d.drop_rate||0),0);
@@ -294,12 +297,18 @@ export default function BattleAdminPanel({onDenied, recordId, onOpen}) {
               <form className="admin-form" onSubmit={saveMonster}>
                 <h3>{id ? `마물 ${id} 수정` : '신규 마물'}</h3>
 
-                {['name', 'description', 'image_url'].map(k => (
+                {['name','description'].map(k=>(
                     <label key={k}>
-                      {{name: '이름', description: '설명', image_url: '이미지 URL'}[k]}
-                      <input value={draft[k] ?? ''} required={k === 'name'} disabled={busy} onChange={e => change(k, e.target.value)}/>
+                      {{name:'이름',description:'설명'}[k]}
+                      <input value={draft[k]??''} required={k==='name'} disabled={busy}
+                             onChange={e=>change(k,e.target.value)}/>
                     </label>
                 ))}
+
+                <ImageUploadField kind="monsters" label="마물 이미지"
+                                  value={draft.image_url} onChange={value=>change('image_url',value)}
+                                  disabled={busy} onDenied={onDenied}
+                                  onUploadingChange={setImageUploading}/>
 
                 {['max_hp', 'atk', 'def', 'agi'].map(k => (
                     <div key={k}>{number(k, draft[k], v => change(k, v))}</div>
@@ -390,7 +399,7 @@ export default function BattleAdminPanel({onDenied, recordId, onOpen}) {
                   <pre>{JSON.stringify({before: original, after: draft}, null, 2)}</pre>
                 </details>
 
-                <button disabled={busy}>마물 저장</button>
+                <button disabled={busy||imageUploading}>마물 저장</button>
               </form>
           )}
         </details>

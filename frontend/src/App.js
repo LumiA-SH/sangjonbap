@@ -1,14 +1,14 @@
 import GuidePage from './public/GuidePage';
 import CharacterDirectory from './public/CharacterDirectory';
-import AnemiaNotice,{AnemiaPolicyContext} from './public/AnemiaNotice';
+import AnemiaNotice, {AnemiaPolicyContext} from './public/AnemiaNotice';
 import CoinTransferPanel from './dev/CoinTransferPanel';
 import PublicCharacterPanel from './dev/PublicCharacterPanel';
 import MobileLoginHelp from './MobileLoginHelp';
 import {publicAsset} from './publicAsset';
 import OAuthErrorNotice from './OAuthErrorNotice';
-import { useEffect, useRef, useState } from 'react';
+import {useEffect, useRef, useState} from 'react';
 import CharacterCreationPanel from './dev/CharacterCreationPanel';
-import { api, apiUrl, setToken } from './api/client';
+import {api, apiUrl, setToken} from './api/client';
 import AdminPanel from './admin/AdminPanel';
 import {useNavigation} from './admin/navigation';
 import TrainingBloodPanel from './dev/TrainingBloodPanel';
@@ -22,15 +22,15 @@ import InventoryPanel from './dev/InventoryPanel';
 import InvestigationPanel from './dev/InvestigationPanel';
 import RecordsPanel from './dev/RecordsPanel';
 import BattlePanel from './dev/BattlePanel';
-import { HomeHeaderDecor } from './HomeDecor';
+import {HomeHeaderDecor} from './HomeDecor';
 
 const FALLBACK_IMAGE = publicAsset('test.png');
 
-function NavIcon({ name, className = '' }) {
-  return <img src={publicAsset(`assets/decor/icon-${name}.svg`)} alt="" aria-hidden="true" className={className} />;
+function NavIcon({name, className = ''}) {
+  return <img src={publicAsset(`assets/decor/icon-${name}.svg`)} alt="" aria-hidden="true" className={className}/>;
 }
 
-function GameImage({ src, alt, className }) {
+function GameImage({src, alt, className}) {
   const [imageSrc, setImageSrc] = useState(src || FALLBACK_IMAGE);
 
   useEffect(() => {
@@ -43,10 +43,10 @@ function GameImage({ src, alt, className }) {
     }
   }
 
-  return <img src={imageSrc} alt={alt} className={className} onError={handleImageError} />;
+  return <img src={imageSrc} alt={alt} className={className} onError={handleImageError}/>;
 }
 
-function DashboardCard({ title, subtitle, action, children, className = '' }) {
+function DashboardCard({title, subtitle, action, children, className = ''}) {
   return (
       <section className={`survival-card ${className}`}>
         <div className="survival-card-title">
@@ -61,36 +61,127 @@ function DashboardCard({ title, subtitle, action, children, className = '' }) {
   );
 }
 
-function ResourceBar({ label, value, max, character }) {
+function ResourceBar({label, value, max, character}) {
   const current = Math.max(0, Number(value) || 0);
   const maximum = Math.max(1, Number(max) || 1);
 
   return (
       <div className="survival-resource">
         <div className="survival-resource-label">
-          <b>{label}{label==='혈량'&&<AnemiaNotice character={character}/>}</b>
+          <b>{label}{label === '혈량' && <AnemiaNotice character={character}/>}</b>
           <span>{current} / {maximum}</span>
         </div>
-        <progress max={maximum} value={Math.min(current, maximum)} />
+        <progress max={maximum} value={Math.min(current, maximum)}/>
+      </div>
+  );
+}
+
+function getKstDay(date) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Seoul',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).formatToParts(date);
+
+  const values = Object.fromEntries(
+      parts.filter(part => part.type !== 'literal').map(part => [part.type, part.value])
+  );
+
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
+function HomeDailyTraining({character, busy, run, refresh, today}) {
+  const [completed, setCompleted] = useState(null);
+  const [message, setMessage] = useState('');
+  const sending = useRef(false);
+
+  const serverDay = String(character?.last_training_date ?? '').slice(0, 10);
+  const isCompleted = serverDay === today ||
+      (completed?.characterId === String(character?.id) && completed.day === today);
+
+  const unavailable = !character ||
+      character.initial_setup_complete === false ||
+      character.status !== 'ALIVE' ||
+      character.in_active_battle;
+
+  const disabled = busy || unavailable || isCompleted;
+
+  async function train() {
+    if (disabled || sending.current) return;
+
+    sending.current = true;
+
+    try {
+      await run(async () => {
+        setMessage('');
+
+        let result;
+
+        try {
+          result = await api('/training', {
+            method: 'POST',
+            body: {requestKey: crypto.randomUUID()}
+          });
+        } catch (error) {
+          if (error.code === 'TRAINING_ALREADY_DONE') {
+            setCompleted({
+              characterId: String(character.id),
+              day: today
+            });
+            setMessage('오늘 훈련 완료');
+          } else {
+            setMessage(`${error.code || 'TRAINING_FAILED'}: ${error.message}`);
+          }
+
+          return;
+        }
+
+        setCompleted({
+          characterId: String(character.id),
+          day: String(result.day || today).slice(0, 10)
+        });
+
+        try {
+          const synced = await refresh();
+          setMessage(synced ? '훈련 완료!' : '훈련 완료 · 일부 상태 갱신 실패');
+        } catch {
+          setMessage('훈련 완료 · 상태를 다시 불러와 주세요.');
+        }
+      });
+    } finally {
+      sending.current = false;
+    }
+  }
+
+  return (
+      <div className="survival-training-slot">
+        <button type="button" className="survival-training-button" disabled={disabled} onClick={train}>
+          {isCompleted ? '훈련 완료' : '일일훈련'}
+        </button>
+        <small className="survival-training-hint">
+          {isCompleted ? '오늘 훈련 완료' : unavailable ? '현재 이용 불가' : 'KST 하루 1회'}
+        </small>
+        {message && <span className="survival-training-message" role="status">{message}</span>}
       </div>
   );
 }
 
 export default function App() {
   const [key, setKey] = useState('');
-  const [anemiaPolicy,setAnemiaPolicy]=useState(null);
-  const {route,go,back}=useNavigation();
-  const view=route.tab;
-  const setView=tab=>go({admin:false,tab});
+  const [anemiaPolicy, setAnemiaPolicy] = useState(null);
+  const {route, go, back} = useNavigation();
+  const view = route.tab;
+  const setView = tab => go({admin: false, tab});
   const [menuOpen, setMenuOpen] = useState(false);
   const [loggedIn, setLoggedIn] = useState(false);
   const [provider, setProvider] = useState(null);
   const [authError, setAuthError] = useState(null);
   const [authAttempt, setAuthAttempt] = useState(0);
   const [user, setUser] = useState(null);
-  const adminOpen=route.admin;
-  const setAdminOpen=open=>go({admin:open,tab:view,menu:'dashboard'});
-  const canAdmin=loggedIn && user?.role==='ADMIN' && (provider==='mastodon'||process.env.NODE_ENV!=='production');
+  const adminOpen = route.admin;
+  const setAdminOpen = open => go({admin: open, tab: view, menu: 'dashboard'});
+  const canAdmin = loggedIn && user?.role === 'ADMIN' && (provider === 'mastodon' || process.env.NODE_ENV !== 'production');
   const [character, setCharacter] = useState(null);
   const [inventory, setInventory] = useState([]);
   const [storage, setStorage] = useState([]);
@@ -109,29 +200,30 @@ export default function App() {
 
   const running = useRef(false);
 
-  useEffect(()=>{
-    if(!loggedIn||!user?.character_id){
+  useEffect(() => {
+    if (!loggedIn || !user?.character_id) {
       setAnemiaPolicy(null);
       return;
     }
 
-    let live=true;
-    const read=()=>api('/public/anemia').then(r=>{
-      if(live)setAnemiaPolicy(r.settings);
-    }).catch(()=>{
-      if(live)setAnemiaPolicy(null);
+    let live = true;
+
+    const read = () => api('/public/anemia').then(r => {
+      if (live) setAnemiaPolicy(r.settings);
+    }).catch(() => {
+      if (live) setAnemiaPolicy(null);
     });
 
     read();
-    window.addEventListener('focus',read);
-    const timer=setInterval(read,60000);
+    window.addEventListener('focus', read);
+    const timer = setInterval(read, 60000);
 
-    return()=>{
-      live=false;
+    return () => {
+      live = false;
       clearInterval(timer);
-      window.removeEventListener('focus',read);
+      window.removeEventListener('focus', read);
     };
-  },[loggedIn,user?.character_id,revision]);
+  }, [loggedIn, user?.character_id, revision]);
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(new Date()), 1000);
@@ -146,8 +238,14 @@ export default function App() {
         .then(async config => {
           if (!live) return;
 
-          if (process.env.NODE_ENV==='production' && config.provider==='dev') throw new Error('운영 환경에서는 개발 로그인을 사용할 수 없습니다.');
-          if (!['mastodon','dev'].includes(config.provider)) throw new Error('지원하지 않는 인증 설정입니다.');
+          if (process.env.NODE_ENV === 'production' && config.provider === 'dev') {
+            throw new Error('운영 환경에서는 개발 로그인을 사용할 수 없습니다.');
+          }
+
+          if (!['mastodon', 'dev'].includes(config.provider)) {
+            throw new Error('지원하지 않는 인증 설정입니다.');
+          }
+
           setProvider(config.provider);
 
           if (config.provider === 'mastodon') {
@@ -160,7 +258,7 @@ export default function App() {
 
                 if (data.user.character_id) {
                   await refreshAll('mastodon');
-                  if(!window.location.hash)go({admin:false,tab:'character'});
+                  if (!window.location.hash) go({admin: false, tab: 'character'});
                 }
               }
             } catch (error) {
@@ -239,7 +337,7 @@ export default function App() {
     await run(async () => {
       const data = await api('/auth/dev/login', {
         method: 'POST',
-        body: { key }
+        body: {key}
       });
 
       setToken(data.token);
@@ -253,7 +351,7 @@ export default function App() {
 
   async function logout() {
     try {
-      await api('/auth/logout', { method: 'POST' });
+      await api('/auth/logout', {method: 'POST'});
     } finally {
       setToken(null);
       setLoggedIn(false);
@@ -276,7 +374,10 @@ export default function App() {
 
   const navigation = [
     ['home', '홈', 'home'],
-    ['world','세계관','book'],['system','시스템 안내','book'],['schedule','러닝 일정','book'],['roster','공개 캐릭터','user'],
+    ['world', '세계관', 'book'],
+    ['system', '시스템 안내', 'book'],
+    ['schedule', '러닝 일정', 'book'],
+    ['roster', '공개 캐릭터', 'user'],
     ['character', '캐릭터', 'user'],
     ['investigation', '조사', 'compass'],
     ['battle', '전투', 'swords'],
@@ -292,11 +393,15 @@ export default function App() {
     ['battle', '전투', 'swords', '조우한 위협과 전투를 진행합니다.'],
     ['cooking', '요리', 'cooking', '재료를 조리해 식량을 만듭니다.'],
     ['inventory', '인벤토리', 'box', '보유한 아이템을 확인하고 관리합니다.'],
-    ['shop', '상점', 'shop', '필요한 물자를 구매합니다.']
+    ['shop', '상점', 'shop', '필요한 물자를 구매합니다.'],
+    ['gacha', '가챠', 'sparkle', '가챠를 통해 다양한 보상을 획득합니다.']
   ];
 
   const pageDescriptions = {
-    world:'공개된 세계관을 확인합니다.',system:'운영진이 등록한 시스템 안내입니다.',schedule:'러닝 일정과 진행 상태를 확인합니다.',roster:'공개된 캐릭터를 살펴봅니다.',
+    world: '공개된 세계관을 확인합니다.',
+    system: '운영진이 등록한 시스템 안내입니다.',
+    schedule: '러닝 일정과 진행 상태를 확인합니다.',
+    roster: '공개된 캐릭터를 살펴봅니다.',
     home: '식량을 확보하고, 조리하고, 버텨내세요.',
     character: '생존자 정보와 상태를 확인합니다.',
     investigation: '탐사 지역과 조사 결과를 확인합니다.',
@@ -314,7 +419,7 @@ export default function App() {
     window.scrollTo(0, 0);
   };
 
-  const display = name => ({ display: view === name ? 'block' : 'none' });
+  const display = name => ({display: view === name ? 'block' : 'none'});
   const maxBlood = character?.effective_max_blood ?? Math.min(100, character?.max_blood ?? 100);
 
   const resourceStats = character ? [
@@ -324,38 +429,43 @@ export default function App() {
   ] : [];
 
   const characterImage = character?.image_url || character?.profile_image_url || user?.avatar_url || null;
-  const currentTime = now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false });
-  const currentDate = now.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' });
+  const currentTime = now.toLocaleTimeString('ko-KR', {hour: '2-digit', minute: '2-digit', hour12: false});
+  const currentDate = now.toLocaleDateString('ko-KR', {year: 'numeric', month: 'long', day: 'numeric', weekday: 'short'});
+  const today = getKstDay(now);
 
   return (
       <AnemiaPolicyContext.Provider value={anemiaPolicy}>
-        {adminOpen&&<main className="admin-workspace">
-          {canAdmin?<AdminPanel route={route} onNavigate={next=>go({...route,...next})} onBack={back} onExit={()=>go({admin:false,tab:view})} onLogout={()=>run(logout)} onAccessLost={()=>setUser(current=>current?{...current,role:null}:null)}/>:
-              <section className="admin-gate"><h1>운영진 전용 페이지</h1><p role="alert">{provider===null?'인증 확인 중…':loggedIn?'관리자 권한이 필요합니다.':'로그인 후 관리자 권한을 확인합니다.'}</p><button onClick={()=>setAdminOpen(false)}>게임으로 돌아가기</button></section>}
+        {adminOpen && <main className="admin-workspace">
+          {canAdmin ? <AdminPanel route={route} onNavigate={next => go({...route, ...next})} onBack={back} onExit={() => go({admin: false, tab: view})} onLogout={() => run(logout)} onAccessLost={() => setUser(current => current ? {...current, role: null} : null)}/> :
+              <section className="admin-gate">
+                <h1>운영진 전용 페이지</h1>
+                <p role="alert">{provider === null ? '인증 확인 중…' : loggedIn ? '관리자 권한이 필요합니다.' : '로그인 후 관리자 권한을 확인합니다.'}</p>
+                <button onClick={() => setAdminOpen(false)}>게임으로 돌아가기</button>
+              </section>}
         </main>}
 
         <div className="survival-app" hidden={adminOpen}>
           <aside className={`survival-sidebar ${menuOpen ? 'is-open' : ''}`}>
             <button type="button" className="survival-logo survival-logo-link" onClick={() => navigate('home')} aria-label="생존밥 홈으로 이동">
-              <img src={publicAsset('saengjonbap_logo.png')} alt="생존밥" />
+              <img src={publicAsset('saengjonbap_logo.png')} alt="생존밥"/>
             </button>
 
             <nav aria-label="주 메뉴">
-              {canAdmin&&<button type="button" onClick={()=>setAdminOpen(true)}>운영 관리</button>}
+              {canAdmin && <button type="button" onClick={() => setAdminOpen(true)}>운영 관리</button>}
               {navigation.map(([id, label, symbol]) => (
                   <button key={id} type="button" className={view === id ? 'is-active' : ''} onClick={() => navigate(id)}>
-                    <NavIcon name={symbol} className="survival-nav-icon" />
+                    <NavIcon name={symbol} className="survival-nav-icon"/>
                     {label}
                   </button>
               ))}
             </nav>
 
             <div className="survival-sidebar-foot">
-              <img className="survival-sidebar-cutlery" src={publicAsset('assets/decor/side-cutlery.svg')} alt="" aria-hidden="true" />
+              <img className="survival-sidebar-cutlery" src={publicAsset('assets/decor/side-cutlery.svg')} alt="" aria-hidden="true"/>
               REVIVAL COMPLETE
-              <br />
+              <br/>
               OF THE CORPSE
-              <div className="survival-barcode" />
+              <div className="survival-barcode"/>
             </div>
           </aside>
 
@@ -364,7 +474,7 @@ export default function App() {
               <button className="survival-menu-toggle" type="button" onClick={() => setMenuOpen(!menuOpen)} aria-label="전체 메뉴" aria-expanded={menuOpen}>☰</button>
 
               <button type="button" className="survival-mobile-logo survival-logo-link" onClick={() => navigate('home')} aria-label="생존밥 홈으로 이동">
-                <img src={publicAsset('saengjonbap_logo.png')} alt="생존밥" />
+                <img src={publicAsset('saengjonbap_logo.png')} alt="생존밥"/>
               </button>
 
               <span className="survival-top-caption">SURVIVAL COOKING SYSTEM</span>
@@ -381,20 +491,23 @@ export default function App() {
 
             <main className="survival-content">
               <div className="survival-heading">
-                {view === 'home' && <HomeHeaderDecor />}
+                {view === 'home' && <HomeHeaderDecor/>}
                 <small>SURVIVOR TERMINAL</small>
                 <h1>{view === 'home' ? `${character?.name ? `${character.name}, ` : ''}오늘도 생존을 이어가세요.` : navigation.find(([id]) => id === view)?.[1]}</h1>
                 <p>{pageDescriptions[view]}</p>
               </div>
 
-              {loggedIn && character?.initial_setup_complete===false && <section role="status"><h2>캐릭터 연결 완료</h2><p>{character.name}의 게임 초기 능력치가 아직 설정되지 않았습니다. 운영진이 캐릭터 관리에서 헌터 등급·이능·능력치를 설정하면 이용할 수 있습니다.</p></section>}
+              {loggedIn && character?.initial_setup_complete === false && <section role="status">
+                <h2>캐릭터 연결 완료</h2>
+                <p>{character.name}의 게임 초기 능력치가 아직 설정되지 않았습니다. 운영진이 캐릭터 관리에서 헌터 등급·이능·능력치를 설정하면 이용할 수 있습니다.</p>
+              </section>}
 
               {loggedIn && user?.character_id && (
-                  <div className="survival-home" style={{ display: view === 'home' ? 'grid' : 'none' }}>
+                  <div className="survival-home" style={{display: view === 'home' ? 'grid' : 'none'}}>
                     <DashboardCard title="SURVIVOR ID" subtitle={`#${String(character?.id ?? '---').padStart(3, '0')}`} className="survival-profile">
                       <div className="survival-profile-body">
                         <div className="survival-identity">
-                          <GameImage src={characterImage} alt={`${character?.name || '생존자'} 프로필`} className="survival-avatar" />
+                          <GameImage src={characterImage} alt={`${character?.name || '생존자'} 프로필`} className="survival-avatar"/>
 
                           <div className="survival-identity-info">
                             <div className="survival-identity-name">{character?.name || '불러오는 중'}</div>
@@ -404,9 +517,11 @@ export default function App() {
                           </div>
                         </div>
 
+                        <HomeDailyTraining character={character} busy={busy} run={run} refresh={refreshAll} today={today}/>
+
                         <div className="survival-resource-list">
                           {resourceStats.map(([label, value, max]) => (
-                              <ResourceBar key={label} label={label} value={value} max={max} character={character} />
+                              <ResourceBar key={label} label={label} value={value} max={max} character={character}/>
                           ))}
                         </div>
                       </div>
@@ -432,7 +547,7 @@ export default function App() {
                       <div className="survival-quick">
                         {quickNavigation.map(([id, label, symbol, description]) => (
                             <button key={id} type="button" onClick={() => navigate(id)}>
-                              <NavIcon name={symbol} className="survival-quick-icon" />
+                              <NavIcon name={symbol} className="survival-quick-icon"/>
                               <b>{label}</b>
                               <small>{description}</small>
                             </button>
@@ -449,7 +564,7 @@ export default function App() {
 
                     <DashboardCard title="현재 진행 중인 이벤트" subtitle="EVENT" className="survival-event">
                       <div className="survival-event-banner">
-                        <GameImage alt="이벤트 배너 임시 이미지" className="survival-event-image" />
+                        <GameImage alt="이벤트 배너 임시 이미지" className="survival-event-image"/>
                         <div className="survival-event-overlay">
                           <span>EVENT</span>
                           <strong>스토리 이벤트 준비 중</strong>
@@ -467,9 +582,9 @@ export default function App() {
                   </div>
               )}
 
-              <div className="survival-auth" style={{ display: loggedIn && view !== 'home' ? 'none' : 'block' }}>
+              <div className="survival-auth" style={{display: loggedIn || view !== 'home' ? 'none' : 'block'}}>
                 <section aria-labelledby="login-title">
-                  <OAuthErrorNotice />
+                  <OAuthErrorNotice/>
                   <h2 id="login-title">{provider === 'mastodon' ? 'Mastodon 로그인' : provider === 'dev' ? '개발 로그인' : '로그인 연결'}</h2>
 
                   {provider === 'dev' && (
@@ -480,12 +595,12 @@ export default function App() {
                       provider === 'mastodon' ? (
                           <>
                             <a href={apiUrl('/auth/mastodon/login')}>Mastodon으로 로그인</a>
-                            <MobileLoginHelp />
+                            <MobileLoginHelp/>
                           </>
                       ) : provider === 'dev' ? (
                           <form onSubmit={login}>
                             <label htmlFor="key">개발 로그인 키</label>
-                            <input id="key" type="password" value={key} onChange={event => setKey(event.target.value)} required autoComplete="off" disabled={busy} />
+                            <input id="key" type="password" value={key} onChange={event => setKey(event.target.value)} required autoComplete="off" disabled={busy}/>
                             <button disabled={busy}>로그인</button>
                           </form>
                       ) : (
@@ -507,52 +622,52 @@ export default function App() {
               </div>
 
               {(busy || message) && <p className="dev-message" role="status" aria-live="polite">{busy ? '처리 중…' : message}</p>}
-              {['world','system','schedule'].includes(view)&&<GuidePage key={view} kind={view}/>}
-              {view==='roster'&&<CharacterDirectory recordId={route.record} onOpen={record=>go({admin:false,tab:'roster',record})} onBack={()=>go({admin:false,tab:'roster'})} canReadDetails={loggedIn&&!!user?.character_id}/>}
-              {loggedIn && !user?.character_id && <CharacterCreationPanel />}
+              {['world', 'system', 'schedule'].includes(view) && <GuidePage key={view} kind={view}/>}
+              {view === 'roster' && <CharacterDirectory recordId={route.record} onOpen={record => go({admin: false, tab: 'roster', record})} onBack={() => go({admin: false, tab: 'roster'})} canReadDetails={loggedIn && !!user?.character_id}/>}
+              {loggedIn && !user?.character_id && <CharacterCreationPanel/>}
 
               {loggedIn && user?.character_id && (
                   <>
                     <div className="survival-page" style={display('character')}>
-                      <CharacterPanel character={character} error={errors.character} busy={busy} run={run} onCharacter={setCharacter} refresh={refreshAll} notify={setMessage} dev={provider === 'dev'} />
-                      <PublicCharacterPanel />
-                      <CoinTransferPanel character={character} busy={busy} refresh={refreshAll} />
-                      <CharacterCarePanel character={character} busy={busy} run={run} refresh={refreshAll} notify={setMessage} />
-                      <TrainingBloodPanel character={character} inventory={inventory} busy={busy} run={run} refresh={refreshAll} />
+                      <CharacterPanel character={character} error={errors.character} busy={busy} run={run} onCharacter={setCharacter} refresh={refreshAll} notify={setMessage} dev={provider === 'dev'}/>
+                      <PublicCharacterPanel/>
+                      <CoinTransferPanel character={character} busy={busy} refresh={refreshAll}/>
+                      <CharacterCarePanel character={character} busy={busy} run={run} refresh={refreshAll} notify={setMessage}/>
+                      <TrainingBloodPanel character={character} inventory={inventory} busy={busy} run={run} refresh={refreshAll}/>
                     </div>
 
                     <div className="survival-page" style={display('battle')}>
-                      <BattlePanel inventory={inventory} busy={busy} run={run} refresh={refreshAll} revision={revision} />
+                      <BattlePanel inventory={inventory} busy={busy} run={run} refresh={refreshAll} revision={revision}/>
                     </div>
 
                     <div className="survival-page" style={display('records')}>
-                      <RecordsPanel />
+                      <RecordsPanel/>
                     </div>
 
                     <div className="survival-page" style={display('inventory')}>
-                      <InventoryPanel character={character} inventory={inventory} storage={storage} errors={errors} busy={busy} run={run} refresh={refreshAll} notify={setMessage} />
+                      <InventoryPanel character={character} inventory={inventory} storage={storage} errors={errors} busy={busy} run={run} refresh={refreshAll} notify={setMessage}/>
                     </div>
 
                     <div className="survival-page" style={display('investigation')}>
-                      <InvestigationPanel activeBattle={character?.in_active_battle} battleError={errors.character} investigationApCost={investigationApCost} areas={areas} globalInvestigationRate={globalInvestigationRate} character={character} error={errors.areas} characterError={errors.character} busy={busy} run={run} refresh={refreshAll} notify={setMessage} />
+                      <InvestigationPanel activeBattle={character?.in_active_battle} battleError={errors.character} investigationApCost={investigationApCost} areas={areas} globalInvestigationRate={globalInvestigationRate} character={character} error={errors.areas} characterError={errors.character} busy={busy} run={run} refresh={refreshAll} notify={setMessage}/>
                     </div>
 
                     {provider === 'dev' && (
                         <div className="survival-page" style={display('records')}>
-                          <ActionLogPanel logs={logs} error={errors.logs} busy={busy} run={run} refresh={refreshAll} />
+                          <ActionLogPanel logs={logs} error={errors.logs} busy={busy} run={run} refresh={refreshAll}/>
                         </div>
                     )}
 
                     <div className="survival-page" style={display('shop')}>
-                      <ShopPanel products={products} character={character} error={errors.products} busy={busy} run={run} refresh={refreshAll} notify={setMessage} />
+                      <ShopPanel products={products} character={character} error={errors.products} busy={busy} run={run} refresh={refreshAll} notify={setMessage}/>
                     </div>
 
                     <div className="survival-page" style={display('cooking')}>
-                      <CookingPanel activeBattle={character?.in_active_battle} battleError={errors.character} inventory={inventory} catalog={cooking} character={character} error={errors.cooking} busy={busy} run={run} refresh={refreshAll} notify={setMessage} />
+                      <CookingPanel activeBattle={character?.in_active_battle} battleError={errors.character} inventory={inventory} catalog={cooking} character={character} error={errors.cooking} busy={busy} run={run} refresh={refreshAll} notify={setMessage}/>
                     </div>
 
                     <div className="survival-page" style={display('gacha')}>
-                      <GachaPanel gachas={gachas} character={character} error={errors.gachas} busy={busy} run={run} refresh={refreshAll} notify={setMessage} />
+                      <GachaPanel gachas={gachas} character={character} error={errors.gachas} busy={busy} run={run} refresh={refreshAll} notify={setMessage}/>
                     </div>
                   </>
               )}
@@ -561,7 +676,7 @@ export default function App() {
             <nav className="survival-bottom-nav" aria-label="모바일 메뉴">
               {navigation.filter(([id]) => ['home', 'character', 'investigation', 'battle'].includes(id)).map(([id, label, symbol]) => (
                   <button key={id} type="button" className={view === id ? 'is-active' : ''} onClick={() => navigate(id)}>
-                    <NavIcon name={symbol} className="survival-nav-icon" />
+                    <NavIcon name={symbol} className="survival-nav-icon"/>
                     {label}
                   </button>
               ))}

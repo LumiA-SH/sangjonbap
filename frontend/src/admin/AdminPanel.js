@@ -15,6 +15,7 @@ import ItemPicker from './ItemPicker';
 import BalancePanel from './BalancePanel';
 import CharacterOperationsPanel from './CharacterOperationsPanel';
 import InvestigationAdminPanel from './InvestigationAdminPanel';
+import ImageUploadField from './ImageUploadField';
 
 const emptyItem = {
   name: '',
@@ -69,14 +70,15 @@ function Editor({kind, record, seed, onSaved, onDenied}) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const saving = useRef(false);
+  const [imageUploading,setImageUploading]=useState(false);
 
   function change(key, value) {
-    setDraft({...draft, [key]: value});
+    setDraft(current => ({...current, [key]: value}));
   }
 
   async function submit(event) {
     event.preventDefault();
-    if (saving.current) return;
+    if (saving.current || imageUploading) return;
 
     saving.current = true;
     setBusy(true);
@@ -126,16 +128,11 @@ function Editor({kind, record, seed, onSaved, onDenied}) {
   }
 
   function renderField(key) {
-    if (key === 'item_id') {
-      return (
-          <ItemPicker key={key} label="판매 아이템" value={draft.item_id} disabled={busy} onDenied={onDenied} onChange={(id, item) => setDraft(d => ({
-            ...d,
-            item_id: id,
-            ...(item?.blood_pack_kind === 'FREE'
-                ? {price: 0, daily_limit: 1, purchase_limit: null, stock_limit: null}
-                : {daily_limit: null})
-          }))}/>
-      );
+    if (key==='image_url') {
+      return <ImageUploadField key={key} kind="items" label="아이템 이미지"
+                               value={draft.image_url} onChange={value=>change('image_url',value)}
+                               disabled={busy} onDenied={onDenied}
+                               onUploadingChange={setImageUploading}/>;
     }
 
     let input;
@@ -166,13 +163,6 @@ function Editor({kind, record, seed, onSaved, onDenied}) {
           <select value={draft[key]} disabled={busy} onChange={e => change(key, e.target.value)}>
             {['MATERIAL', 'CONSUMABLE', 'FOOD', 'ETC'].map(v => <option key={v}>{v}</option>)}
           </select>
-      );
-    } else if (key === 'image_url') {
-      input = (
-          <>
-            <span>이미지 URL</span>
-            <input value={draft[key] ?? ''} disabled={busy} onChange={e => change(key, e.target.value || null)}/>
-          </>
       );
     } else if (key === 'description') {
       input = <textarea value={draft[key] ?? ''} disabled={busy} onChange={e => change(key, e.target.value || null)}/>;
@@ -211,7 +201,9 @@ function Editor({kind, record, seed, onSaved, onDenied}) {
             </details>
         )}
 
-        <button disabled={busy}>{busy ? '저장 중…' : '저장'}</button>
+        <button disabled={busy || imageUploading}>
+          {imageUploading ? '이미지 업로드 중…' : busy ? '저장 중…' : '저장'}
+        </button>
         <p role="status">{message}</p>
       </form>
   );

@@ -3,6 +3,7 @@ import {AppError,ok} from '../../shared/http.js';
 import {requireAdmin} from '../../shared/admin.js';
 import {validId,validateAdminInput} from './service.js';
 import {mountExtendedAdminRoutes} from './extended-routes.js';
+import {mountAdminImageRoutes} from './image-upload.js';
 
 export function adminRoutes(config,repository,sessions) {
     const router=Router();
@@ -15,6 +16,7 @@ export function adminRoutes(config,repository,sessions) {
     });
 
     router.use(sessions.require,requireAdmin);
+    mountAdminImageRoutes(router);
     router.get('/access',(req,res)=>ok(res,{
         role:'ADMIN',
         authentication:config.provider==='mastodon'?'MASTODON':'DEV',

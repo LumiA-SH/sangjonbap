@@ -3,6 +3,7 @@ import {useEffect,useRef,useState} from 'react';
 import {api} from '../api/client';
 import ItemPicker from './ItemPicker';
 import GachaStockEditor from './GachaStockEditor';
+import ImageUploadField from './ImageUploadField';
 
 const defaults={
   areas:{name:'',description:null,image_url:null,sort_order:0,encounter_rate:40,is_open:false,unlock_at:null},
@@ -146,6 +147,7 @@ function MasterEditor({kind,record,onSaved,onDenied,onBusy}) {
   const saving=useRef(false);
   const [grades,setGrades]=useState([]);
   const [areas,setAreas]=useState([]);
+  const [imageUploading,setImageUploading]=useState(false);
 
   useEffect(()=>{
     if (kind==='foods') {
@@ -219,7 +221,7 @@ function MasterEditor({kind,record,onSaved,onDenied,onBusy}) {
 
   async function save(event) {
     event.preventDefault();
-    if (saving.current) return;
+    if (saving.current||imageUploading) return;
 
     const error=validateDraft(kind,draft);
 
@@ -305,7 +307,12 @@ function MasterEditor({kind,record,onSaved,onDenied,onBusy}) {
       </span>)}
     </p>}
 
-    {Object.entries(defaults[kind]).filter(([k])=>k!==child&&k!=='area_recipes'&&!(kind==='foods'&&k==='stat_growth_value')).map(([k,v])=>k.endsWith('item_id')?
+    {Object.entries(defaults[kind]).filter(([k])=>k!==child&&k!=='area_recipes'&&!(kind==='foods'&&k==='stat_growth_value')).map(([k,v])=>k==='image_url'?
+        <ImageUploadField key={k} kind="areas" label="구역 이미지"
+                          value={draft[k]} onChange={value=>change(k,value)}
+                          disabled={busy} onDenied={onDenied}
+                          onUploadingChange={setImageUploading}/>:
+        k.endsWith('item_id')?
         <ItemPicker key={k} label={kind==='recipes'?(recipeLabels[k]||labels[k]):labels[k]}
                     value={draft[k]} disabled={busy||(k==='item_id'&&!!record)}
                     type={kind==='recipes'?(k==='result_item_id'?'food':k==='failure_item_id'?'failure-food':'all'):'all'}
@@ -443,7 +450,7 @@ function MasterEditor({kind,record,onSaved,onDenied,onBusy}) {
       }
     }}>미참조 등급 삭제</button>}
 
-    <button disabled={busy}>{busy?'저장 중…':'저장'}</button>
+    <button disabled={busy||imageUploading}>{imageUploading?'이미지 업로드 중…':busy?'저장 중…':'저장'}</button>
     <p role="alert">{message}</p>
   </form>;
 }
