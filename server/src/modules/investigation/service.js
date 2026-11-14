@@ -10,9 +10,15 @@ export function createInvestigationService(repository) {
   return {
     async getAreas(userId) {
       requireRepository();
-      const areas = await repository.getInvestigationAreas(userId);
+
+      const {areas, globalInvestigationRate} = await repository.getInvestigationAreas(userId);
       const investigationApCost = await repository.getInvestigationApCost();
-      return {areas, investigationApCost};
+
+      return {
+        areas,
+        globalInvestigationRate,
+        investigationApCost
+      };
     },
 
     async investigate(userId, areaId, body) {
