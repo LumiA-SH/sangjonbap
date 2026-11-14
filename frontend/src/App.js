@@ -76,6 +76,25 @@ function ResourceBar({label, value, max, character}) {
   );
 }
 
+function HomeCoreStats({character}) {
+  const stats = [
+    ['ATK', character?.atk],
+    ['DEF', character?.def],
+    ['AGI', character?.agi]
+  ];
+
+  return (
+      <div className="survival-core-stats" aria-label="캐릭터 기본 능력치">
+        {stats.map(([label, value]) => (
+            <div className="survival-core-stat" key={label}>
+              <span>{label}</span>
+              <strong>{value ?? '-'}</strong>
+            </div>
+        ))}
+      </div>
+  );
+}
+
 function getKstDay(date) {
   const parts = new Intl.DateTimeFormat('en-US', {
     timeZone: 'Asia/Seoul',
@@ -523,6 +542,8 @@ export default function App() {
                           {resourceStats.map(([label, value, max]) => (
                               <ResourceBar key={label} label={label} value={value} max={max} character={character}/>
                           ))}
+
+                          <HomeCoreStats character={character}/>
                         </div>
                       </div>
                     </DashboardCard>

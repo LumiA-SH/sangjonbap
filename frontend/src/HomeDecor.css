@@ -660,3 +660,53 @@
         top: 0;
     }
 }
+
+
+/* ========================================
+   HOME PROFILE - CORE STATS
+======================================== */
+
+.survival-home .survival-core-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    min-width: 0;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #dddddd;
+}
+
+.survival-home .survival-core-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    min-width: 0;
+    text-align: center;
+}
+
+.survival-home .survival-core-stat span {
+    color: #666666;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.survival-home .survival-core-stat strong {
+    color: #242428;
+    font-size: 18px;
+    font-weight: 850;
+    line-height: 1.3;
+    font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 600px) {
+    .survival-home .survival-core-stats {
+        gap: 10px;
+        padding-top: 12px;
+    }
+
+    .survival-home .survival-core-stat strong {
+        font-size: 20px;
+    }
+}
