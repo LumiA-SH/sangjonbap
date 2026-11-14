@@ -1,0 +1,162 @@
+/* ========================================
+   MONSTER / CLUE LIST TOOLBARS
+======================================== */
+
+.admin-monster-actions,
+.admin-clue-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    margin: 16px 0 20px;
+}
+
+.admin-panel .admin-monster-actions button,
+.admin-panel .admin-clue-actions button {
+    margin: 0;
+}
+
+/* ========================================
+   TWO-COLUMN ADMIN LIST
+======================================== */
+
+.admin-panel .admin-two-column-list {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0;
+    width: 100%;
+    min-width: 0;
+    margin: 16px 0;
+    padding: 0;
+    border: 1px solid #dedee1;
+    border-radius: 9px;
+    background: #ffffff;
+    list-style: none;
+    overflow: hidden;
+}
+
+/* 가운데 구분선은 각 행이 아닌 목록 전체에 적용 */
+.admin-panel .admin-two-column-list::before {
+    position: absolute;
+    z-index: 1;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: 1px;
+    background: #d4d4d7;
+    content: '';
+    pointer-events: none;
+}
+
+.admin-panel .admin-two-column-list > li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    min-width: 0;
+    min-height: 92px;
+    margin: 0;
+    padding: 17px 20px;
+    border: 0;
+    border-bottom: 1px solid #e5e5e7;
+    background: transparent;
+}
+
+.admin-panel .admin-two-column-list > li:last-child {
+    border-bottom: 0;
+}
+
+.admin-panel .admin-two-column-list > li:nth-child(odd):last-child,
+.admin-panel .admin-two-column-list > li:nth-last-child(2):nth-child(odd) {
+    border-bottom: 0;
+}
+
+.admin-panel .admin-two-column-list > li:nth-child(even):last-child {
+    border-bottom: 0;
+}
+
+/* ========================================
+   LIST ITEM CONTENT
+======================================== */
+
+.admin-list-detail {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.admin-list-detail strong {
+    color: #242428;
+    font-size: 14px;
+    font-weight: 800;
+    line-height: 1.5;
+}
+
+.admin-list-detail small {
+    display: block;
+    color: #6e6e73;
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.admin-panel .admin-two-column-list > li > button {
+    flex: 0 0 auto;
+    min-width: 80px;
+    margin: 0;
+    white-space: nowrap;
+}
+
+.admin-panel .admin-two-column-list > li > button:hover:not(:disabled) {
+    border-color: #650c13;
+    background: #f7eded;
+    color: #650c13;
+}
+
+/* ========================================
+   RESPONSIVE
+======================================== */
+
+@media (max-width: 1080px) {
+    .admin-panel .admin-two-column-list {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .admin-panel .admin-two-column-list::before {
+        display: none;
+    }
+
+    .admin-panel .admin-two-column-list > li {
+        border-bottom: 1px solid #e5e5e7 !important;
+    }
+
+    .admin-panel .admin-two-column-list > li:last-child {
+        border-bottom: 0 !important;
+    }
+}
+
+@media (max-width: 600px) {
+    .admin-panel .admin-two-column-list > li {
+        gap: 10px;
+        min-height: 75px;
+        padding: 13px 12px;
+    }
+
+    .admin-panel .admin-two-column-list > li > button {
+        min-width: 72px;
+        padding: 9px 10px;
+        font-size: 12px;
+    }
+
+    .admin-list-detail strong {
+        font-size: 13px;
+    }
+
+    .admin-list-detail small {
+        font-size: 11px;
+    }
+}

@@ -1,5 +1,6 @@
 import {useEffect, useRef, useState} from 'react';
 import {api} from '../api/client';
+import './admin-list-layout.css';
 
 const empty = {
  title: '',
@@ -32,7 +33,10 @@ export default function ClueAdminPanel({onDenied, recordId, onOpen}) {
    await f();
   } catch (e) {
    setMessage(`${e.code || 'ERROR'}: ${e.message}`);
-   if ([401, 403].includes(e.status)) onDenied?.(e.message);
+
+   if ([401, 403].includes(e.status)) {
+    onDenied?.(e.message);
+   }
   } finally {
    pending.current = false;
    setBusy(false);
@@ -40,7 +44,9 @@ export default function ClueAdminPanel({onDenied, recordId, onOpen}) {
  }
 
  async function list(after = null) {
-  const r = await api('/admin/clues?q=' + encodeURIComponent(q) + (after ? '&after=' + after : ''));
+  const r = await api('/admin/clues?q=' + encodeURIComponent(q) +
+      (after ? '&after=' + after : ''));
+
   setRows(r.records);
   setNext(r.nextAfter);
  }
@@ -55,8 +61,11 @@ export default function ClueAdminPanel({onDenied, recordId, onOpen}) {
   }
 
   const r = await api('/admin/clues/' + id);
+
   setLoaded(r);
-  setDraft(Object.fromEntries(Object.keys(empty).map(k => [k, r.record[k]])));
+  setDraft(Object.fromEntries(
+      Object.keys(empty).map(k => [k, r.record[k]])
+  ));
  }
 
  useEffect(() => {
@@ -70,7 +79,9 @@ export default function ClueAdminPanel({onDenied, recordId, onOpen}) {
     const [listResult, areaResult, detail] = await Promise.all([
      api('/admin/clues?q='),
      api('/admin/battle-areas'),
-     onOpen && recordId && recordId !== 'new' ? api('/admin/clues/' + recordId) : Promise.resolve(null)
+     onOpen && recordId && recordId !== 'new'
+         ? api('/admin/clues/' + recordId)
+         : Promise.resolve(null)
     ]);
 
     if (!active) return;
@@ -84,12 +95,17 @@ export default function ClueAdminPanel({onDenied, recordId, onOpen}) {
     if (recordId === 'new') {
      setDraft({...empty});
     } else if (detail) {
-     setDraft(Object.fromEntries(Object.keys(empty).map(k => [k, detail.record[k]])));
+     setDraft(Object.fromEntries(
+         Object.keys(empty).map(k => [k, detail.record[k]])
+     ));
     }
    } catch (e) {
     if (active) {
      setMessage(e.message);
-     if ([401, 403].includes(e.status)) onDenied?.(e.message);
+
+     if ([401, 403].includes(e.status)) {
+      onDenied?.(e.message);
+     }
     }
    } finally {
     if (active) setBusy(false);
@@ -99,7 +115,9 @@ export default function ClueAdminPanel({onDenied, recordId, onOpen}) {
   return () => {
    active = false;
   };
- }, [recordId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+ }, [recordId]);
 
  const choose = id => onOpen ? onOpen(id) : work(() => open(id));
 
@@ -107,9 +125,12 @@ export default function ClueAdminPanel({onDenied, recordId, onOpen}) {
   e.preventDefault();
 
   await work(async () => {
-   if (!window.confirm('발견 기록을 보존하고 단서 내용을 저장합니까?')) return;
+   if (!window.confirm('발견 기록을 보존하고 단서 내용을 저장합니까?')) {
+    return;
+   }
 
-   const r = await api('/admin/clues' + (loaded ? '/' + loaded.record.id : ''), {
+   const r = await api('/admin/clues' +
+       (loaded ? '/' + loaded.record.id : ''), {
     method: loaded ? 'PATCH' : 'POST',
     body: {
      ...draft,
@@ -120,7 +141,9 @@ export default function ClueAdminPanel({onDenied, recordId, onOpen}) {
    });
 
    setLoaded(r);
-   setDraft(Object.fromEntries(Object.keys(empty).map(k => [k, r.record[k]])));
+   setDraft(Object.fromEntries(
+       Object.keys(empty).map(k => [k, r.record[k]])
+   ));
 
    await list();
    setMessage('저장 성공');
@@ -132,7 +155,10 @@ export default function ClueAdminPanel({onDenied, recordId, onOpen}) {
       <h2>단서 등록·수정</h2>
       <p>미발견 단서는 공개 설정과 관계없이 숨깁니다. 발견자·발견 시각·조사율은 이 화면에서 변경하지 않습니다.</p>
 
-      <form onSubmit={e => {e.preventDefault(); work(() => list());}}>
+      <form onSubmit={e => {
+       e.preventDefault();
+       work(() => list());
+      }}>
        <label>
         단서 검색
         <input value={q} onChange={e => setQ(e.target.value)}/>
@@ -140,47 +166,83 @@ export default function ClueAdminPanel({onDenied, recordId, onOpen}) {
        <button disabled={busy}>검색</button>
       </form>
 
-      <button disabled={busy} onClick={() => choose('new')}>새 단서</button>
+      <div className="admin-clue-actions">
+       <button disabled={busy} onClick={() => choose('new')}>
+        새 단서
+       </button>
+      </div>
 
-      <ul>
+      <ul className="admin-two-column-list admin-clue-list">
        {rows.map(r => (
            <li key={r.id}>
-            {r.title} · {r.is_discovered ? '발견' : '미발견'} · {r.is_public ? '공개 허용' : '비공개'}
-            <button disabled={busy} onClick={() => choose(String(r.id))}>단서 상세</button>
+            <div className="admin-list-detail">
+             <strong>{r.title}</strong>
+             <small>
+              {r.is_discovered ? '발견' : '미발견'}
+              {' · '}
+              {r.is_public ? '공개 허용' : '비공개'}
+             </small>
+            </div>
+
+            <button disabled={busy} onClick={() => choose(String(r.id))}>
+             단서 상세
+            </button>
            </li>
        ))}
       </ul>
 
-      {next && <button disabled={busy} onClick={() => work(() => list(next))}>다음 단서</button>}
+      {next && (
+          <button disabled={busy} onClick={() => work(() => list(next))}>
+           다음 단서
+          </button>
+      )}
 
       {draft && (
           <form className="admin-form" onSubmit={save}>
            <label>
             제목
-            <input required maxLength={100} disabled={busy} value={draft.title} onChange={e => setDraft({...draft, title: e.target.value})}/>
+            <input required maxLength={100} disabled={busy}
+                   value={draft.title}
+                   onChange={e => setDraft({...draft, title: e.target.value})}/>
            </label>
 
            <label>
             내용
-            <textarea maxLength={10000} disabled={busy} value={draft.content} onChange={e => setDraft({...draft, content: e.target.value})}/>
+            <textarea maxLength={10000} disabled={busy}
+                      value={draft.content}
+                      onChange={e => setDraft({...draft, content: e.target.value})}/>
            </label>
 
            <label>
             관련 대상
-            <input maxLength={200} disabled={busy} value={draft.related_target || ''} onChange={e => setDraft({...draft, related_target: e.target.value || null})}/>
+            <input maxLength={200} disabled={busy}
+                   value={draft.related_target || ''}
+                   onChange={e => setDraft({
+                    ...draft,
+                    related_target: e.target.value || null
+                   })}/>
            </label>
 
            <label>
             관련 구역
-            <select required disabled={busy} value={draft.area_id || ''} onChange={e => setDraft({...draft, area_id: e.target.value})}>
+            <select required disabled={busy}
+                    value={draft.area_id || ''}
+                    onChange={e => setDraft({...draft, area_id: e.target.value})}>
              <option value="">선택</option>
-             {areas.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+             {areas.map(a => (
+                 <option key={a.id} value={a.id}>{a.name}</option>
+             ))}
             </select>
            </label>
 
            <label>
             발견 후 공개 허용
-            <input type="checkbox" disabled={busy} checked={draft.is_public} onChange={e => setDraft({...draft, is_public: e.target.checked})}/>
+            <input type="checkbox" disabled={busy}
+                   checked={draft.is_public}
+                   onChange={e => setDraft({
+                    ...draft,
+                    is_public: e.target.checked
+                   })}/>
            </label>
 
            {loaded && (
@@ -193,12 +255,17 @@ export default function ClueAdminPanel({onDenied, recordId, onOpen}) {
 
            <label>
             수정 사유
-            <input required maxLength={500} disabled={busy} value={reason} onChange={e => setReason(e.target.value)}/>
+            <input required maxLength={500} disabled={busy}
+                   value={reason}
+                   onChange={e => setReason(e.target.value)}/>
            </label>
 
            <details className="admin-wide">
             <summary>변경 전후 비교</summary>
-            <pre>{JSON.stringify({before: loaded?.record || null, after: draft}, null, 2)}</pre>
+            <pre>{JSON.stringify({
+             before: loaded?.record || null,
+             after: draft
+            }, null, 2)}</pre>
            </details>
 
            <button disabled={busy}>단서 저장</button>

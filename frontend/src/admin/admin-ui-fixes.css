@@ -1,0 +1,283 @@
+/* ========================================
+   ADMIN UI - COMMON SPACING
+======================================== */
+
+.admin-content > button {
+    margin: 0 10px 12px 0;
+}
+
+.admin-content > section[aria-label="마스터 관리"] > button {
+    margin: 0 10px 12px 0;
+}
+
+.admin-content button {
+    flex-shrink: 0;
+}
+
+.admin-content .admin-toolbar {
+    gap: 14px;
+    margin: 18px 0;
+}
+
+.admin-content .admin-toolbar-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    margin: 16px 0 20px;
+}
+
+.admin-content .admin-toolbar-actions button {
+    margin: 0;
+}
+
+.admin-content nav[aria-label="운영 정책 종류"] {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin: 18px 0 22px;
+}
+
+.admin-content nav[aria-label="운영 정책 종류"] button {
+    margin: 0;
+}
+
+.admin-content nav[aria-label="운영 정책 종류"] button[aria-pressed="true"] {
+    border-color: #650c13;
+    background: #650c13;
+    color: #ffffff;
+}
+
+/* ========================================
+   TWO-COLUMN RECORD LISTS
+======================================== */
+
+.admin-content .admin-records,
+.admin-content .admin-master-records {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 0;
+    row-gap: 0;
+    width: 100%;
+    padding: 8px 12px !important;
+    border: 1px solid #dddddf;
+    border-radius: 9px;
+    background: #ffffff;
+    list-style: none;
+}
+
+.admin-content .admin-records > li,
+.admin-content .admin-master-records > li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    min-width: 0;
+    min-height: 76px;
+    margin: 0;
+    padding: 12px 16px;
+    border-bottom: 1px solid #e5e5e7;
+}
+
+.admin-content .admin-records > li:nth-child(2n),
+.admin-content .admin-master-records > li:nth-child(2n) {
+    border-left: 1px solid #d3d3d6;
+}
+
+.admin-content .admin-records > li:nth-last-child(-n+2),
+.admin-content .admin-master-records > li:nth-last-child(-n+2) {
+    border-bottom: 0;
+}
+
+.admin-content .admin-record-summary {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.admin-content .admin-record-summary strong {
+    font-size: 14px;
+    font-weight: 800;
+    color: #242428;
+}
+
+.admin-content .admin-record-summary small {
+    color: #69696e;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.admin-content .admin-record-summary details {
+    width: fit-content;
+    max-width: 100%;
+    padding: 2px 0;
+    border: 0;
+    background: transparent;
+    font-size: 11px;
+    color: #77777b;
+}
+
+.admin-content .admin-record-summary summary {
+    cursor: pointer;
+}
+
+.admin-content .admin-records > li > button,
+.admin-content .admin-master-records > li > button {
+    flex: 0 0 auto;
+    margin: 0;
+}
+
+/* ========================================
+   CHARACTER LIST - IMAGE INLINE
+======================================== */
+
+.admin-content li:has(> img[width="40"]) {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+    padding: 12px 0;
+}
+
+.admin-content li > img[width="40"] {
+    display: block;
+    width: 52px;
+    height: 52px;
+    flex: 0 0 52px;
+    border: 1px solid #d5d5d7;
+    border-radius: 8px;
+    object-fit: cover;
+}
+
+.admin-content li:has(> img[width="40"]) > button {
+    margin-left: auto;
+}
+
+/* ========================================
+   CHECKBOXES / ANEMIA RP
+======================================== */
+
+.admin-panel input[type="checkbox"] {
+    width: 21px;
+    height: 21px;
+    min-width: 21px;
+    flex: 0 0 21px;
+    margin: 0;
+    accent-color: #650c13;
+}
+
+.admin-content form > fieldset > label:has(> input[type="checkbox"]) {
+    display: flex;
+    flex-direction: row-reverse;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 14px;
+    width: fit-content;
+    max-width: 100%;
+    min-height: 48px;
+    margin-bottom: 14px;
+    padding: 10px 14px;
+    border: 1px solid #dedee1;
+    border-radius: 8px;
+    background: #f8f8f9;
+    cursor: pointer;
+}
+
+.admin-content form > fieldset > label:has(> input[type="checkbox"]) input {
+    margin: 0;
+}
+
+.admin-content fieldset > button {
+    margin: 8px 10px 8px 0;
+}
+
+.admin-content fieldset {
+    min-width: 0;
+}
+
+.admin-content fieldset > fieldset {
+    margin-bottom: 14px;
+}
+
+/* ========================================
+   FORM / SEARCH RESULTS
+======================================== */
+
+.admin-item-search-results li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.admin-item-search-results li > div,
+.admin-selected-item > div {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.admin-item-search-results small,
+.admin-selected-item small {
+    color: #77777b;
+}
+
+.admin-selected-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    min-height: 48px;
+    margin-top: 10px;
+    padding: 10px 12px;
+    border: 1px solid #dedee1;
+    border-radius: 7px;
+    background: #f8f8f9;
+}
+
+/* ========================================
+   RESPONSIVE
+======================================== */
+
+@media (max-width: 1100px) {
+    .admin-content .admin-records,
+    .admin-content .admin-master-records {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .admin-content .admin-records > li,
+    .admin-content .admin-master-records > li {
+        border-left: 0 !important;
+        border-bottom: 1px solid #e5e5e7;
+    }
+
+    .admin-content .admin-records > li:last-child,
+    .admin-content .admin-master-records > li:last-child {
+        border-bottom: 0;
+    }
+}
+
+@media (max-width: 600px) {
+    .admin-content .admin-records > li,
+    .admin-content .admin-master-records > li {
+        flex-wrap: wrap;
+        padding: 13px 8px;
+    }
+
+    .admin-content li:has(> img[width="40"]) {
+        flex-wrap: wrap;
+    }
+
+    .admin-content .admin-record-summary {
+        flex-basis: 100%;
+    }
+
+    .admin-content .admin-toolbar-actions {
+        gap: 8px;
+    }
+}

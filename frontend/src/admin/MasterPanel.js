@@ -1,558 +1,963 @@
 /* global BigInt */
-import {useEffect,useRef,useState} from 'react';
+import {useCallback, useEffect, useRef, useState} from 'react';
 import {api} from '../api/client';
 import ItemPicker from './ItemPicker';
 import GachaStockEditor from './GachaStockEditor';
 import ImageUploadField from './ImageUploadField';
+import AdminReferenceName, {invalidateAdminNames} from './AdminReferenceName';
 
-const defaults={
-  areas:{name:'',description:null,image_url:null,sort_order:0,encounter_rate:40,is_open:false,unlock_at:null},
-  'food-grades':{name:'',blood_recovery:10,stat_growth_rate:15,is_active:true},
-  foods:{grade_id:null,is_failure:false,item_id:'',blood_recovery:0,stat_growth_enabled:false,stat_growth_target:null,stat_growth_value:0,rp_effect_text:null,rp_effect_texts:[]},
-  recipes:{name:'',description:null,discovery_grade:null,success_rate:80,result_quantity:3,result_item_id:'',failure_item_id:null,is_active:true,ingredients:[],area_recipes:[]},
-  gachas:{name:'',price:1,is_active:true,start_at:null,end_at:null,period_enabled:null,start_inclusive:null,end_inclusive:null,rewards:[]}
+const defaults = {
+  areas: {
+    name: '',
+    description: null,
+    image_url: null,
+    sort_order: 0,
+    encounter_rate: 40,
+    is_open: false,
+    unlock_at: null
+  },
+  'food-grades': {
+    name: '',
+    blood_recovery: 10,
+    stat_growth_rate: 15,
+    is_active: true
+  },
+  foods: {
+    grade_id: null,
+    is_failure: false,
+    item_id: '',
+    blood_recovery: 0,
+    stat_growth_enabled: false,
+    stat_growth_target: null,
+    stat_growth_value: 0,
+    rp_effect_text: null,
+    rp_effect_texts: []
+  },
+  recipes: {
+    name: '',
+    description: null,
+    discovery_grade: null,
+    success_rate: 80,
+    result_quantity: 3,
+    result_item_id: '',
+    failure_item_id: null,
+    is_active: true,
+    ingredients: [],
+    area_recipes: []
+  },
+  gachas: {
+    name: '',
+    price: 1,
+    is_active: true,
+    start_at: null,
+    end_at: null,
+    period_enabled: null,
+    start_inclusive: null,
+    end_inclusive: null,
+    rewards: []
+  }
 };
 
-const recipePrices={COMMON:2,RARE:3,SPECIAL:4};
+const recipePrices = {COMMON: 2, RARE: 3, SPECIAL: 4};
 
-const labels={
-  period_enabled:'기간 제한',start_inclusive:'시작 경계 포함',end_inclusive:'종료 경계 포함',
-  grade_id:'음식 등급',is_failure:'실패 RP 음식 (수치 효과 없음)',encounter_rate:'조우 확률 (%)',
-  item_id:'아이템 ID',blood_recovery:'혈량 회복',stat_growth_enabled:'능력치 성장 적용',
-  stat_growth_rate:'능력치 성장 확률 (%)',stat_growth_target:'성장 대상 능력치',stat_growth_value:'성장량',
-  rp_effect_texts:'실패요리 RP 문구 후보 (한 줄에 하나, 최대 50개)',rp_effect_text:'기존 RP 효과 설명',
-  name:'이름',description:'설명',success_rate:'성공 확률 (%)',
-  result_item_id:'성공 음식 ID',failure_item_id:'실패 음식 ID',is_active:'활성',
-  price:'가격',start_at:'시작 시각 (시간대 포함 ISO)',end_at:'종료 시각 (시간대 포함 ISO)'
+const labels = {
+  period_enabled: '기간 제한',
+  start_inclusive: '시작 경계 포함',
+  end_inclusive: '종료 경계 포함',
+  grade_id: '음식 등급',
+  is_failure: '실패 RP 음식 (수치 효과 없음)',
+  encounter_rate: '조우 확률 (%)',
+  item_id: '아이템 선택',
+  blood_recovery: '혈량 회복',
+  stat_growth_enabled: '능력치 성장 적용',
+  stat_growth_rate: '능력치 성장 확률 (%)',
+  stat_growth_target: '성장 대상 능력치',
+  stat_growth_value: '성장량',
+  rp_effect_texts: '실패요리 RP 문구 후보 (한 줄에 하나, 최대 50개)',
+  rp_effect_text: '기존 RP 효과 설명',
+  name: '이름',
+  description: '설명',
+  success_rate: '성공 확률 (%)',
+  result_item_id: '완성 음식',
+  failure_item_id: '실패 요리',
+  is_active: '활성',
+  price: '가격',
+  start_at: '시작 시각 (시간대 포함 ISO)',
+  end_at: '종료 시각 (시간대 포함 ISO)'
 };
 
-const recipeLabels={
-  discovery_grade:'레시피 등급',
-  success_rate:'요리 성공 확률 (%)',
-  result_item_id:'완성 음식',
-  failure_item_id:'실패 요리',
-  result_quantity:'완성 음식 지급 수량',
-  is_active:'사용 여부'
+const recipeLabels = {
+  discovery_grade: '레시피 등급',
+  success_rate: '요리 성공 확률 (%)',
+  result_item_id: '완성 음식',
+  failure_item_id: '실패 요리',
+  result_quantity: '완성 음식 지급 수량',
+  is_active: '사용 여부'
 };
 
-const numeric=['encounter_rate','sort_order','blood_recovery','stat_growth_rate','stat_growth_value','success_rate','price','result_quantity'];
+const numeric = [
+  'encounter_rate',
+  'sort_order',
+  'blood_recovery',
+  'stat_growth_rate',
+  'stat_growth_value',
+  'success_rate',
+  'price',
+  'result_quantity'
+];
 
-labels.result_quantity='성공 음식 수량';
-Object.assign(labels,{is_open:'공개 허용',unlock_at:'공개 시각 (시간대 포함 ISO, 비우면 즉시)'});
-Object.assign(labels,{image_url:'이미지 URL',sort_order:'표시 순서'});
+labels.result_quantity = '성공 음식 수량';
 
-const isId=value=>typeof value==='string'&&/^[1-9][0-9]{0,18}$/.test(value)&&BigInt(value)<=9223372036854775807n;
+Object.assign(labels, {
+  is_open: '공개 허용',
+  unlock_at: '공개 시각 (시간대 포함 ISO, 비우면 즉시)'
+});
 
-export function validateDraft(kind,draft) {
-  for (const [key,value] of Object.entries(draft)) {
-    if (numeric.includes(key) && (typeof value!=='number'||!Number.isFinite(value)||value<0||value>2147483647||(!key.endsWith('rate')&&!Number.isInteger(value)))) {
+Object.assign(labels, {
+  image_url: '이미지 URL',
+  sort_order: '표시 순서'
+});
+
+const isId = value =>
+    typeof value === 'string' &&
+    /^[1-9][0-9]{0,18}$/.test(value) &&
+    BigInt(value) <= 9223372036854775807n;
+
+export function validateDraft(kind, draft) {
+  for (const [key, value] of Object.entries(draft)) {
+    if (numeric.includes(key) &&
+        (typeof value !== 'number' || !Number.isFinite(value) || value < 0 ||
+            value > 2147483647 || (!key.endsWith('rate') && !Number.isInteger(value)))) {
       return `${labels[key]} 값을 확인하세요.`;
     }
 
-    if (key.endsWith('rate')&&(value>100||Number(value.toFixed(2))!==value)) {
+    if (key.endsWith('rate') && (value > 100 || Number(value.toFixed(2)) !== value)) {
       return '확률은 소수 둘째 자리까지의 0~100입니다.';
     }
 
-    if (key.endsWith('item_id') && !(key==='failure_item_id'&&value===null) && !isId(value)) {
-      return '아이템 ID는 양의 정수입니다.';
+    if (key.endsWith('item_id') &&
+        !(key === 'failure_item_id' && value === null) &&
+        !isId(value)) {
+      return '아이템 선택값을 확인하세요.';
     }
   }
 
-  if (draft.rp_effect_texts && (draft.rp_effect_texts.length>50||draft.rp_effect_texts.some(v=>!v.trim()||v.length>500))) {
+  if (draft.rp_effect_texts &&
+      (draft.rp_effect_texts.length > 50 ||
+          draft.rp_effect_texts.some(v => !v.trim() || v.length > 500))) {
     return 'RP 문구는 1~500자, 최대 50개입니다.';
   }
 
-  if ('grade_id' in draft && draft.grade_id!==null && !isId(draft.grade_id)) {
+  if ('grade_id' in draft && draft.grade_id !== null && !isId(draft.grade_id)) {
     return '음식 등급을 선택하세요.';
   }
 
-  if ('name' in draft && (!draft.name.trim()||[...draft.name].length>100)) {
+  if ('name' in draft && (!draft.name.trim() || [...draft.name].length > 100)) {
     return '이름은 1~100자입니다.';
   }
 
-  if (kind==='foods' && (draft.stat_growth_enabled ? !draft.stat_growth_target||draft.stat_growth_value!==1 : draft.stat_growth_target!==null||draft.stat_growth_value!==0)) {
+  if (kind === 'foods' &&
+      (draft.stat_growth_enabled
+          ? !draft.stat_growth_target || draft.stat_growth_value !== 1
+          : draft.stat_growth_target !== null || draft.stat_growth_value !== 0)) {
     return '능력치 성장 적용 시 성장 대상과 +1 설정이 필요합니다.';
   }
 
-  if (kind==='foods' && draft.stat_growth_enabled && !draft.grade_id) {
+  if (kind === 'foods' && draft.stat_growth_enabled && !draft.grade_id) {
     return '능력치 성장을 적용하려면 음식 등급을 선택하세요.';
   }
 
-  const children=draft.ingredients||draft.rewards;
+  const children = draft.ingredients || draft.rewards;
 
   if (children) {
-    if (kind==='recipes'&&!children.length) return '재료를 한 개 이상 등록하세요.';
-    if (kind==='recipes'&&children.length>5) return '레시피 재료는 최대 5종입니다.';
-
-    if (children.some(r=>!isId(r.item_id)||!Number.isInteger(r.quantity)||r.quantity<1||r.quantity>2147483647||('weight' in r&&(!Number.isInteger(r.weight)||r.weight<1||r.weight>2147483647)))) {
-      return '재료/보상의 ID, 양수 정수 수량과 가중치를 확인하세요.';
+    if (kind === 'recipes' && !children.length) {
+      return '재료를 한 개 이상 등록하세요.';
     }
 
-    if (new Set(children.map(r=>r.item_id)).size!==children.length) {
+    if (kind === 'recipes' && children.length > 5) {
+      return '레시피 재료는 최대 5종입니다.';
+    }
+
+    if (children.some(r =>
+        !isId(r.item_id) ||
+        !Number.isInteger(r.quantity) ||
+        r.quantity < 1 ||
+        r.quantity > 2147483647 ||
+        ('weight' in r &&
+            (!Number.isInteger(r.weight) || r.weight < 1 || r.weight > 2147483647))
+    )) {
+      return '재료/보상의 아이템 선택값, 수량과 가중치를 확인하세요.';
+    }
+
+    if (new Set(children.map(r => r.item_id)).size !== children.length) {
       return '아이템을 중복 등록할 수 없습니다.';
     }
   }
 
-  if (kind==='recipes'&&!draft.failure_item_id) {
+  if (kind === 'recipes' && !draft.failure_item_id) {
     return '실패 가능한 레시피에는 실패 음식이 필요합니다.';
   }
 
-  if (kind==='recipes'&&draft.result_quantity!==undefined&&draft.result_quantity<1) {
+  if (kind === 'recipes' &&
+      draft.result_quantity !== undefined &&
+      draft.result_quantity < 1) {
     return '성공 음식 수량은 양수입니다.';
   }
 
-  if (kind==='recipes') {
-    const areas=draft.area_recipes||[];
+  if (kind === 'recipes') {
+    const areas = draft.area_recipes || [];
 
-    if (!Array.isArray(areas)||areas.length>100) {
+    if (!Array.isArray(areas) || areas.length > 100) {
       return '등장 구역은 최대 100개까지 등록할 수 있습니다.';
     }
 
     for (const row of areas) {
-      if (!isId(String(row.area_id||''))||
-          !Number.isInteger(row.weight)||row.weight<1||row.weight>2147483647||
-          typeof row.drop_rate!=='number'||!Number.isFinite(row.drop_rate)||
-          row.drop_rate<0||row.drop_rate>100||Number(row.drop_rate.toFixed(2))!==row.drop_rate) {
+      if (!isId(String(row.area_id || '')) ||
+          !Number.isInteger(row.weight) ||
+          row.weight < 1 ||
+          row.weight > 2147483647 ||
+          typeof row.drop_rate !== 'number' ||
+          !Number.isFinite(row.drop_rate) ||
+          row.drop_rate < 0 ||
+          row.drop_rate > 100 ||
+          Number(row.drop_rate.toFixed(2)) !== row.drop_rate) {
         return '등장 구역, 선택 가중치, 발견 확률을 확인하세요.';
       }
     }
 
-    if (new Set(areas.map(row=>String(row.area_id))).size!==areas.length) {
+    if (new Set(areas.map(row => String(row.area_id))).size !== areas.length) {
       return '같은 등장 구역을 중복 등록할 수 없습니다.';
     }
   }
 
-  for (const key of ['start_at','end_at','unlock_at']) {
-    if (draft[key] && (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,6})?(Z|[+-]\d{2}:\d{2})$/.test(draft[key])||!Number.isFinite(Date.parse(draft[key])))) {
+  for (const key of ['start_at', 'end_at', 'unlock_at']) {
+    if (draft[key] &&
+        (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,6})?(Z|[+-]\d{2}:\d{2})$/.test(draft[key]) ||
+            !Number.isFinite(Date.parse(draft[key])))) {
       return '시각은 2026-10-11T00:00:00+09:00 형식입니다.';
     }
   }
 
-  if (kind==='gachas'&&draft.period_enabled===true&&(!draft.start_at||!draft.end_at||typeof draft.start_inclusive!=='boolean'||typeof draft.end_inclusive!=='boolean')) {
+  if (kind === 'gachas' &&
+      draft.period_enabled === true &&
+      (!draft.start_at ||
+          !draft.end_at ||
+          typeof draft.start_inclusive !== 'boolean' ||
+          typeof draft.end_inclusive !== 'boolean')) {
     return '기간 활성 시 시작·종료 시각과 경계 포함 여부를 설정하세요.';
   }
 
-  const micros=value=>BigInt(Date.parse(value))*1000n+BigInt((value.match(/\.(\d+)/)?.[1]||'').padEnd(6,'0').slice(3,6));
+  const micros = value =>
+      BigInt(Date.parse(value)) * 1000n +
+      BigInt((value.match(/\.(\d+)/)?.[1] || '').padEnd(6, '0').slice(3, 6));
 
-  if (draft.start_at&&draft.end_at&&micros(draft.end_at)<=micros(draft.start_at)) {
+  if (draft.start_at && draft.end_at && micros(draft.end_at) <= micros(draft.start_at)) {
     return '종료 시각은 시작 시각 이후여야 합니다.';
   }
 
   return '';
 }
 
-function MasterEditor({kind,record,onSaved,onDenied,onBusy}) {
-  const [draft,setDraft]=useState(()=>Object.fromEntries(Object.entries(defaults[kind]).map(([k,v])=>[k,record?.[k]??v])));
-  const [busy,setBusy]=useState(false),[message,setMessage]=useState('');
-  const saving=useRef(false);
-  const [grades,setGrades]=useState([]);
-  const [areas,setAreas]=useState([]);
-  const [imageUploading,setImageUploading]=useState(false);
+function MasterEditor({kind, record, onSaved, onDenied, onBusy}) {
+  const [draft, setDraft] = useState(() =>
+      Object.fromEntries(
+          Object.entries(defaults[kind]).map(([k, v]) => [k, record?.[k] ?? v])
+      )
+  );
 
-  useEffect(()=>{
-    if (kind==='foods') {
-      (async()=>{
-        let after=null,all=[];
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState('');
+  const saving = useRef(false);
+  const [grades, setGrades] = useState([]);
+  const [areas, setAreas] = useState([]);
+  const [imageUploading, setImageUploading] = useState(false);
+
+  useEffect(() => {
+    if (kind === 'foods') {
+      (async () => {
+        let after = null;
+        let all = [];
 
         do {
-          const r=await api('/admin/food-grades'+(after?'?after='+after:''));
-          all=all.concat(r.records);
-          after=r.nextAfter;
-        } while(after);
+          const r = await api('/admin/food-grades' + (after ? '?after=' + after : ''));
+          all = all.concat(r.records);
+          after = r.nextAfter;
+        } while (after);
 
         setGrades(all);
-      })().catch(e=>{
+      })().catch(e => {
         setMessage(e.message);
-        if ([401,403].includes(e.status)) onDenied(e.message);
+
+        if ([401, 403].includes(e.status)) {
+          onDenied(e.message);
+        }
       });
     }
-  },[kind,onDenied]);
+  }, [kind, onDenied]);
 
-  useEffect(()=>{
-    if (kind!=='recipes') return;
+  useEffect(() => {
+    if (kind !== 'recipes') return;
 
-    let live=true;
+    let live = true;
 
-    (async()=>{
-      let after=null,all=[];
+    (async () => {
+      let after = null;
+      let all = [];
 
       do {
-        const r=await api('/admin/areas'+(after?'?after='+after:''));
-        all=all.concat(r.records);
-        after=r.nextAfter;
-      } while(after);
+        const r = await api('/admin/areas' + (after ? '?after=' + after : ''));
+        all = all.concat(r.records);
+        after = r.nextAfter;
+      } while (after);
 
       if (live) setAreas(all);
-    })().catch(e=>{
+    })().catch(e => {
       if (!live) return;
 
-      setMessage(`${e.code||'AREA_LOAD_FAILED'}: ${e.message}`);
-      if ([401,403].includes(e.status)) onDenied(e.message);
+      setMessage(`${e.code || 'AREA_LOAD_FAILED'}: ${e.message}`);
+
+      if ([401, 403].includes(e.status)) {
+        onDenied(e.message);
+      }
     });
 
-    return ()=>{live=false;};
-  },[kind,onDenied]);
+    return () => {
+      live = false;
+    };
+  }, [kind, onDenied]);
 
-  const child=kind==='recipes'?'ingredients':kind==='gachas'?'rewards':null;
-  const rows=child?draft[child]:[];
-  const total=rows.filter(r=>r.is_active!==false).reduce((sum,r)=>sum+(Number(r.weight)||0),0);
-  const selectedGrade=kind==='foods'?grades.find(g=>String(g.id)===String(draft.grade_id)):null;
+  const child = kind === 'recipes' ? 'ingredients' : kind === 'gachas' ? 'rewards' : null;
+  const rows = child ? draft[child] : [];
 
-  const recipeAreas=kind==='recipes'?(draft.area_recipes||[]):[];
-  const hasRecipeDiscovery=kind==='recipes'&&(record?.area_recipes||[]).some(row=>row.discovered);
+  const total = rows.filter(r => r.is_active !== false)
+      .reduce((sum, r) => sum + (Number(r.weight) || 0), 0);
 
-  function change(k,v) {
-    setDraft(d=>({...d,[k]:v,...(k==='stat_growth_enabled'?{
-        stat_growth_value:v?1:0,
-        stat_growth_target:v?d.stat_growth_target:null
-      }:{})}));
-  }
+  const selectedGrade = kind === 'foods'
+      ? grades.find(g => String(g.id) === String(draft.grade_id))
+      : null;
 
-  function changeRow(index,k,v) {
-    change(child,rows.map((r,i)=>i===index?{...r,[k]:v}:r));
-  }
+  const recipeAreas = kind === 'recipes' ? (draft.area_recipes || []) : [];
+  const hasRecipeDiscovery = kind === 'recipes' &&
+      (record?.area_recipes || []).some(row => row.discovered);
 
-  function changeAreaRecipe(index,k,v) {
-    setDraft(d=>({
+  function change(k, v) {
+    setDraft(d => ({
       ...d,
-      area_recipes:d.area_recipes.map((row,i)=>i===index?{...row,[k]:v}:row)
+      [k]: v,
+      ...(k === 'stat_growth_enabled'
+          ? {
+            stat_growth_value: v ? 1 : 0,
+            stat_growth_target: v ? d.stat_growth_target : null
+          }
+          : {})
+    }));
+  }
+
+  function changeRow(index, k, v) {
+    change(child, rows.map((r, i) => i === index ? {...r, [k]: v} : r));
+  }
+
+  function changeAreaRecipe(index, k, v) {
+    setDraft(d => ({
+      ...d,
+      area_recipes: d.area_recipes.map((row, i) =>
+          i === index ? {...row, [k]: v} : row
+      )
     }));
   }
 
   async function save(event) {
     event.preventDefault();
-    if (saving.current||imageUploading) return;
+    if (saving.current || imageUploading) return;
 
-    const error=validateDraft(kind,draft);
+    const error = validateDraft(kind, draft);
 
     if (error) {
       setMessage(error);
       return;
     }
 
-    saving.current=true;
+    saving.current = true;
     setBusy(true);
     onBusy(true);
     setMessage('');
 
-    const body={...draft};
+    const body = {...draft};
 
-    if (record&&kind==='areas') {
+    if (record && kind === 'areas') {
       for (const key of Object.keys(body)) {
-        if (body[key]===(record[key]??defaults.areas[key])) delete body[key];
+        if (body[key] === (record[key] ?? defaults.areas[key])) {
+          delete body[key];
+        }
       }
     }
 
-    if (record&&kind==='foods') delete body.item_id;
+    if (record && kind === 'foods') delete body.item_id;
 
     if (child) {
-      body[child]=rows.map(r=>({
-        item_id:r.item_id,
-        quantity:r.quantity,
-        ...(kind==='gachas'?{weight:r.weight,is_active:r.is_active??true}:{})
+      body[child] = rows.map(r => ({
+        item_id: r.item_id,
+        quantity: r.quantity,
+        ...(kind === 'gachas'
+            ? {weight: r.weight, is_active: r.is_active ?? true}
+            : {})
       }));
     }
 
-    if (kind==='recipes') {
-      body.area_recipes=recipeAreas.map(row=>({
-        area_id:String(row.area_id),
-        weight:Number(row.weight),
-        drop_rate:Number(row.drop_rate)
+    if (kind === 'recipes') {
+      body.area_recipes = recipeAreas.map(row => ({
+        area_id: String(row.area_id),
+        weight: Number(row.weight),
+        drop_rate: Number(row.drop_rate)
       }));
     }
 
     try {
-      const data=await api(`/admin/${kind}${record?`/${record.id}`:''}`,{
-        method:record?'PATCH':'POST',
-        body:{...body,requestKey:crypto.randomUUID()}
+      const data = await api(`/admin/${kind}${record ? `/${record.id}` : ''}`, {
+        method: record ? 'PATCH' : 'POST',
+        body: {...body, requestKey: crypto.randomUUID()}
       });
 
+      invalidateAdminNames();
       await onSaved(data.record);
-    } catch(e) {
-      setMessage(`${e.code||'SAVE_FAILED'}: ${e.message}`);
-      if ([401,403].includes(e.status)) onDenied(e.message);
+    } catch (e) {
+      setMessage(`${e.code || 'SAVE_FAILED'}: ${e.message}`);
+
+      if ([401, 403].includes(e.status)) {
+        onDenied(e.message);
+      }
     } finally {
-      saving.current=false;
+      saving.current = false;
       setBusy(false);
       onBusy(false);
     }
   }
 
-  return <form onSubmit={save} className="admin-form">
-    <h3>{record?`ID ${record.id} 상세/수정`:'새로 등록'}</h3>
+  return (
+      <form onSubmit={save} className="admin-form">
+        <h3>
+          {record ? (
+              kind === 'foods'
+                  ? <><AdminReferenceName itemId={record.item_id} eager onDenied={onDenied}/> 상세/수정</>
+                  : `${record.name || '등록 정보'} 상세/수정`
+          ) : '새로 등록'}
+        </h3>
 
-    {kind==='foods'&&<>
-      <p>음식 등급을 선택하면 혈량 회복량과 능력치 성장 확률이 해당 등급의 설정을 따릅니다. 실패요리에는 수치 효과가 적용되지 않습니다. 현재 실패 판정: {record?.effective_failure?'예':'아니오'}</p>
-      <p>능력치 성장: {draft.stat_growth_enabled
-          ? selectedGrade?`${selectedGrade.name} · ${Number(selectedGrade.stat_growth_rate)}% 확률 · ${draft.stat_growth_target||'대상 미선택'} +1`:'성장 대상과 음식 등급을 선택하세요.'
-          :'적용 안 함'}</p>
-    </>}
+        {kind === 'foods' && (
+            <>
+              <p>음식 등급을 선택하면 혈량 회복량과 능력치 성장 확률이 해당 등급의 설정을 따릅니다. 실패요리에는 수치 효과가 적용되지 않습니다. 현재 실패 판정: {record?.effective_failure ? '예' : '아니오'}</p>
+              <p>
+                능력치 성장: {draft.stat_growth_enabled
+                  ? selectedGrade
+                      ? `${selectedGrade.name} · ${Number(selectedGrade.stat_growth_rate)}% 확률 · ${draft.stat_growth_target || '대상 미선택'} +1`
+                      : '성장 대상과 음식 등급을 선택하세요.'
+                  : '적용 안 함'}
+              </p>
+            </>
+        )}
 
-    {kind==='areas'&&<>
-      <p>공개 허용과 공개 시각으로 접근을 제어합니다. 조사율은 발견된 고유 조사결과·마물·레시피에 따라 자동 계산되며 직접 수정할 수 없습니다.</p>
-      <p>현재 조사율: {record?`${Number(record.investigation_rate).toFixed(2)}%`:'구역 등록 후 자동 계산'}</p>
-    </>}
+        {kind === 'areas' && (
+            <>
+              <p>공개 허용과 공개 시각으로 접근을 제어합니다. 조사율은 발견된 고유 조사결과·마물·레시피에 따라 자동 계산되며 직접 수정할 수 없습니다.</p>
+              <p>현재 조사율: {record ? `${Number(record.investigation_rate).toFixed(2)}%` : '구역 등록 후 자동 계산'}</p>
+            </>
+        )}
 
-    {kind==='recipes'&&<>
-      <p>기본 성공률 80%, 성공 3개 / 실패 1개. 성공률·성공 수량 변경은 다음 요리부터 적용됩니다. 실패 재료는 max(1, floor(수량/2))입니다.</p>
-      <p>상점 판매 가격 (등급별 자동 적용): {recipePrices[draft.discovery_grade] ? `${recipePrices[draft.discovery_grade]}코인` : '등급 선택 후 자동 결정'}</p>
-      <p>완성 음식과 실패 요리는 먼저 아이템·음식 설정에 등록되어 있어야 합니다. 필요한 식재료는 아이템 메뉴에서 등록합니다.</p>
-    </>}
+        {kind === 'recipes' && (
+            <>
+              <p>기본 성공률 80%, 성공 3개 / 실패 1개. 성공률·성공 수량 변경은 다음 요리부터 적용됩니다. 실패 재료는 max(1, floor(수량/2))입니다.</p>
+              <p>상점 판매 가격 (등급별 자동 적용): {recipePrices[draft.discovery_grade] ? `${recipePrices[draft.discovery_grade]}코인` : '등급 선택 후 자동 결정'}</p>
+              <p>완성 음식과 실패 요리는 먼저 아이템·음식 설정에 등록되어 있어야 합니다. 필요한 식재료는 아이템 메뉴에서 등록합니다.</p>
+            </>
+        )}
 
-    {kind==='gachas'&&<p>
-      운영 시간대: KST (Asia/Seoul). ISO 시각에 +09:00을 입력하세요. 기간 제한을 끄면 저장된 시각과 관계없이 추첨합니다.
-      <br/>
-      {['start_at','end_at'].map(k=><span key={k}>
-        {k==='start_at'?'시작':'종료'} KST: {draft[k]&&Number.isFinite(Date.parse(draft[k]))?new Date(draft[k]).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'}):'미설정'}{' '}
-      </span>)}
-    </p>}
+        {kind === 'gachas' && (
+            <p>
+              운영 시간대: KST (Asia/Seoul). ISO 시각에 +09:00을 입력하세요. 기간 제한을 끄면 저장된 시각과 관계없이 추첨합니다.
+              <br/>
+              {['start_at', 'end_at'].map(k => (
+                  <span key={k}>
+                            {k === 'start_at' ? '시작' : '종료'} KST: {draft[k] && Number.isFinite(Date.parse(draft[k]))
+                      ? new Date(draft[k]).toLocaleString('ko-KR', {timeZone: 'Asia/Seoul'})
+                      : '미설정'}{' '}
+                        </span>
+              ))}
+            </p>
+        )}
 
-    {Object.entries(defaults[kind]).filter(([k])=>k!==child&&k!=='area_recipes'&&!(kind==='foods'&&k==='stat_growth_value')).map(([k,v])=>k==='image_url'?
-        <ImageUploadField key={k} kind="areas" label="구역 이미지"
-                          value={draft[k]} onChange={value=>change(k,value)}
-                          disabled={busy} onDenied={onDenied}
-                          onUploadingChange={setImageUploading}/>:
-        k.endsWith('item_id')?
-        <ItemPicker key={k} label={kind==='recipes'?(recipeLabels[k]||labels[k]):labels[k]}
-                    value={draft[k]} disabled={busy||(k==='item_id'&&!!record)}
-                    type={kind==='recipes'?(k==='result_item_id'?'food':k==='failure_item_id'?'failure-food':'all'):'all'}
-                    onDenied={onDenied} onChange={id=>change(k,id)}/>:
-        <label key={k}>
-          {kind==='recipes'?(recipeLabels[k]||labels[k]):labels[k]}
-          {['period_enabled','start_inclusive','end_inclusive'].includes(k)?
-              <select value={draft[k]===null?'':String(draft[k])} disabled={busy} onChange={e=>change(k,e.target.value===''?null:e.target.value==='true')}>
-                <option value="">기존 동작 유지 / 미설정</option>
-                <option value="true">사용 / 포함</option>
-                <option value="false">사용 안 함 / 제외</option>
-              </select>:
-              typeof v==='boolean'?
-                  <input type="checkbox" checked={draft[k]} disabled={busy} onChange={e=>change(k,e.target.checked)}/>:
-                  k==='grade_id'?
-                      <select value={draft[k]??''} disabled={busy} onChange={e=>change(k,e.target.value||null)}>
-                        <option value="">음식 등급 미설정</option>
-                        {grades.map(g=><option key={g.id} value={g.id} disabled={!g.is_active}>
-                          {g.name} · 혈량 +{g.blood_recovery} · 성장 {Number(g.stat_growth_rate)}%{g.is_active?'':' (비활성)'}
-                        </option>)}
-                      </select>:
-                      k==='stat_growth_target'?
-                          <select value={draft[k]??''} disabled={busy} onChange={e=>change(k,e.target.value||null)}>
+        {Object.entries(defaults[kind])
+            .filter(([k]) => k !== child && k !== 'area_recipes' &&
+                !(kind === 'foods' && k === 'stat_growth_value'))
+            .map(([k, v]) =>
+                k === 'image_url' ? (
+                    <ImageUploadField
+                        key={k}
+                        kind="areas"
+                        label="구역 이미지"
+                        value={draft[k]}
+                        onChange={value => change(k, value)}
+                        disabled={busy}
+                        onDenied={onDenied}
+                        onUploadingChange={setImageUploading}
+                    />
+                ) : k.endsWith('item_id') ? (
+                    <ItemPicker
+                        key={k}
+                        label={kind === 'recipes' ? (recipeLabels[k] || labels[k]) : labels[k]}
+                        value={draft[k]}
+                        disabled={busy || (k === 'item_id' && !!record)}
+                        type={kind === 'recipes'
+                            ? k === 'result_item_id'
+                                ? 'food'
+                                : k === 'failure_item_id'
+                                    ? 'failure-food'
+                                    : 'all'
+                            : 'all'}
+                        onDenied={onDenied}
+                        onChange={id => change(k, id)}
+                    />
+                ) : (
+                    <label key={k}>
+                      {kind === 'recipes' ? (recipeLabels[k] || labels[k]) : labels[k]}
+
+                      {['period_enabled', 'start_inclusive', 'end_inclusive'].includes(k) ? (
+                          <select value={draft[k] === null ? '' : String(draft[k])}
+                                  disabled={busy}
+                                  onChange={e => change(k, e.target.value === '' ? null : e.target.value === 'true')}>
+                            <option value="">기존 동작 유지 / 미설정</option>
+                            <option value="true">사용 / 포함</option>
+                            <option value="false">사용 안 함 / 제외</option>
+                          </select>
+                      ) : typeof v === 'boolean' ? (
+                          <input type="checkbox" checked={draft[k]} disabled={busy}
+                                 onChange={e => change(k, e.target.checked)}/>
+                      ) : k === 'grade_id' ? (
+                          <select value={draft[k] ?? ''} disabled={busy}
+                                  onChange={e => change(k, e.target.value || null)}>
+                            <option value="">음식 등급 미설정</option>
+                            {grades.map(g => (
+                                <option key={g.id} value={g.id} disabled={!g.is_active}>
+                                  {g.name} · 혈량 +{g.blood_recovery} · 성장 {Number(g.stat_growth_rate)}%
+                                  {g.is_active ? '' : ' (비활성)'}
+                                </option>
+                            ))}
+                          </select>
+                      ) : k === 'stat_growth_target' ? (
+                          <select value={draft[k] ?? ''} disabled={busy}
+                                  onChange={e => change(k, e.target.value || null)}>
                             <option value="">성장 능력치 선택</option>
-                            {['ATK','DEF','AGI'].map(s=><option key={s}>{s}</option>)}
-                          </select>:
-                          k==='discovery_grade'?
-                              <select value={draft[k]??''} disabled={busy} onChange={e=>change(k,e.target.value||null)}>
-                                <option value="">등급 미설정</option>
-                                <option value="COMMON">일반 레시피</option>
-                                <option value="RARE">희귀 레시피</option>
-                                <option value="SPECIAL">특별 레시피</option>
-                              </select>:
-                              k==='rp_effect_texts'?
-                                  <textarea disabled={busy} value={(draft[k]||[]).join('\n')} onChange={e=>change(k,e.target.value?e.target.value.split('\n'):[])}/>:
-                                  ['description','rp_effect_text'].includes(k)?
-                                      <textarea disabled={busy} value={draft[k]??''} onChange={e=>change(k,e.target.value||null)}/>:
-                                      <input type={numeric.includes(k)?'number':'text'} step={k.endsWith('rate')?'any':1} value={draft[k]??''} disabled={busy||(k==='item_id'&&!!record)}
-                                             onChange={e=>change(k,numeric.includes(k)?(e.target.value===''?'':Number(e.target.value)):(e.target.value||(v===null?null:'')))}/>
-          }
-        </label>
-    )}
+                            {['ATK', 'DEF', 'AGI'].map(s => <option key={s}>{s}</option>)}
+                          </select>
+                      ) : k === 'discovery_grade' ? (
+                          <select value={draft[k] ?? ''} disabled={busy}
+                                  onChange={e => change(k, e.target.value || null)}>
+                            <option value="">등급 미설정</option>
+                            <option value="COMMON">일반 레시피</option>
+                            <option value="RARE">희귀 레시피</option>
+                            <option value="SPECIAL">특별 레시피</option>
+                          </select>
+                      ) : k === 'rp_effect_texts' ? (
+                          <textarea disabled={busy} value={(draft[k] || []).join('\n')}
+                                    onChange={e => change(k, e.target.value ? e.target.value.split('\n') : [])}/>
+                      ) : ['description', 'rp_effect_text'].includes(k) ? (
+                          <textarea disabled={busy} value={draft[k] ?? ''}
+                                    onChange={e => change(k, e.target.value || null)}/>
+                      ) : (
+                          <input type={numeric.includes(k) ? 'number' : 'text'}
+                                 step={k.endsWith('rate') ? 'any' : 1}
+                                 value={draft[k] ?? ''}
+                                 disabled={busy || (k === 'item_id' && !!record)}
+                                 onChange={e => change(
+                                     k,
+                                     numeric.includes(k)
+                                         ? (e.target.value === '' ? '' : Number(e.target.value))
+                                         : (e.target.value || (v === null ? null : ''))
+                                 )}/>
+                      )}
+                    </label>
+                )
+            )}
 
-    {child&&<fieldset className="admin-wide" disabled={busy}>
-      <legend>{kind==='recipes'?'필요 재료':'보상'}</legend>
+        {child && (
+            <fieldset className="admin-wide" disabled={busy}>
+              <legend>{kind === 'recipes' ? '필요 재료' : '보상'}</legend>
 
-      {rows.map((row,index)=><div className="admin-child-row" key={index}>
-        <ItemPicker label={kind==='recipes'?'필요 재료':'보상'} value={row.item_id} disabled={busy}
-                    onDenied={onDenied} onChange={id=>changeRow(index,'item_id',id)}/>
-        <label>
-          {kind==='recipes'?'필요 수량':'수량'}
-          <input type="number" min="1" value={row.quantity} onChange={e=>changeRow(index,'quantity',e.target.value===''?'':Number(e.target.value))}/>
-        </label>
+              {rows.map((row, index) => (
+                  <div className="admin-child-row" key={index}>
+                    <ItemPicker
+                        label={kind === 'recipes' ? '필요 재료' : '보상'}
+                        value={row.item_id}
+                        disabled={busy}
+                        onDenied={onDenied}
+                        onChange={id => changeRow(index, 'item_id', id)}
+                    />
 
-        {kind==='gachas'&&<>
-          <label>보상 활성
-            <input type="checkbox" checked={row.is_active!==false} onChange={e=>changeRow(index,'is_active',e.target.checked)}/>
-          </label>
-          <label>가중치
-            <input type="number" min="1" value={row.weight} onChange={e=>changeRow(index,'weight',e.target.value===''?'':Number(e.target.value))}/>
-          </label>
-          <span>확률 {total>0&&row.is_active!==false?(Number(row.weight)/total*100).toFixed(4):'0'}%</span>
-        </>}
+                    <label>
+                      {kind === 'recipes' ? '필요 수량' : '수량'}
+                      <input type="number" min="1" value={row.quantity}
+                             onChange={e => changeRow(index, 'quantity', e.target.value === '' ? '' : Number(e.target.value))}/>
+                    </label>
 
-        <button type="button" onClick={()=>change(child,rows.filter((_,i)=>i!==index))}>행 제거</button>
-      </div>)}
+                    {kind === 'gachas' && (
+                        <>
+                          <label>
+                            보상 활성
+                            <input type="checkbox" checked={row.is_active !== false}
+                                   onChange={e => changeRow(index, 'is_active', e.target.checked)}/>
+                          </label>
 
-      <button type="button" onClick={()=>change(child,[...rows,{item_id:'',quantity:1,...(kind==='gachas'?{weight:1,is_active:true}:{})}])}>행 추가</button>
-    </fieldset>}
+                          <label>
+                            가중치
+                            <input type="number" min="1" value={row.weight}
+                                   onChange={e => changeRow(index, 'weight', e.target.value === '' ? '' : Number(e.target.value))}/>
+                          </label>
 
-    {kind==='recipes'&&<fieldset className="admin-wide" disabled={busy}>
-      <legend>등장 구역 · 레시피 발견 설정</legend>
-      <p>선택한 구역에서 조사 또는 마물 처치 시 미발견 레시피 후보로 추첨됩니다. 선택 가중치는 후보 간 비율이며 발견 확률은 해당 레시피의 실제 발견 판정입니다.</p>
+                          <span>
+                                        확률 {total > 0 && row.is_active !== false
+                              ? (Number(row.weight) / total * 100).toFixed(4)
+                              : '0'}%
+                                    </span>
+                        </>
+                    )}
 
-      {recipeAreas.map((row,index)=><div className="admin-child-row" key={index}>
-        <label>
-          등장 구역
-          <select required value={String(row.area_id??'')} disabled={busy||hasRecipeDiscovery}
-                  onChange={e=>changeAreaRecipe(index,'area_id',e.target.value)}>
-            <option value="">구역 선택</option>
-            {areas.map(area=><option key={area.id} value={String(area.id)}>
-              {area.name} · ID {area.id}
-            </option>)}
-          </select>
-        </label>
+                    <button type="button" onClick={() => change(child, rows.filter((_, i) => i !== index))}>
+                      행 제거
+                    </button>
+                  </div>
+              ))}
 
-        <label>
-          선택 가중치
-          <input type="number" min="1" max="2147483647" step="1" value={row.weight} disabled={busy}
-                 onChange={e=>changeAreaRecipe(index,'weight',e.target.value===''?'':Number(e.target.value))}/>
-        </label>
+              <button type="button" onClick={() => change(child, [
+                ...rows,
+                {
+                  item_id: '',
+                  quantity: 1,
+                  ...(kind === 'gachas' ? {weight: 1, is_active: true} : {})
+                }
+              ])}>
+                행 추가
+              </button>
+            </fieldset>
+        )}
 
-        <label>
-          발견 확률 (%)
-          <input type="number" min="0" max="100" step=".01" value={row.drop_rate} disabled={busy}
-                 onChange={e=>changeAreaRecipe(index,'drop_rate',e.target.value===''?'':Number(e.target.value))}/>
-        </label>
+        {kind === 'recipes' && (
+            <fieldset className="admin-wide" disabled={busy}>
+              <legend>등장 구역 · 레시피 발견 설정</legend>
+              <p>선택한 구역에서 조사 또는 마물 처치 시 미발견 레시피 후보로 추첨됩니다. 선택 가중치는 후보 간 비율이며 발견 확률은 해당 레시피의 실제 발견 판정입니다.</p>
 
-        {row.discovered&&<span>최초 발견 완료</span>}
+              {recipeAreas.map((row, index) => (
+                  <div className="admin-child-row" key={index}>
+                    <label>
+                      등장 구역
+                      <select required value={String(row.area_id ?? '')}
+                              disabled={busy || hasRecipeDiscovery}
+                              onChange={e => changeAreaRecipe(index, 'area_id', e.target.value)}>
+                        <option value="">구역 선택</option>
+                        {areas.map(area => (
+                            <option key={area.id} value={String(area.id)}>
+                              {area.name}
+                            </option>
+                        ))}
+                      </select>
+                    </label>
 
-        <button type="button" disabled={busy||hasRecipeDiscovery}
-                onClick={()=>change('area_recipes',recipeAreas.filter((_,i)=>i!==index))}>
-          구역 제거
+                    <label>
+                      선택 가중치
+                      <input type="number" min="1" max="2147483647" step="1"
+                             value={row.weight} disabled={busy}
+                             onChange={e => changeAreaRecipe(index, 'weight', e.target.value === '' ? '' : Number(e.target.value))}/>
+                    </label>
+
+                    <label>
+                      발견 확률 (%)
+                      <input type="number" min="0" max="100" step=".01"
+                             value={row.drop_rate} disabled={busy}
+                             onChange={e => changeAreaRecipe(index, 'drop_rate', e.target.value === '' ? '' : Number(e.target.value))}/>
+                    </label>
+
+                    {row.discovered && <span>최초 발견 완료</span>}
+
+                    <button type="button" disabled={busy || hasRecipeDiscovery}
+                            onClick={() => change('area_recipes', recipeAreas.filter((_, i) => i !== index))}>
+                      구역 제거
+                    </button>
+                  </div>
+              ))}
+
+              <button type="button" disabled={busy || hasRecipeDiscovery}
+                      onClick={() => change('area_recipes', [
+                        ...recipeAreas,
+                        {area_id: '', weight: 1, drop_rate: 100}
+                      ])}>
+                등장 구역 추가
+              </button>
+
+              {hasRecipeDiscovery && (
+                  <p>이미 최초 발견된 레시피는 조사율과 발견 이력을 보호하기 위해 등장 구역을 추가하거나 제거할 수 없습니다. 기존 구역의 가중치와 발견 확률은 수정할 수 있습니다.</p>
+              )}
+            </fieldset>
+        )}
+
+        {record && (
+            <details className="admin-wide">
+              <summary>변경 전후 확인</summary>
+              <pre>{JSON.stringify({before: record, after: draft}, null, 2)}</pre>
+            </details>
+        )}
+
+        {kind === 'food-grades' && record && (
+            <button type="button" disabled={busy} onClick={async () => {
+              if (!window.confirm('참조 없는 등급만 영구 삭제합니다. 삭제하시겠습니까?')) {
+                return;
+              }
+
+              setBusy(true);
+              onBusy(true);
+
+              try {
+                await api('/admin/food-grades/' + record.id, {
+                  method: 'DELETE',
+                  body: {requestKey: crypto.randomUUID()}
+                });
+
+                invalidateAdminNames();
+                await onSaved(null);
+              } catch (e) {
+                setMessage(e.message);
+
+                if ([401, 403].includes(e.status)) {
+                  onDenied(e.message);
+                }
+              } finally {
+                setBusy(false);
+                onBusy(false);
+              }
+            }}>
+              미참조 등급 삭제
+            </button>
+        )}
+
+        <button disabled={busy || imageUploading}>
+          {imageUploading ? '이미지 업로드 중…' : busy ? '저장 중…' : '저장'}
         </button>
-      </div>)}
 
-      <button type="button" disabled={busy||hasRecipeDiscovery}
-              onClick={()=>change('area_recipes',[...recipeAreas,{area_id:'',weight:1,drop_rate:100}])}>
-        등장 구역 추가
-      </button>
-
-      {hasRecipeDiscovery&&<p>이미 최초 발견된 레시피는 조사율과 발견 이력을 보호하기 위해 등장 구역을 추가하거나 제거할 수 없습니다. 기존 구역의 가중치와 발견 확률은 수정할 수 있습니다.</p>}
-    </fieldset>}
-
-    {record&&<details className="admin-wide">
-      <summary>변경 전후 확인</summary>
-      <pre>{JSON.stringify({before:record,after:draft},null,2)}</pre>
-    </details>}
-
-    {kind==='food-grades'&&record&&<button type="button" disabled={busy} onClick={async()=>{
-      if (!window.confirm('참조 없는 등급만 영구 삭제합니다. 삭제하시겠습니까?')) return;
-
-      setBusy(true);
-      onBusy(true);
-
-      try {
-        await api('/admin/food-grades/'+record.id,{method:'DELETE',body:{requestKey:crypto.randomUUID()}});
-        await onSaved(null);
-      } catch(e) {
-        setMessage(e.message);
-        if ([401,403].includes(e.status)) onDenied(e.message);
-      } finally {
-        setBusy(false);
-        onBusy(false);
-      }
-    }}>미참조 등급 삭제</button>}
-
-    <button disabled={busy||imageUploading}>{imageUploading?'이미지 업로드 중…':busy?'저장 중…':'저장'}</button>
-    <p role="alert">{message}</p>
-  </form>;
+        <p role="alert">{message}</p>
+      </form>
+  );
 }
 
-export default function MasterPanel({kind,onDenied,recordId,onOpen,after,onPage}) {
-  const selection=useRef(0),listing=useRef(0);
-  const [search,setSearch]=useState('');
-  const Editor=kind==='gachas'?GachaStockEditor:MasterEditor;
-  const [records,setRecords]=useState([]),[selected,setSelected]=useState(null),[revision,setRevision]=useState(0);
-  const [busy,setBusy]=useState(false),[saving,setSaving]=useState(false),[message,setMessage]=useState(''),[next,setNext]=useState(null);
+export default function MasterPanel({kind, onDenied, recordId, onOpen, after, onPage}) {
+  const selection = useRef(0);
+  const listing = useRef(0);
 
-  async function load(cursor=after||null) {
-    const request=++listing.current;
+  const [search, setSearch] = useState('');
+  const Editor = kind === 'gachas' ? GachaStockEditor : MasterEditor;
+
+  const [records, setRecords] = useState([]);
+  const [selected, setSelected] = useState(null);
+  const [revision, setRevision] = useState(0);
+  const [busy, setBusy] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState('');
+  const [next, setNext] = useState(null);
+  const [resolvedNames, setResolvedNames] = useState({});
+
+  const handleNameResolved = useCallback((key, name) => {
+    setResolvedNames(previous => {
+      if (previous[key] === name) return previous;
+      return {...previous, [key]: name};
+    });
+  }, []);
+
+  async function load(cursor = after || null) {
+    const request = ++listing.current;
     setBusy(true);
 
     try {
-      const data=await api(`/admin/${kind}${cursor?`?after=${cursor}`:''}`);
-      if (request!==listing.current) return false;
+      const data = await api(`/admin/${kind}${cursor ? `?after=${cursor}` : ''}`);
+
+      if (request !== listing.current) return false;
 
       setRecords(data.records);
       setNext(data.nextAfter);
       return true;
-    } catch(e) {
+    } catch (e) {
       setMessage(`${e.code}: ${e.message}`);
-      if ([401,403].includes(e.status)) onDenied(e.message);
+
+      if ([401, 403].includes(e.status)) {
+        onDenied(e.message);
+      }
+
       return false;
     } finally {
       setBusy(false);
     }
   }
 
-  useEffect(()=>{
+  useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[after]);
+  }, [after]);
 
-  useEffect(()=>{
+  useEffect(() => {
     selection.current++;
+
     if (!onOpen) return;
 
     setSelected(null);
-    setRevision(v=>v+1);
-    if (recordId&&recordId!=='new') select({id:recordId},false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[recordId]);
+    setRevision(v => v + 1);
 
-  async function select(row,navigate=true) {
-    if (onOpen&&navigate) {
+    if (recordId && recordId !== 'new') {
+      select({id: recordId}, false);
+    }
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recordId]);
+
+  async function select(row, navigate = true) {
+    if (onOpen && navigate) {
       onOpen(String(row.id));
       return;
     }
 
-    const request=++selection.current;
+    const request = ++selection.current;
     setBusy(true);
     setMessage('');
 
     try {
-      const data=await api(`/admin/${kind}/${row.id}`);
-      if (request!==selection.current) return;
+      const data = await api(`/admin/${kind}/${row.id}`);
+
+      if (request !== selection.current) return;
 
       setSelected(data.record);
-      setRevision(v=>v+1);
-    } catch(e) {
+      setRevision(v => v + 1);
+    } catch (e) {
       setMessage(`${e.code}: ${e.message}`);
-      if ([401,403].includes(e.status)) onDenied(e.message);
+
+      if ([401, 403].includes(e.status)) {
+        onDenied(e.message);
+      }
     } finally {
       setBusy(false);
     }
   }
 
-  return <section aria-label="마스터 관리">
-    <p role="status">{busy?'불러오는 중…':message}</p>
+  const normalizedSearch = search.trim().toLowerCase();
 
-    <button disabled={busy||saving} onClick={()=>{
-      setSelected(null);
-      setRevision(v=>v+1);
-      setMessage('');
-      onOpen?.('new');
-    }}>새로 등록</button>
+  const visibleRecords = records.filter(row => {
+    if (!normalizedSearch) return true;
 
-    <button disabled={busy||saving} onClick={()=>load()}>목록 새로고침</button>
-    {!records.length&&!busy&&<p>등록된 데이터가 없습니다.</p>}
+    const referenceKey = kind === 'foods' ? `items:${row.item_id}` : '';
+    const resolvedName = referenceKey ? resolvedNames[referenceKey] : '';
 
-    <label>현재 페이지 검색
-      <input value={search} onChange={e=>setSearch(e.target.value)}/>
-    </label>
+    const text = [
+      row.id,
+      row.name,
+      row.item_id,
+      resolvedName
+    ].filter(value => value != null).join(' ').toLowerCase();
 
-    <ul>{records.filter(r=>[r.id,r.name,r.item_id].join(' ').toLowerCase().includes(search.toLowerCase())).map(r=>
-        <li key={r.id}>
-          ID {r.id} · {r.name||`음식 아이템 ${r.item_id}`}
-          <button disabled={busy||saving} onClick={()=>select(r)}>상세/수정</button>
-        </li>
-    )}</ul>
+    return text.includes(normalizedSearch) ||
+        (kind === 'foods' && !resolvedName);
+  });
 
-    {after&&<button disabled={busy||saving} onClick={()=>onPage(null)}>처음 페이지</button>}
-    {next&&<button disabled={busy||saving} onClick={()=>onPage?onPage(next):load(next)}>다음 100건</button>}
+  return (
+      <section aria-label="마스터 관리">
+        <p role="status">{busy ? '불러오는 중…' : message}</p>
 
-    {!busy&&(!onOpen||recordId==='new'||selected)&&<Editor key={revision} kind={kind} record={selected} onDenied={onDenied}
-                                                           onBusy={setSaving} onSaved={async r=>{
-      setSelected(r);
-      setRevision(v=>v+1);
-      if (await load()) setMessage('저장 성공');
-    }}/>}
-  </section>;
+        <div className="admin-toolbar-actions">
+          <button disabled={busy || saving} onClick={() => {
+            setSelected(null);
+            setRevision(v => v + 1);
+            setMessage('');
+            onOpen?.('new');
+          }}>
+            새로 등록
+          </button>
+
+          <button disabled={busy || saving} onClick={() => load()}>
+            목록 새로고침
+          </button>
+        </div>
+
+        {!records.length && !busy && <p>등록된 데이터가 없습니다.</p>}
+
+        <label>
+          현재 페이지 검색
+          <input value={search} onChange={e => setSearch(e.target.value)}/>
+        </label>
+
+        <ul className="admin-master-records">
+          {visibleRecords.map(row => (
+              <li key={row.id}>
+                <div className="admin-record-summary">
+                  <strong>
+                    {kind === 'foods'
+                        ? <AdminReferenceName
+                            itemId={row.item_id}
+                            eager={!!normalizedSearch}
+                            onResolved={handleNameResolved}
+                            onDenied={onDenied}
+                        />
+                        : row.name || '이름 미등록'}
+                  </strong>
+
+                  <small>
+                    {kind === 'foods'
+                        ? `${row.is_failure ? '실패 음식' : '음식 설정'} · 혈량 +${row.blood_recovery}`
+                        : kind === 'recipes'
+                            ? `레시피 · ${row.is_active ? '사용 중' : '비활성'}`
+                            : kind === 'gachas'
+                                ? `가챠 · ${row.is_active ? '사용 중' : '비활성'}`
+                                : kind === 'areas'
+                                    ? `지역 · ${row.is_open ? '공개 중' : '비공개'}`
+                                    : '음식 등급'}
+                  </small>
+
+                  <details>
+                    <summary>관리 번호</summary>
+                    <span>등록 ID {row.id}</span>
+                  </details>
+                </div>
+
+                <button disabled={busy || saving} onClick={() => select(row)}>
+                  상세/수정
+                </button>
+              </li>
+          ))}
+        </ul>
+
+        {after && (
+            <button disabled={busy || saving} onClick={() => onPage(null)}>
+              처음 페이지
+            </button>
+        )}
+
+        {next && (
+            <button disabled={busy || saving}
+                    onClick={() => onPage ? onPage(next) : load(next)}>
+              다음 100건
+            </button>
+        )}
+
+        {!busy && (!onOpen || recordId === 'new' || selected) && (
+            <Editor
+                key={revision}
+                kind={kind}
+                record={selected}
+                onDenied={onDenied}
+                onBusy={setSaving}
+                onSaved={async record => {
+                  invalidateAdminNames();
+                  setResolvedNames({});
+                  setSelected(record);
+                  setRevision(v => v + 1);
+
+                  if (await load()) {
+                    setMessage('저장 성공');
+                  }
+                }}
+            />
+        )}
+      </section>
+  );
 }

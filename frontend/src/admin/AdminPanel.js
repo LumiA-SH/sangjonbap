@@ -5,6 +5,7 @@ import {useCallback, useEffect, useRef, useState} from 'react';
 import {api} from '../api/client';
 import {adminMenus} from './navigation';
 import './admin.css';
+import './admin-ui-fixes.css';
 import OperatingPolicyPanel from './OperatingPolicyPanel';
 import DiagnosticsPanel from './DiagnosticsPanel';
 import MasterPanel from './MasterPanel';
@@ -16,6 +17,7 @@ import BalancePanel from './BalancePanel';
 import CharacterOperationsPanel from './CharacterOperationsPanel';
 import InvestigationAdminPanel from './InvestigationAdminPanel';
 import ImageUploadField from './ImageUploadField';
+import AdminReferenceName, {invalidateAdminNames} from './AdminReferenceName';
 
 const emptyItem = {
     name: '',
@@ -48,7 +50,7 @@ const fieldLabels = {
     description: '설명',
     transferable: '이동 가능',
     is_active: '활성',
-    item_id: '판매 아이템 ID',
+    item_id: '판매할 아이템',
     price: '가격',
     purchase_limit: '개인 누적 한도',
     stock_limit: '전체 누적 재고 한도',
@@ -94,7 +96,10 @@ function Editor({kind, record, seed, onSaved, onDenied}) {
             onSaved(saved);
         } catch (e) {
             setMessage(`${e.code || 'SAVE_FAILED'}: ${e.message}`);
-            if (e.status === 401 || e.status === 403) onDenied(e.message);
+
+            if (e.status === 401 || e.status === 403) {
+                onDenied(e.message);
+            }
         } finally {
             saving.current = false;
             setBusy(false);
@@ -129,6 +134,22 @@ function Editor({kind, record, seed, onSaved, onDenied}) {
 
     function renderField(key) {
         if (key === 'item_id') {
+            if (record?.recipe_id != null) {
+                return (
+                    <div key={key} className="admin-wide">
+                        <strong>판매 레시피</strong>
+                        <p>
+                            <AdminReferenceName
+                                recipeId={record.recipe_id}
+                                eager
+                                onDenied={onDenied}
+                            />
+                        </p>
+                        <p>레시피 상품의 연결 대상은 레시피 관리에서 확인합니다.</p>
+                    </div>
+                );
+            }
+
             return (
                 <ItemPicker
                     key={key}
@@ -155,16 +176,31 @@ function Editor({kind, record, seed, onSaved, onDenied}) {
         }
 
         if (key === 'image_url') {
-            return <ImageUploadField key={key} kind="items" label="아이템 이미지"
-                                     value={draft.image_url} onChange={value => change('image_url', value)}
-                                     disabled={busy} onDenied={onDenied}
-                                     onUploadingChange={setImageUploading}/>;
+            return (
+                <ImageUploadField
+                    key={key}
+                    kind="items"
+                    label="아이템 이미지"
+                    value={draft.image_url}
+                    onChange={value => change('image_url', value)}
+                    disabled={busy}
+                    onDenied={onDenied}
+                    onUploadingChange={setImageUploading}
+                />
+            );
         }
 
         let input;
 
         if (typeof fields[key] === 'boolean') {
-            input = <input type="checkbox" checked={draft[key]} disabled={busy} onChange={e => change(key, e.target.checked)}/>;
+            input = (
+                <input
+                    type="checkbox"
+                    checked={draft[key]}
+                    disabled={busy}
+                    onChange={e => change(key, e.target.checked)}
+                />
+            );
         } else if (key === 'effect_type') {
             input = (
                 <select value={draft[key] ?? ''} disabled={busy} onChange={e => changeEffectType(e.target.value)}>
@@ -181,7 +217,10 @@ function Editor({kind, record, seed, onSaved, onDenied}) {
                 </select>
             );
         } else if (key === 'effect_value') {
-            input = <input type="number" min="1" value={draft[key] ?? ''} disabled={busy} onChange={e => change(key, e.target.value === '' ? null : Number(e.target.value))}/>;
+            input = (
+                <input type="number" min="1" value={draft[key] ?? ''} disabled={busy}
+                       onChange={e => change(key, e.target.value === '' ? null : Number(e.target.value))}/>
+            );
         } else if (key === 'use_target') {
             input = <input value={draft[key] ?? ''} readOnly/>;
         } else if (key === 'category') {
@@ -191,24 +230,36 @@ function Editor({kind, record, seed, onSaved, onDenied}) {
                 </select>
             );
         } else if (key === 'description') {
-            input = <textarea value={draft[key] ?? ''} disabled={busy} onChange={e => change(key, e.target.value || null)}/>;
+            input = (
+                <textarea value={draft[key] ?? ''} disabled={busy}
+                          onChange={e => change(key, e.target.value || null)}/>
+            );
         } else if (['purchase_limit', 'stock_limit', 'daily_limit'].includes(key)) {
             input = (
                 <>
-            <span>
-              <input type="checkbox" checked={draft[key] === null} disabled={busy} onChange={e => changeLimit(key, e.target.checked)}/>
-              무제한(NULL)
-            </span>
-                    <input type="number" min={key === 'purchase_limit' ? 1 : 0} max={2147483647} value={draft[key] ?? ''}
-                           disabled={busy || draft[key] === null} required={draft[key] !== null}
+                    <span>
+                        <input type="checkbox" checked={draft[key] === null} disabled={busy}
+                               onChange={e => changeLimit(key, e.target.checked)}/>
+                        무제한(NULL)
+                    </span>
+                    <input type="number" min={key === 'purchase_limit' ? 1 : 0}
+                           max={2147483647} value={draft[key] ?? ''}
+                           disabled={busy || draft[key] === null}
+                           required={draft[key] !== null}
                            onChange={e => change(key, e.target.value === '' ? '' : Number(e.target.value))}/>
                 </>
             );
         } else {
             input = (
-                <input type={['price', 'sort_order'].includes(key) ? 'number' : 'text'} value={draft[key]} required disabled={busy}
+                <input type={['price', 'sort_order'].includes(key) ? 'number' : 'text'}
+                       value={draft[key]} required disabled={busy}
                        maxLength={key === 'name' ? 100 : undefined}
-                       onChange={e => change(key, ['price', 'sort_order'].includes(key) ? (e.target.value === '' ? '' : Number(e.target.value)) : e.target.value)}/>
+                       onChange={e => change(
+                           key,
+                           ['price', 'sort_order'].includes(key)
+                               ? (e.target.value === '' ? '' : Number(e.target.value))
+                               : e.target.value
+                       )}/>
             );
         }
 
@@ -217,11 +268,11 @@ function Editor({kind, record, seed, onSaved, onDenied}) {
 
     return (
         <form className="admin-form" onSubmit={submit}>
-            <h3>{record ? `ID ${record.id} 수정` : '새로 등록'}</h3>
+            <h3>{record ? `${record.name || '등록 정보'} 상세/수정` : '새로 등록'}</h3>
             {Object.keys(fields).map(renderField)}
 
             {record && (
-                <details>
+                <details className="admin-wide">
                     <summary>변경 전후 확인</summary>
                     <pre>{JSON.stringify({before: record, after: draft}, null, 2)}</pre>
                 </details>
@@ -248,6 +299,7 @@ export default function AdminPanel({onBack, onExit = onBack, onLogout, onAccessL
     const [productSeed, setProductSeed] = useState(null);
     const [search, setSearch] = useState('');
     const [filter, setFilter] = useState('all');
+    const [resolvedNames, setResolvedNames] = useState({});
 
     const selectionRequest = useRef(0);
     const listRequest = useRef(0);
@@ -284,6 +336,13 @@ export default function AdminPanel({onBack, onExit = onBack, onLogout, onAccessL
         accessLost.current?.();
     }, []);
 
+    const handleNameResolved = useCallback((key, name) => {
+        setResolvedNames(previous => {
+            if (previous[key] === name) return previous;
+            return {...previous, [key]: name};
+        });
+    }, []);
+
     async function load(type = kind, after = route?.after || null) {
         const request = ++listRequest.current;
 
@@ -292,6 +351,7 @@ export default function AdminPanel({onBack, onExit = onBack, onLogout, onAccessL
 
         try {
             const data = await api(`/admin/${type}${after ? `?after=${after}` : ''}`);
+
             if (request !== listRequest.current) return false;
 
             setRows(data.records);
@@ -299,7 +359,10 @@ export default function AdminPanel({onBack, onExit = onBack, onLogout, onAccessL
             return true;
         } catch (e) {
             setMessage(`${e.code || 'LOAD_FAILED'}: ${e.message}`);
-            if (e.status === 401 || e.status === 403) denied(e.message);
+
+            if (e.status === 401 || e.status === 403) {
+                denied(e.message);
+            }
         } finally {
             setBusy(false);
         }
@@ -311,7 +374,10 @@ export default function AdminPanel({onBack, onExit = onBack, onLogout, onAccessL
         const verify = () => api('/admin/access')
             .then(data => {
                 if (live) {
-                    if (data.role !== 'ADMIN') throw new Error('관리자 권한이 필요합니다.');
+                    if (data.role !== 'ADMIN') {
+                        throw new Error('관리자 권한이 필요합니다.');
+                    }
+
                     setAuthentication(data.authentication || 'DEV');
                     setAllowed(true);
                 }
@@ -329,6 +395,7 @@ export default function AdminPanel({onBack, onExit = onBack, onLogout, onAccessL
             window.removeEventListener('focus', verify);
             window.clearInterval(timer);
         };
+
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -342,8 +409,12 @@ export default function AdminPanel({onBack, onExit = onBack, onLogout, onAccessL
 
         if (['items', 'products'].includes(kind)) {
             load(kind, route?.after);
-            if (recordId && recordId !== 'new') select({id: recordId}, false);
+
+            if (recordId && recordId !== 'new') {
+                select({id: recordId}, false);
+            }
         }
+
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [allowed, kind, recordId, route?.after]);
 
@@ -358,20 +429,26 @@ export default function AdminPanel({onBack, onExit = onBack, onLogout, onAccessL
 
         try {
             const data = await api(`/admin/${kind}/${row.id}`);
+
             if (request !== selectionRequest.current) return;
 
             setSelected(data.record);
             setEditorKey(v => v + 1);
         } catch (e) {
             setMessage(e.message);
-            if (e.status === 401 || e.status === 403) denied(e.message);
+
+            if (e.status === 401 || e.status === 403) {
+                denied(e.message);
+            }
         } finally {
             setBusy(false);
         }
     }
 
     async function deleteItem() {
-        if (!window.confirm(`아이템 ${selected.name} (ID ${selected.id})을 영구 삭제합니까? 참조가 있으면 거부됩니다.`)) return;
+        if (!window.confirm(`아이템 ${selected.name} (ID ${selected.id})을 영구 삭제합니까? 참조가 있으면 거부됩니다.`)) {
+            return;
+        }
 
         setBusy(true);
 
@@ -381,13 +458,17 @@ export default function AdminPanel({onBack, onExit = onBack, onLogout, onAccessL
                 body: {requestKey: crypto.randomUUID()}
             });
 
+            invalidateAdminNames();
             setSelected(null);
             setEditorKey(v => v + 1);
             await load();
             setMessage('삭제 완료');
         } catch (e) {
             setMessage(`${e.code || 'DELETE_FAILED'}: ${e.message}`);
-            if ([401, 403].includes(e.status)) denied(e.message);
+
+            if ([401, 403].includes(e.status)) {
+                denied(e.message);
+            }
         } finally {
             setBusy(false);
         }
@@ -408,6 +489,7 @@ export default function AdminPanel({onBack, onExit = onBack, onLogout, onAccessL
 
         setSelected(null);
         setEditorKey(v => v + 1);
+
         if (!route) load('products');
     }
 
@@ -429,6 +511,8 @@ export default function AdminPanel({onBack, onExit = onBack, onLogout, onAccessL
     }
 
     function handleSaved(saved) {
+        invalidateAdminNames();
+        setResolvedNames({});
         setProductSeed(null);
         setSelected(saved);
         setEditorKey(v => v + 1);
@@ -436,6 +520,18 @@ export default function AdminPanel({onBack, onExit = onBack, onLogout, onAccessL
         load().then(ok => {
             if (ok) setMessage('저장 성공');
         });
+    }
+
+    function getReferenceKey(row) {
+        if (row.recipe_id != null) {
+            return `recipes:${row.recipe_id}`;
+        }
+
+        if (row.item_id != null) {
+            return `items:${row.item_id}`;
+        }
+
+        return null;
     }
 
     function renderContent() {
@@ -466,31 +562,64 @@ export default function AdminPanel({onBack, onExit = onBack, onLogout, onAccessL
 
         if (['foods', 'food-grades', 'recipes', 'gachas', 'areas'].includes(kind)) {
             return (
-                <MasterPanel key={kind} kind={kind} onDenied={denied} recordId={recordId} onOpen={onNavigate ? openRecord : undefined} after={route?.after} onPage={onNavigate ? after => onNavigate({after, record: null}) : undefined}/>
+                <MasterPanel key={kind} kind={kind} onDenied={denied}
+                             recordId={recordId}
+                             onOpen={onNavigate ? openRecord : undefined}
+                             after={route?.after}
+                             onPage={onNavigate ? after => onNavigate({after, record: null}) : undefined}/>
             );
         }
+
+        const normalizedSearch = search.trim().toLowerCase();
+
+        const visibleRows = rows.filter(row => {
+            if (filter !== 'all' && row.is_active !== (filter === 'active')) {
+                return false;
+            }
+
+            if (!normalizedSearch) return true;
+
+            const referenceKey = getReferenceKey(row);
+            const resolvedName = referenceKey ? resolvedNames[referenceKey] : '';
+
+            const text = [
+                row.id,
+                row.name,
+                row.item_id,
+                row.recipe_id,
+                resolvedName
+            ].filter(value => value != null).join(' ').toLowerCase();
+
+            return text.includes(normalizedSearch) ||
+                (kind === 'products' && referenceKey && !resolvedName);
+        });
 
         return (
             <>
                 <p>혈액팩은 무료(+10, 0코인, 하루 1개)와 일반(+30, 유료)을 별도 아이템으로 관리합니다. 일반팩 가격은 운영진이 정합니다. 기록은 보존합니다.</p>
 
                 {kind === 'items' && selected && (
-                    <>
+                    <div className="admin-toolbar-actions">
                         <button disabled={busy} onClick={deleteItem}>미참조 아이템 영구 삭제</button>
                         <button disabled={busy} onClick={registerProduct}>이 아이템을 상점에 등록</button>
-                    </>
+                    </div>
                 )}
 
-                {kind === 'products' && <p>상점 상품 설정은 다음 구매부터 적용됩니다. 기존 구매 이력은 유지됩니다.</p>}
+                {kind === 'products' && (
+                    <p>상점 상품 설정은 다음 구매부터 적용됩니다. 기존 구매 이력은 유지됩니다.</p>
+                )}
 
-                <button disabled={busy} onClick={createRecord}>새로 등록</button>
-                <button disabled={busy} onClick={() => load()}>목록 새로고침</button>
+                <div className="admin-toolbar-actions">
+                    <button disabled={busy} onClick={createRecord}>새로 등록</button>
+                    <button disabled={busy} onClick={() => load()}>목록 새로고침</button>
+                </div>
 
                 <div className="admin-toolbar">
                     <label>
                         현재 페이지 검색
                         <input value={search} onChange={e => setSearch(e.target.value)}/>
                     </label>
+
                     <label>
                         상태
                         <select value={filter} onChange={e => setFilter(e.target.value)}>
@@ -505,12 +634,33 @@ export default function AdminPanel({onBack, onExit = onBack, onLogout, onAccessL
                 {!busy && !rows.length && <p>등록된 데이터가 없습니다.</p>}
 
                 <ul className="admin-records">
-                    {rows.filter(row => (
-                        (filter === 'all' || row.is_active === (filter === 'active')) &&
-                        [row.id, row.name, row.item_id].join(' ').toLowerCase().includes(search.toLowerCase())
-                    )).map(row => (
+                    {visibleRows.map(row => (
                         <li key={row.id}>
-                            ID {row.id} · {row.name || `아이템 ${row.item_id} / 가격 ${row.price}`} · {row.is_active ? '활성' : '비활성'}
+                            <div className="admin-record-summary">
+                                <strong>
+                                    {kind === 'items'
+                                        ? row.name
+                                        : <AdminReferenceName
+                                            itemId={row.item_id}
+                                            recipeId={row.recipe_id}
+                                            eager={!!normalizedSearch}
+                                            onResolved={handleNameResolved}
+                                            onDenied={denied}
+                                        />}
+                                </strong>
+
+                                <small>
+                                    {kind === 'products'
+                                        ? `가격 ${row.price}코인 · ${row.is_active ? '판매 중' : '비활성'}`
+                                        : `${row.category || '아이템'} · ${row.is_active ? '활성' : '비활성'}`}
+                                </small>
+
+                                <details>
+                                    <summary>관리 번호</summary>
+                                    <span>등록 ID {row.id}</span>
+                                </details>
+                            </div>
+
                             <button disabled={busy} onClick={() => select(row)}>상세/수정</button>
                         </li>
                     ))}
@@ -521,11 +671,18 @@ export default function AdminPanel({onBack, onExit = onBack, onLogout, onAccessL
                 )}
 
                 {next && (
-                    <button disabled={busy} onClick={() => onNavigate ? onNavigate({after: next, record: null}) : load(kind, next)}>다음 100건</button>
+                    <button disabled={busy} onClick={() => onNavigate ? onNavigate({after: next, record: null}) : load(kind, next)}>
+                        다음 100건
+                    </button>
                 )}
 
                 {(!route || recordId === 'new' || selected) && !busy && (
-                    <Editor key={`${kind}-${editorKey}`} kind={kind} record={selected} seed={kind === 'products' ? productSeed : null} onDenied={denied} onSaved={handleSaved}/>
+                    <Editor key={`${kind}-${editorKey}`}
+                            kind={kind}
+                            record={selected}
+                            seed={kind === 'products' ? productSeed : null}
+                            onDenied={denied}
+                            onSaved={handleSaved}/>
                 )}
             </>
         );
@@ -538,6 +695,7 @@ export default function AdminPanel({onBack, onExit = onBack, onLogout, onAccessL
                     <small>생존밥 · 운영 관리</small>
                     <h1>관리자</h1>
                 </div>
+
                 <div className="actions">
                     <button onClick={onBack}>뒤로가기</button>
                     <button onClick={onExit}>게임으로 돌아가기</button>
@@ -552,13 +710,22 @@ export default function AdminPanel({onBack, onExit = onBack, onLogout, onAccessL
                 <>
                     <nav className="admin-navigation" aria-label="관리자 메뉴">
                         {adminMenus.map(([type, label]) => (
-                            <button key={type} aria-current={kind === type ? 'page' : undefined} disabled={busy} onClick={() => setKind(type)}>{label}</button>
+                            <button key={type} aria-current={kind === type ? 'page' : undefined}
+                                    disabled={busy} onClick={() => setKind(type)}>
+                                {label}
+                            </button>
                         ))}
                     </nav>
 
                     <div className="admin-content">
                         <h2>{adminMenus.find(([id]) => id === kind)?.[1]}</h2>
-                        {recordId && <button disabled={busy} onClick={() => onNavigate({record: null})}>편집 취소 · 목록으로</button>}
+
+                        {recordId && (
+                            <button disabled={busy} onClick={() => onNavigate({record: null})}>
+                                편집 취소 · 목록으로
+                            </button>
+                        )}
+
                         {renderContent()}
                     </div>
                 </>

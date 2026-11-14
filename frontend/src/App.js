@@ -403,8 +403,8 @@ export default function App() {
     ['cooking', '요리', 'cooking'],
     ['inventory', '인벤토리', 'box'],
     ['shop', '상점', 'shop'],
-    ['records', '기록', 'book'],
-    ['gacha', '가챠', 'sparkle']
+    ['gacha', '가챠', 'sparkle'],
+    ['records', '기록', 'book']
   ];
 
   const quickNavigation = [
