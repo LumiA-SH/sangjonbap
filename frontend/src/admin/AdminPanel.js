@@ -24,6 +24,7 @@ const emptyItem = {
   transferable: true,
   is_active: true,
   effect_type: null,
+  blood_pack_kind: null,
   effect_value: null,
   usable: false,
   use_target: 'NONE',
@@ -53,6 +54,7 @@ const fieldLabels = {
   sort_order: '표시 순서',
   daily_limit: '일일 구매 한도',
   effect_type: '효과',
+  blood_pack_kind: '혈액팩 종류',
   battle_usable: '전투 사용 가능',
   effect_value: '효과 수치',
   usable: '사용 가능',
@@ -101,10 +103,21 @@ function Editor({kind, record, seed, onSaved, onDenied}) {
     setDraft({
       ...draft,
       effect_type: value || null,
-      effect_value: value ? 10 : null,
+      blood_pack_kind: value ? 'STANDARD' : null,
+      effect_value: value ? 30 : null,
       usable: !!value,
       use_target: value ? 'SELF' : 'NONE',
+      category: value ? 'CONSUMABLE' : draft.category,
+      battle_usable: !!value,
       transferable: true
+    });
+  }
+
+  function changeBloodPackKind(value) {
+    setDraft({
+      ...draft,
+      blood_pack_kind: value || null,
+      effect_value: value === 'FREE' ? 10 : value === 'STANDARD' ? 30 : null
     });
   }
 
@@ -118,7 +131,9 @@ function Editor({kind, record, seed, onSaved, onDenied}) {
           <ItemPicker key={key} label="판매 아이템" value={draft.item_id} disabled={busy} onDenied={onDenied} onChange={(id, item) => setDraft(d => ({
             ...d,
             item_id: id,
-            ...(item?.effect_type === 'BLOOD_PACK' ? {price: 0, daily_limit: 1} : {})
+            ...(item?.blood_pack_kind === 'FREE'
+                ? {price: 0, daily_limit: 1, purchase_limit: null, stock_limit: null}
+                : {daily_limit: null})
           }))}/>
       );
     }
@@ -132,6 +147,14 @@ function Editor({kind, record, seed, onSaved, onDenied}) {
           <select value={draft[key] ?? ''} disabled={busy} onChange={e => changeEffectType(e.target.value)}>
             <option value="">없음</option>
             <option value="BLOOD_PACK">혈액팩</option>
+          </select>
+      );
+    } else if (key === 'blood_pack_kind') {
+      input = (
+          <select value={draft[key] ?? ''} disabled={busy || draft.effect_type !== 'BLOOD_PACK'} onChange={e => changeBloodPackKind(e.target.value)}>
+            <option value="">선택</option>
+            <option value="FREE">무료 혈액팩 (+10, 하루 1개)</option>
+            <option value="STANDARD">일반 혈액팩 (+30, 유료)</option>
           </select>
       );
     } else if (key === 'effect_value') {
@@ -156,16 +179,20 @@ function Editor({kind, record, seed, onSaved, onDenied}) {
     } else if (['purchase_limit', 'stock_limit', 'daily_limit'].includes(key)) {
       input = (
           <>
-                    <span>
-                        <input type="checkbox" checked={draft[key] === null} disabled={busy} onChange={e => changeLimit(key, e.target.checked)}/>
-                        무제한(NULL)
-                    </span>
-            <input type="number" min={key === 'purchase_limit' ? 1 : 0} max={2147483647} value={draft[key] ?? ''} disabled={busy || draft[key] === null} required={draft[key] !== null} onChange={e => change(key, e.target.value === '' ? '' : Number(e.target.value))}/>
+            <span>
+              <input type="checkbox" checked={draft[key] === null} disabled={busy} onChange={e => changeLimit(key, e.target.checked)}/>
+              무제한(NULL)
+            </span>
+            <input type="number" min={key === 'purchase_limit' ? 1 : 0} max={2147483647} value={draft[key] ?? ''}
+                   disabled={busy || draft[key] === null} required={draft[key] !== null}
+                   onChange={e => change(key, e.target.value === '' ? '' : Number(e.target.value))}/>
           </>
       );
     } else {
       input = (
-          <input type={['price', 'sort_order'].includes(key) ? 'number' : 'text'} value={draft[key]} required disabled={busy} maxLength={key === 'name' ? 100 : undefined} onChange={e => change(key, ['price', 'sort_order'].includes(key) ? (e.target.value === '' ? '' : Number(e.target.value)) : e.target.value)}/>
+          <input type={['price', 'sort_order'].includes(key) ? 'number' : 'text'} value={draft[key]} required disabled={busy}
+                 maxLength={key === 'name' ? 100 : undefined}
+                 onChange={e => change(key, ['price', 'sort_order'].includes(key) ? (e.target.value === '' ? '' : Number(e.target.value)) : e.target.value)}/>
       );
     }
 
@@ -352,7 +379,7 @@ export default function AdminPanel({onBack, onExit = onBack, onLogout, onAccessL
     setProductSeed({
       item_id: String(selected.id),
       price: 0,
-      daily_limit: selected.effect_type === 'BLOOD_PACK' ? 1 : null
+      daily_limit: selected.blood_pack_kind === 'FREE' ? 1 : null
     });
 
     if (onNavigate) {
@@ -427,7 +454,7 @@ export default function AdminPanel({onBack, onExit = onBack, onLogout, onAccessL
 
     return (
         <>
-          <p>혈액팩은 명시적 효과로 지정하며 무료 상품의 일일 한도는 1입니다. 영구 삭제는 참조가 없는 아이템만 가능하며 기록은 보존합니다.</p>
+          <p>혈액팩은 무료(+10, 0코인, 하루 1개)와 일반(+30, 유료)을 별도 아이템으로 관리합니다. 일반팩 가격은 운영진이 정합니다. 기록은 보존합니다.</p>
 
           {kind === 'items' && selected && (
               <>
