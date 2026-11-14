@@ -1,16 +1,16 @@
 {
   "files": {
-    "main.css": "/static/css/main.859b1c56.css",
-    "main.js": "/static/js/main.c6aca8ef.js",
+    "main.css": "/static/css/main.1a69d8bd.css",
+    "main.js": "/static/js/main.857de452.js",
     "static/media/background-pattern.svg": "/static/media/background-pattern.39a5ebd1b3ce594076c9.svg",
     "static/media/blood-splatter-logo.svg": "/static/media/blood-splatter-logo.77817a91d051d402cb0a.svg",
     "index.html": "/index.html",
     "static/media/warning-stripe.svg": "/static/media/warning-stripe.dd1a6cb4eb855c6e8eca.svg",
-    "main.859b1c56.css.map": "/static/css/main.859b1c56.css.map",
-    "main.c6aca8ef.js.map": "/static/js/main.c6aca8ef.js.map"
+    "main.1a69d8bd.css.map": "/static/css/main.1a69d8bd.css.map",
+    "main.857de452.js.map": "/static/js/main.857de452.js.map"
   },
   "entrypoints": [
-    "static/css/main.859b1c56.css",
-    "static/js/main.c6aca8ef.js"
+    "static/css/main.1a69d8bd.css",
+    "static/js/main.857de452.js"
   ]
 }
