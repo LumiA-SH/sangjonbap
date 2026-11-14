@@ -1,15 +1,16 @@
 /* ========================================
-   01. AREA HUB
+   01. AREA HUB - BASE
 ======================================== */
 
 .area-hub {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 16px;
     width: 100%;
     min-width: 0;
 }
 
+.area-hub,
 .area-hub * {
     box-sizing: border-box;
 }
@@ -20,35 +21,37 @@
     justify-content: space-between;
     flex-wrap: wrap;
     gap: 16px;
+    width: 100%;
 }
 
 .area-hub-heading h2 {
-    margin: 0 0 8px;
-    font-size: 24px;
+    margin: 0 0 5px;
+    color: #242428;
+    font-size: 23px;
     font-weight: 850;
 }
 
 .area-hub-heading p {
     margin: 0;
-    color: #6f6f74;
+    color: #74747a;
     font-size: 13px;
-    line-height: 1.7;
+    line-height: 1.6;
 }
 
 .area-hub button {
-    min-height: 40px;
+    flex-shrink: 0;
+    min-height: 38px;
     white-space: nowrap;
 }
 
 .area-hub button:disabled {
-    opacity: 0.55;
+    opacity: 0.5;
     cursor: not-allowed;
 }
 
 .area-hub input,
 .area-hub select,
 .area-hub textarea {
-    width: 100%;
     min-width: 0;
     max-width: 100%;
 }
@@ -57,23 +60,25 @@
     display: flex;
     align-items: end;
     gap: 12px;
-    padding: 16px;
+    width: 100%;
+    padding: 14px 16px;
     border: 1px solid #dedee1;
-    border-radius: 9px;
-    background: #f5f5f6;
+    border-radius: 8px;
+    background: #f4f4f5;
 }
 
-.area-hub-selector label {
+.area-hub-selector > label {
     flex: 1 1 auto;
     min-width: 0;
 }
 
-.area-hub-selector button {
+.area-hub-selector > button {
     flex: 0 0 auto;
 }
 
 .area-hub-error,
 .area-hub-message {
+    width: 100%;
     margin: 0;
     padding: 12px 15px;
     border: 1px solid #dedee1;
@@ -83,12 +88,12 @@
 }
 
 .area-hub-error {
-    border-color: #d8a7ab;
-    color: #9e1b27;
+    border-color: #dcb2b6;
+    color: #9d2630;
 }
 
 .area-hub-message {
-    color: #326640;
+    color: #366a43;
 }
 
 /* ========================================
@@ -96,9 +101,10 @@
 ======================================== */
 
 .area-hub-overview {
-    padding: 20px;
-    border: 1px solid #d7d7da;
-    border-radius: 10px;
+    width: 100%;
+    padding: 16px 18px;
+    border: 1px solid #dedee1;
+    border-radius: 9px;
     background: #ffffff;
 }
 
@@ -108,70 +114,88 @@
     justify-content: space-between;
     flex-wrap: wrap;
     gap: 12px;
-    margin-bottom: 16px;
+    margin-bottom: 14px;
 }
 
 .area-hub-overview > div:first-child strong {
-    font-size: 21px;
+    color: #242428;
+    font-size: 20px;
     font-weight: 850;
 }
 
 .area-hub-overview > div:first-child span {
-    padding: 5px 11px;
+    padding: 5px 10px;
     border: 1px solid #650c13;
-    border-radius: 20px;
+    border-radius: 5px;
     color: #650c13;
     font-size: 12px;
-    font-weight: 800;
+    font-weight: 700;
 }
 
 .area-hub-summary-grid {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 12px;
+    gap: 10px;
+    width: 100%;
 }
 
 .area-hub-summary-grid > div {
     display: flex;
-    flex-direction: column;
     align-items: center;
-    justify-content: center;
-    gap: 7px;
+    justify-content: space-between;
+    gap: 10px;
     min-width: 0;
-    min-height: 86px;
-    padding: 12px;
-    border: 1px solid #e0e0e2;
-    border-radius: 8px;
+    min-height: 60px;
+    padding: 12px 14px;
+    border: 1px solid #e1e1e3;
+    border-radius: 7px;
     background: #f7f7f8;
 }
 
 .area-hub-summary-grid small {
-    color: #74747a;
+    color: #707075;
     font-size: 12px;
 }
 
 .area-hub-summary-grid strong {
     color: #650c13;
-    font-size: 22px;
+    font-size: 19px;
     font-weight: 850;
+    white-space: nowrap;
 }
 
 /* ========================================
-   03. ALL SECTIONS ON ONE PAGE
+   03. SECTION LAYOUT
+
+   1. 기본 설정       전체
+   2. 조사 결과       전체
+   3. 마물 출현       좌측
+   4. 레시피 발견     우측
+   5. 단서 관리       전체
 ======================================== */
 
 .area-hub-sections {
-    display: flex;
-    flex-direction: column;
-    gap: 22px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    gap: 16px;
+    width: 100%;
     min-width: 0;
 }
 
+.area-hub-sections > .area-hub-section:nth-child(1),
+.area-hub-sections > .area-hub-section:nth-child(2),
+.area-hub-sections > .area-hub-section:nth-child(5) {
+    grid-column: 1 / -1;
+}
+
 .area-hub-section {
+    width: 100%;
     min-width: 0;
-    padding: clamp(16px, 2vw, 24px);
-    border: 1px solid #d7d7da;
-    border-radius: 10px;
+    margin: 0;
+    padding: 18px 20px;
+    border: 1px solid #d8d8db;
+    border-radius: 9px;
     background: #ffffff;
 }
 
@@ -180,102 +204,173 @@
     align-items: flex-start;
     justify-content: space-between;
     gap: 16px;
-    margin-bottom: 20px;
-    padding-bottom: 16px;
-    border-bottom: 1px solid #e1e1e3;
+    margin-bottom: 16px;
+    padding-bottom: 13px;
+    border-bottom: 1px solid #e3e3e5;
 }
 
 .area-hub-section-head h3 {
-    margin: 0 0 8px;
-    color: #28282c;
-    font-size: 19px;
+    margin: 0 0 5px;
+    color: #242428;
+    font-size: 18px;
     font-weight: 850;
 }
 
 .area-hub-section-head p {
     margin: 0;
-    color: #6f6f74;
-    font-size: 13px;
-    line-height: 1.7;
+    color: #74747a;
+    font-size: 12px;
+    line-height: 1.6;
 }
 
 .area-hub-count {
     flex: 0 0 auto;
-    min-width: 46px;
-    padding: 6px 10px;
-    border: 1px solid #e1e1e3;
-    border-radius: 20px;
+    min-width: 42px;
+    padding: 5px 9px;
+    border: 1px solid #e0e0e2;
+    border-radius: 5px;
     background: #f5f5f6;
-    color: #59595e;
+    color: #5d5d63;
     font-size: 12px;
-    font-weight: 800;
+    font-weight: 700;
     text-align: center;
 }
 
 /* ========================================
-   04. FORMS
+   04. FORMS - COMMON
+
+   기존 styles.css의 form align-items:center
+   영향 제거
 ======================================== */
 
 .admin-panel .area-hub .area-hub-form {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    justify-items: stretch;
+    gap: 14px 18px;
     width: 100%;
     min-width: 0;
     margin: 0;
+    padding: 0;
 }
 
-.area-hub-form > label,
-.area-hub-form-grid > label {
+.admin-panel .area-hub .area-hub-form > * {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.admin-panel .area-hub .area-hub-form > h4,
+.admin-panel .area-hub .area-hub-form > .area-hub-form-grid,
+.admin-panel .area-hub .area-hub-form > .area-hub-buttons,
+.admin-panel .area-hub .area-hub-form > .area-hub-checks,
+.admin-panel .area-hub .area-hub-form > .area-hub-fieldset,
+.admin-panel .area-hub .area-hub-form > .area-hub-list,
+.admin-panel .area-hub .area-hub-form > .area-hub-monster-list,
+.admin-panel .area-hub .area-hub-form > .area-hub-add-row,
+.admin-panel .area-hub .area-hub-form > .area-hub-warning,
+.admin-panel .area-hub .area-hub-form > .area-hub-hint,
+.admin-panel .area-hub .area-hub-form > .area-hub-empty {
+    grid-column: 1 / -1;
+}
+
+.admin-panel .area-hub .area-hub-form > label,
+.admin-panel .area-hub .area-hub-form-grid > label {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 7px;
+    width: 100%;
     min-width: 0;
 }
 
 .area-hub-form h4 {
-    margin: 0 0 4px;
-    color: #333337;
+    margin: 4px 0 0;
     font-size: 16px;
-    font-weight: 850;
+    font-weight: 800;
 }
 
 .area-hub-form-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 14px;
+    align-items: start;
+    gap: 14px 18px;
+    width: 100%;
+    min-width: 0;
 }
 
-.area-hub-form textarea {
-    min-height: 100px;
+.admin-panel .area-hub .area-hub-form input:not([type="checkbox"]),
+.admin-panel .area-hub .area-hub-form select,
+.admin-panel .area-hub .area-hub-form textarea {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    margin: 0;
+}
+
+.admin-panel .area-hub .area-hub-form textarea {
+    min-height: 105px;
     resize: vertical;
 }
 
-.area-hub-buttons {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin: 14px 0;
+/* ========================================
+   05. BASE AREA FORM
+======================================== */
+
+.area-hub-sections > .area-hub-section:first-child .area-hub-form {
+    align-items: stretch;
 }
 
-.area-hub-buttons button {
+.area-hub .admin-image-upload {
+    width: 100%;
+    min-width: 0;
     margin: 0;
+    padding: 12px;
+    border: 1px solid #e1e1e3;
+    border-radius: 7px;
+    background: #f8f8f9;
 }
+
+.area-hub .admin-image-upload > label {
+    width: 100%;
+}
+
+.area-hub .admin-image-upload img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    margin-top: 10px;
+    border-radius: 6px;
+}
+
+.area-hub .admin-image-upload p {
+    margin: 7px 0 0;
+    font-size: 12px;
+}
+
+/* ========================================
+   06. CHECKBOX / BUTTON
+======================================== */
 
 .area-hub-checks {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
-    gap: 10px;
+    gap: 12px;
 }
 
 .admin-panel .area-hub .area-hub-checkbox {
     display: flex;
     flex-direction: row;
     align-items: center;
-    gap: 11px;
+    justify-content: flex-start;
+    gap: 10px;
     width: fit-content;
-    min-height: 46px;
-    padding: 10px 13px;
-    border: 1px solid #dedee0;
+    max-width: 100%;
+    min-height: 42px;
+    padding: 9px 12px;
+    border: 1px solid #dedee1;
     border-radius: 7px;
     background: #f8f8f9;
     cursor: pointer;
@@ -290,71 +385,59 @@
     accent-color: #650c13;
 }
 
-.area-hub-inline-form {
-    margin-top: 16px !important;
-    padding: 18px;
-    border: 1px solid #d8c7c9;
-    border-radius: 8px;
-    background: #fcf8f8;
-}
-
-.area-hub-fieldset {
+.area-hub-buttons {
     display: flex;
-    flex-direction: column;
-    gap: 14px;
-    min-width: 0;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 10px;
+    width: 100%;
+    margin: 6px 0 0;
+}
+
+.area-hub-buttons > button {
+    flex: 0 0 auto;
     margin: 0;
-    padding: 16px;
-    border: 1px solid #dedee1;
-    border-radius: 8px;
 }
 
-.area-hub-fieldset legend {
-    padding: 0 7px;
-    color: #650c13;
-    font-size: 13px;
-    font-weight: 800;
+.admin-panel .area-hub .area-hub-form .area-hub-buttons > button:not([type="button"]) {
+    border-color: #650c13;
+    background: #650c13;
+    color: #ffffff;
 }
 
-.area-hub-reward-row {
-    display: grid;
-    grid-template-columns: minmax(0, 1.5fr) 100px 120px auto;
-    align-items: end;
-    gap: 12px;
-    min-width: 0;
-    padding: 14px;
-    border: 1px solid #e3e3e5;
-    border-radius: 8px;
-    background: #ffffff;
-}
-
-.area-hub-reward-row > * {
-    min-width: 0;
+.admin-panel .area-hub .area-hub-form .area-hub-buttons > button:not([type="button"]):hover:not(:disabled) {
+    border-color: #80151d;
+    background: #80151d;
+    color: #ffffff;
 }
 
 /* ========================================
-   05. INVESTIGATION / CLUE CARDS
+   07. LIST - INVESTIGATION / CLUES
 ======================================== */
 
 .area-hub-list {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: start;
-    gap: 12px;
+    gap: 10px;
+    width: 100%;
     min-width: 0;
 }
 
 .area-hub-list-item {
+    width: 100%;
     min-width: 0;
-    padding: 16px;
+    margin: 0;
+    padding: 14px 16px;
     border: 1px solid #dedee1;
-    border-radius: 8px;
+    border-radius: 7px;
     background: #fafafb;
 }
 
 .area-hub-list-item.is-editing {
     grid-column: 1 / -1;
-    border-color: #bba8aa;
+    border-color: #bfaeb0;
     background: #ffffff;
 }
 
@@ -363,6 +446,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 14px;
+    width: 100%;
     min-width: 0;
 }
 
@@ -370,23 +454,24 @@
     display: flex;
     flex: 1 1 auto;
     flex-direction: column;
-    gap: 6px;
+    align-items: flex-start;
+    gap: 5px;
     min-width: 0;
     overflow-wrap: anywhere;
 }
 
 .area-hub-list-info strong {
-    color: #27272b;
+    color: #29292d;
     font-size: 14px;
-    font-weight: 850;
+    font-weight: 800;
     line-height: 1.5;
 }
 
 .area-hub-list-info small {
     display: block;
-    color: #6f6f74;
+    color: #74747a;
     font-size: 12px;
-    line-height: 1.65;
+    line-height: 1.5;
 }
 
 .area-hub-list-top > button {
@@ -394,32 +479,83 @@
     margin: 0;
 }
 
+.admin-panel .area-hub .area-hub-inline-form {
+    margin-top: 14px;
+    padding: 16px;
+    border: 1px solid #d8c7c9;
+    border-radius: 7px;
+    background: #fcf8f8;
+}
+
 .area-hub-empty {
-    margin: 12px 0;
-    padding: 22px;
-    border: 1px dashed #d8d8db;
-    border-radius: 8px;
+    width: 100%;
+    margin: 8px 0;
+    padding: 20px 12px;
+    border: 1px dashed #dddddf;
+    border-radius: 7px;
     background: #fafafb;
-    color: #77777c;
-    font-size: 13px;
+    color: #85858a;
+    font-size: 12px;
     text-align: center;
 }
 
 /* ========================================
-   06. MONSTER ASSIGNMENT
+   08. REWARD FIELDS
+======================================== */
+
+.area-hub-fieldset {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    padding: 14px;
+    border: 1px solid #dedee1;
+    border-radius: 8px;
+}
+
+.area-hub-fieldset legend {
+    padding: 0 8px;
+    color: #650c13;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.area-hub-reward-row {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(90px, 0.5fr) minmax(110px, 0.65fr) auto;
+    align-items: end;
+    gap: 12px;
+    width: 100%;
+    min-width: 0;
+    padding: 12px;
+    border: 1px solid #e2e2e4;
+    border-radius: 7px;
+    background: #ffffff;
+}
+
+.area-hub-reward-row > * {
+    min-width: 0;
+}
+
+/* ========================================
+   09. MONSTER ASSIGNMENTS
 ======================================== */
 
 .area-hub-monster-summary {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
-    gap: 8px 14px;
-    margin-bottom: 18px;
-    padding: 14px 16px;
-    border: 1px solid #e1d3d5;
-    border-radius: 8px;
+    gap: 8px 12px;
+    width: 100%;
+    margin-bottom: 14px;
+    padding: 11px 13px;
+    border: 1px solid #e1d5d7;
+    border-radius: 7px;
     background: #faf5f5;
-    font-size: 13px;
+    font-size: 12px;
 }
 
 .area-hub-monster-summary strong {
@@ -429,26 +565,29 @@
 }
 
 .area-hub-monster-summary span {
-    color: #68686d;
+    color: #717177;
     font-size: 12px;
 }
 
 .area-hub-monster-list {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    align-items: stretch;
+    gap: 9px;
+    width: 100%;
     min-width: 0;
 }
 
 .area-hub-monster-item {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(120px, 165px) auto;
+    grid-template-columns: minmax(0, 1fr) minmax(100px, 135px) auto;
     align-items: center;
-    gap: 14px;
+    gap: 12px;
+    width: 100%;
     min-width: 0;
-    padding: 16px;
-    border: 1px solid #dedee1;
-    border-radius: 8px;
+    padding: 12px;
+    border: 1px solid #e0e0e2;
+    border-radius: 7px;
     background: #fafafb;
 }
 
@@ -463,55 +602,82 @@
 .area-hub-add-row {
     display: flex;
     align-items: end;
-    gap: 12px;
+    gap: 10px;
+    width: 100%;
     min-width: 0;
-    margin-top: 12px;
 }
 
-.area-hub-add-row label {
+.area-hub-add-row > label {
     flex: 1 1 auto;
     min-width: 0;
 }
 
-.area-hub-add-row button {
+.area-hub-add-row > button {
     flex: 0 0 auto;
     margin: 0;
 }
 
 .area-hub-warning {
-    margin: 6px 0;
-    padding: 14px;
-    border: 1px solid #e3c6ad;
-    border-radius: 8px;
+    width: 100%;
+    margin: 0;
+    padding: 12px 14px;
+    border: 1px solid #e1c4a8;
+    border-radius: 7px;
     background: #fff8ed;
-    color: #8a511d;
-    font-size: 13px;
-    line-height: 1.7;
+    color: #96521c;
+    font-size: 12px;
+    line-height: 1.6;
 }
 
 .area-hub-hint {
+    grid-column: 1 / -1;
+    margin: 4px 0;
     color: #77777c;
     font-size: 12px;
-    line-height: 1.7;
+    line-height: 1.6;
 }
 
 /* ========================================
-   07. RESPONSIVE - DESKTOP
+   10. RECIPE AREA
 ======================================== */
 
-@media (max-width: 1250px) {
-    .area-hub-reward-row {
+.area-hub-sections > .area-hub-section:nth-child(4) .area-hub-list {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.area-hub-sections > .area-hub-section:nth-child(4) .area-hub-fieldset {
+    padding: 13px;
+}
+
+.area-hub-sections > .area-hub-section:nth-child(4) .area-hub-form-grid {
+    gap: 10px;
+}
+
+/* ========================================
+   11. RESPONSIVE - SMALL DESKTOP
+======================================== */
+
+@media (max-width: 1450px) {
+    .area-hub-sections {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .area-hub-sections > .area-hub-section {
+        grid-column: 1 / -1;
+    }
+
+    .area-hub-sections > .area-hub-section:nth-child(4) .area-hub-list {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
 
-@media (max-width: 1050px) {
-    .area-hub-list {
-        grid-template-columns: minmax(0, 1fr);
+@media (max-width: 1100px) {
+    .area-hub-reward-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .area-hub-monster-item {
-        grid-template-columns: minmax(0, 1fr) minmax(120px, 160px);
+        grid-template-columns: minmax(0, 1fr) minmax(110px, 150px);
     }
 
     .area-hub-monster-item > button {
@@ -521,12 +687,12 @@
 }
 
 /* ========================================
-   08. RESPONSIVE - MOBILE
+   12. RESPONSIVE - MOBILE
 ======================================== */
 
 @media (max-width: 700px) {
     .area-hub {
-        gap: 14px;
+        gap: 12px;
     }
 
     .area-hub-heading,
@@ -540,16 +706,9 @@
         width: 100%;
     }
 
+    .area-hub-overview,
     .area-hub-section {
-        padding: 15px;
-    }
-
-    .area-hub-section-head {
-        gap: 10px;
-    }
-
-    .area-hub-section-head h3 {
-        font-size: 17px;
+        padding: 14px;
     }
 
     .area-hub-summary-grid {
@@ -557,13 +716,20 @@
         gap: 8px;
     }
 
-    .area-hub-overview {
-        padding: 14px;
+    .area-hub-summary-grid > div {
+        min-height: 57px;
+        padding: 10px;
     }
 
+    .admin-panel .area-hub .area-hub-form,
     .area-hub-form-grid,
+    .area-hub-list,
     .area-hub-reward-row,
     .area-hub-monster-item {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .area-hub-sections > .area-hub-section:nth-child(4) .area-hub-list {
         grid-template-columns: minmax(0, 1fr);
     }
 
@@ -572,16 +738,12 @@
         width: 100%;
     }
 
-    .area-hub-reward-row > button {
-        width: 100%;
-    }
-
     .area-hub-list-item {
-        padding: 13px;
+        padding: 12px;
     }
 
-    .area-hub-inline-form {
-        padding: 13px;
+    .admin-panel .area-hub .area-hub-inline-form {
+        padding: 12px;
     }
 
     .area-hub-add-row {
@@ -589,7 +751,8 @@
         align-items: stretch;
     }
 
-    .area-hub-add-row button {
+    .area-hub-add-row > label,
+    .area-hub-add-row > button {
         width: 100%;
     }
 
@@ -597,7 +760,7 @@
         gap: 8px;
     }
 
-    .area-hub-buttons button {
+    .area-hub-buttons > button {
         flex: 1 1 auto;
     }
 }
