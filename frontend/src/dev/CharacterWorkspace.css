@@ -703,3 +703,225 @@
         transition: none;
     }
 }
+
+
+/* ========================================
+   12. BLOOD PACK CONTROLS
+======================================== */
+
+.survival-training-blood-panel .survival-blood-pack-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    width: 100%;
+    min-width: 0;
+    margin-top: 20px;
+}
+
+.survival-training-blood-panel .survival-blood-pack-picker {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.survival-training-blood-panel .survival-blood-pack-picker > select {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    min-height: 46px;
+    margin: 0;
+    padding: 10px 14px;
+    border: 1px solid #c9c9cc;
+    border-radius: 7px;
+    background: #ffffff;
+    color: #242428;
+    font: inherit;
+    font-size: 14px;
+    line-height: 1.5;
+    cursor: pointer;
+}
+
+.survival-training-blood-panel .survival-blood-pack-picker > select:focus-visible {
+    outline: 2px solid #650c13;
+    outline-offset: 2px;
+}
+
+.survival-training-blood-panel .survival-blood-pack-controls > button {
+    align-self: flex-start;
+    min-height: 44px;
+    margin: 0;
+    padding: 10px 18px;
+}
+
+/* ========================================
+   13. BLOOD PACK TRANSFER SEARCH
+======================================== */
+
+.survival-training-blood-panel .survival-blood-transfer-search {
+    width: 100%;
+    min-width: 0;
+    margin-top: 20px;
+    padding-top: 18px;
+    border-top: 1px solid #dedee0;
+}
+
+.survival-training-blood-panel .survival-blood-transfer-search form {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: 10px;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+}
+
+.survival-training-blood-panel .survival-blood-transfer-search form > label {
+    flex: 0 0 100%;
+    width: 100%;
+    margin: 0;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.survival-training-blood-panel .survival-blood-transfer-search form > input {
+    flex: 1 1 170px;
+    width: auto;
+    min-width: 0;
+    min-height: 44px;
+    margin: 0;
+    padding: 10px 13px;
+    border: 1px solid #c9c9cc;
+    border-radius: 7px;
+    background: #ffffff;
+    font-size: 14px;
+}
+
+.survival-training-blood-panel .survival-blood-transfer-search form > button {
+    flex: 0 0 auto;
+    min-height: 44px;
+    margin: 0;
+    padding: 10px 15px;
+    white-space: nowrap;
+}
+
+.survival-training-blood-panel .survival-blood-transfer-button {
+    border-color: #650c13;
+    background: #650c13;
+    color: #ffffff;
+}
+
+.survival-training-blood-panel .survival-blood-transfer-search .survival-character-search > p {
+    margin: 9px 0;
+    color: #77777b;
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.survival-training-blood-panel .survival-blood-transfer-search ul {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    width: 100%;
+    margin: 12px 0;
+    padding: 0;
+    border: 1px solid #dedee0;
+    border-radius: 8px;
+    background: #ffffff;
+    list-style: none;
+    overflow: hidden;
+}
+
+.survival-training-blood-panel .survival-blood-transfer-search li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-width: 0;
+    padding: 10px 13px;
+    border-bottom: 1px solid #e8e8ea;
+}
+
+.survival-training-blood-panel .survival-blood-transfer-search li:last-child {
+    border-bottom: 0;
+}
+
+.survival-training-blood-panel .survival-blood-transfer-search li > span {
+    flex: 1;
+    min-width: 0;
+    font-size: 13px;
+    overflow-wrap: anywhere;
+}
+
+.survival-training-blood-panel .survival-blood-transfer-search li > button {
+    flex: 0 0 auto;
+    min-height: 36px;
+    margin: 0;
+}
+
+/* ========================================
+   14. SELECTED TRANSFER TARGET
+======================================== */
+
+.survival-training-blood-panel .survival-blood-transfer-target {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    width: 100%;
+    min-width: 0;
+    margin-top: 13px;
+    padding: 12px 14px;
+    border: 1px solid #d8d8db;
+    border-radius: 7px;
+    background: #f7f7f8;
+    font-size: 13px;
+}
+
+.survival-training-blood-panel .survival-blood-transfer-target strong {
+    color: #650c13;
+    font-weight: 800;
+}
+
+.survival-training-blood-panel .survival-blood-transfer-target small {
+    margin-left: 5px;
+    color: #77777b;
+    font-size: 11px;
+}
+
+.survival-training-blood-panel .survival-blood-transfer-target > button {
+    min-height: 34px;
+    margin: 0;
+    padding: 7px 11px;
+    font-size: 12px;
+}
+
+/* ========================================
+   15. MOBILE
+======================================== */
+
+@media (max-width: 600px) {
+    .survival-training-blood-panel .survival-blood-transfer-search form {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .survival-training-blood-panel .survival-blood-transfer-search form > label,
+    .survival-training-blood-panel .survival-blood-transfer-search form > input,
+    .survival-training-blood-panel .survival-blood-transfer-search form > button {
+        flex: 0 0 auto;
+        width: 100%;
+    }
+
+    .survival-training-blood-panel .survival-blood-transfer-search li {
+        flex-wrap: wrap;
+    }
+}
