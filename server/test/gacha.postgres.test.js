@@ -61,7 +61,7 @@ await t.test(name, async () => {
         await scenario('draw weighted reward, exact price, inventory and log; catalog rewards', async () => {
             const r = await draw(); assert.equal(r.currency, 99); assert.equal(r.reward.itemId, items[1]); assert.equal(r.reward.quantity, 1); assert.equal('totalWeight' in r.reward, false); assert.equal('weight' in r.reward, false);
             assert.equal(r.inventoryQuantity, 1); assert.equal((await snapshot()).logs[0].detail.reward.itemId, items[1]);
-            const list = (await repo.getGachaCatalog(users[0])).gachas.find(g => g.id === gachas[0]); assert.equal('rewards' in list, false); assert.equal(list.outside, false);
+            const list = (await repo.getGachaCatalog(users[0])).gachas.find(g => g.id === gachas[0]); assert.ok(Array.isArray(list.rewards)); assert.ok(list.rewards.every(r=>!('weight' in r))); assert.equal(list.outside, false);
         });
         await scenario('insufficient currency, DEAD and NEAR_DEATH restriction change nothing', async () => {
             await pool.query('update public.game_character set currency=0 where id=$1', [characters[0]]);

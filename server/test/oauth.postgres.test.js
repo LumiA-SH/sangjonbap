@@ -17,7 +17,7 @@ test('OAuth shared PostgreSQL state, identity and sessions (isolated)', {skip: p
     const repo = createOAuthRepository(pool);
     try {
         await raw.query(`create schema ${schema}`);
-        for (const table of ['game_character', 'auth_user', 'auth_session', 'oauth_login_state', 'daily_reset_state', 'battle', 'action_log', 'inventory', 'item']) await raw.query(`create table ${schema}.${table} (like public.${table} including all)`);
+        for (const table of ['game_character', 'auth_user', 'auth_session', 'oauth_login_state', 'daily_reset_state', 'battle', 'action_log', 'inventory', 'item', 'system_config']) await raw.query(`create table ${schema}.${table} (like public.${table} including all)`);
         await pool.query('insert into public.daily_reset_state(singleton) values(true)');
         await t.test('concurrent registration creates one linked pending character without granting roles', async () => {
             const users = await Promise.all([repo.resolveOAuthUser('survival-bob.site', '123'), repo.resolveOAuthUser('survival-bob.site', '123')]);

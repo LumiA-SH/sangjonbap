@@ -15,7 +15,7 @@ const deferred = () => {let resolve; const promise = new Promise(r => {resolve =
 
 test('admin phase 2 PostgreSQL isolated schema: masters, roles, scripts, concurrency', {skip: process.env.RUN_ADMIN_DB_TESTS !== '1'}, async t => {
     const raw = createPool(), schema = `test_admin2_${randomUUID().replaceAll('-', '')}`;
-    const tables = ['food_grade', 'recipe_discovery', 'daily_reset_state', 'auth_user', 'game_character', 'item', 'food_config', 'recipe', 'recipe_ingredient', 'character_recipe', 'gacha', 'gacha_reward', 'inventory', 'action_log', 'system_config', 'shop_product', 'shop_purchase', 'blood_pack_purchase_day', 'battle'];
+    const tables = ['area','area_recipe','investigation_result','unique_discovery','clue','monster','monster_action','monster_drop','area_monster','food_grade', 'recipe_discovery', 'daily_reset_state', 'auth_user', 'game_character', 'item', 'food_config', 'recipe', 'recipe_ingredient', 'character_recipe', 'gacha', 'gacha_reward', 'inventory', 'action_log', 'system_config', 'shop_product', 'shop_purchase', 'blood_pack_purchase_day', 'battle'];
     const sql = s => s.replaceAll('public.', `${schema}.`);
     function scoped(hook, onIssued) {
         return {            
@@ -83,11 +83,13 @@ const c = await raw.connect(); return {
         const rp = await repo.saveAdminRecord(a.id, 'items', null, {name: 'RP', category: 'MATERIAL', transferable: true, usable: false, battle_usable: false, use_target: 'NONE', effect_type: null, effect_value: null}, key());
         const rp2 = await repo.saveAdminRecord(a.id, 'items', null, {name: 'RP2', category: 'MATERIAL', transferable: true, usable: false, battle_usable: false, use_target: 'NONE', effect_type: null, effect_value: null}, key());
         const stock = (id, n) => ({item_id: id, quantity: 1, max_stock: n, remaining_stock: n});
+        await save('foods', null, {item_id: food.id, blood_recovery:7});
+        await save('foods', null, {item_id: failure.id, is_failure:true});
         let recipe = await save('recipes', null, {name: 'DEV recipe', success_rate: 100, result_item_id: food.id, failure_item_id: failure.id, ingredients: [{item_id: material.id, quantity: 2}]}),
             gacha = await save('gachas', null, {name: 'DEV gacha', price: 1, rewards: [stock(rp.id, 100), stock(rp2.id, 300)]});
         await t.test('food disabled/enabled constraints, partial updates, percentage and audit', async () => {
             await rejects(save('foods', null, {item_id: food.id}, u.id), 'ADMIN_REQUIRED');
-            let row = await save('foods', null, {item_id: food.id, blood_recovery: 7});
+            let row = await repo.getAdminMaster('foods',food.id);
 
             assert.equal(row.name,'DEV isolated food');
 
@@ -216,17 +218,17 @@ const c = await raw.connect(); return {
             await pool.query("insert into public.system_config(config_key,config_value) values ('training_ap_cost','0'::jsonb)");
         });
         await t.test('admin blood pack setup -> shared daily purchase -> near-death use, transfer, rollback', async () => {
-            const pack = await repo.saveAdminRecord(a.id, 'items', null, {name: 'DEV explicit effect', category: 'CONSUMABLE', effect_type: 'BLOOD_PACK', effect_value: 30, usable: true, use_target: 'SELF', transferable: true}, key());
+            const pack = await repo.saveAdminRecord(a.id, 'items', null, {name: 'DEV explicit effect', category: 'CONSUMABLE', effect_type: 'BLOOD_PACK', effect_value: 10, blood_pack_kind:'FREE', battle_usable:true, usable: true, use_target: 'SELF', transferable: true}, key());
             await rejects(repo.saveAdminRecord(a.id, 'products', null, {item_id: pack.id, price: 1, daily_limit: 1}, key()), 'BLOOD_PACK_CONFIG_INVALID');
-            const product = await repo.saveAdminRecord(a.id, 'products', null, {item_id: pack.id, price: 0, daily_limit: 1}, key());
-            const other = await repo.saveAdminRecord(a.id, 'products', null, {item_id: pack.id, price: 0, daily_limit: 1}, key());
+            const product = await repo.saveAdminRecord(a.id, 'products', null, {item_id: pack.id, price: 0, daily_limit: 1, purchase_limit:null, stock_limit:null}, key());
+            const other = await repo.saveAdminRecord(a.id, 'products', null, {item_id: pack.id, price: 0, daily_limit: 1, purchase_limit:null, stock_limit:null}, key());
             await pool.query("update public.game_character set blood=0,status='NEAR_DEATH' where id=$1", [character.id]);
             const shop = createShopRepository(pool), packs = createBloodPackRepository(pool);
             const results = await Promise.allSettled([shop.buyProduct(u.id, product.id, 1, key()), shop.buyProduct(u.id, other.id, 1, key())]);
             assert.equal(results.filter(r => r.status === 'fulfilled').length, 1);
             assert.equal((await shop.getShopProducts(u.id)).find(p => p.id === product.id).dailyRemaining, 0);
             const usedKey = key(), used = await packs.useBloodPack(u.id, pack.id, usedKey);
-            assert.equal(used.blood, 30); assert.equal(used.status, 'ALIVE');
+            assert.equal(used.blood, 10); assert.equal(used.status, 'ALIVE');
             await rejects(packs.useBloodPack(u.id, pack.id, usedKey), 'DUPLICATE_REQUEST');
             await rejects(shop.buyProduct(u.id, product.id, 1, key()), 'DAILY_LIMIT_EXCEEDED');
             await pool.query("update public.blood_pack_purchase_day set purchase_date=purchase_date-1 where character_id=$1", [character.id]);

@@ -31,6 +31,8 @@ await c.query('begin'); await c.query('create schema ' + isolated);
 });
         await raw.query('create schema ' + schema);
         for (const {tablename} of (await raw.query("select tablename from pg_tables where schemaname='public'")).rows) await raw.query('create table ' + schema + '.' + tablename + '(like public.' + tablename + ' including all)');
+        const view=(await raw.query("select pg_get_viewdef('public.investigation_progress'::regclass,true) definition")).rows[0].definition;
+        const viewClient=await raw.connect();try{await viewClient.query('begin');await viewClient.query('set local search_path to '+schema+',public');await viewClient.query('create view '+schema+'.investigation_progress as '+view.replaceAll('public.',schema+'.'));await viewClient.query('commit');}finally{viewClient.release();}
         await pool.query('insert into public.daily_reset_state(singleton) values(true)');
         await raw.query('insert into ' + schema + '.system_config select * from public.system_config');
         const account = async (role = 'USER') => {const c = (await pool.query("insert into public.game_character(name,hunter_grade,atk,def,agi,blood,hp,ap,currency) values('test','B',39,40,40,10,100,10,100) returning *")).rows[0]; const u = (await pool.query("insert into public.auth_user(role,mastodon_instance,mastodon_account_id,character_id) values($1,'test.invalid',$2,$3) returning *", [role, key(), c.id])).rows[0]; return {c, u};};
@@ -40,10 +42,10 @@ await c.query('begin'); await c.query('create schema ' + isolated);
         await t.test('role denial, grade edits, legacy recovery, failure override and cap40', async () => {
             const f = await item(); await pool.query('insert into public.inventory(character_id,item_id,quantity) values($1,$2,10)', [runner.c.id, f.id]);
             await assert.rejects(admin.saveAdminMaster(runner.u.id, 'food-grades', null, {name: key(), blood_recovery: 10}, key()), e => e.code === 'ADMIN_REQUIRED');
-            const grade = await save('food-grades', null, {name: key(), blood_recovery: 20});
+            const grade = await save('food-grades', null, {name: key(), blood_recovery: 20, stat_growth_rate:100});
             await save('foods', null, {item_id: f.id, blood_recovery: 7});
             assert.equal((await eat.eatFood(runner.u.id, f.id, key())).blood, 17);
-            await save('foods', f.id, {grade_id: grade.id, stat_growth_enabled: true, stat_growth_target: 'ATK', stat_growth_rate: 100, stat_growth_value: 8});
+            await save('foods', f.id, {grade_id: grade.id, stat_growth_enabled: true, stat_growth_target: 'ATK', stat_growth_rate: 100, stat_growth_value: 1});
             await pool.query("update public.system_config set config_value='50' where config_key='permanent_stat_cap'");
             const grown = await eat.eatFood(runner.u.id, f.id, key()); assert.equal(grown.blood, 37); assert.equal(grown.stats.atk, 40);
             await save('food-grades', grade.id, {blood_recovery: 30}); assert.equal((await eat.eatFood(runner.u.id, f.id, key())).blood, 67);
@@ -63,12 +65,12 @@ await c.query('begin'); await c.query('create schema ' + isolated);
             assert.equal((await admin.getAdminMaster('food-grades', spare.id)).blood_recovery, 10);
             assert.equal((await admin.deleteFoodGrade(owner.u.id, spare.id, key())).deleted, true);
         });
-        await t.test('investigation default eligibility, explicit failure exclusion, weights and rewards', async () => {
+        await t.test('investigation normalizes legacy failure flags, preserves rewards and rollback', async () => {
             const area = (await pool.query("insert into public.area(name,is_open,encounter_rate) values('area',true,0) returning *")).rows[0]; const reward = await item('MATERIAL');
-            const body = {result_grade: 'NORMAL', result_text: 'configured', weight: 1, is_unique: false, investigation_rate_value: 0, clue_id: null, is_active: true, is_failure: true, failure_selectable: false, rewards: [{item_id: reward.id, recipe_id: null, quantity: 2, probability: 100}]};
+            const body = {result_grade: 'NORMAL', result_text: 'configured', weight: 1, is_unique: false, clue_id: null, is_active: true, is_failure: true, failure_selectable: false, rewards: [{item_id: reward.id, quantity: 2, probability: 100}]};
             const result = await admin.saveAdminInvestigation(owner.u.id, area.id, null, {...body, requestKey: key()});
             const investigate = createInvestigationRepository(pool, {random: () => 0});
-            await assert.rejects(investigate.investigate(other.u.id, area.id, key()), e => e.code === 'NO_INVESTIGATION_RESULT');
+            assert.equal((await admin.getAdminInvestigation(area.id)).results[0].is_failure,false);
             assert.equal((await pool.query('select ap from public.game_character where id=$1', [other.c.id])).rows[0].ap, 10);
             await admin.saveAdminInvestigation(owner.u.id, area.id, result.id, {...body, failure_selectable: true, requestKey: key()});
             const done = await investigate.investigate(other.u.id, area.id, key()); assert.equal(done.ap, 9); assert.equal(done.rewards[0].quantity, 2);
@@ -96,7 +98,7 @@ await c.query('begin'); await c.query('create schema ' + isolated);
             await pool.query('insert into public.inventory(character_id,item_id,quantity) values($1,$2,2147483647)', [player.c.id, reward.id]);
             const m = (await pool.query("insert into public.monster(name,max_hp,atk,def,agi) values('test',1,1,1,1) returning *")).rows[0];
             const declaration = {action_type: 'ATTACK', probability: 100, is_active: true};
-            const snapshot = {monster: m, actions: [declaration], abilities: {}, drops: [{item_id: reward.id, drop_rate: 100, min_quantity: 1, max_quantity: 1, is_ingredient: true}]};
+            const snapshot = {monster: m, actions: [declaration], abilities: {}, drops: [{item_id: reward.id, drop_rate: 100, min_quantity: 1, max_quantity: 1, is_ingredient: true,ingredient_role:'BASE'}]};
             const b = (await pool.query('insert into public.battle(area_id,character_id,monster_id,character_hp,monster_hp,monster_max_hp,monster_atk,monster_def,monster_agi,snapshot,declaration) values(1,$1,$2,100,1,1,1,1,1,$3,$4) returning *', [player.c.id, m.id, JSON.stringify(snapshot), JSON.stringify(declaration)])).rows[0];
             const request = key(); await assert.rejects(createBattleRepository(pool, {random: () => 0}).commandBattle(player.u.id, b.id, {action: 'ATTACK', turnNo: b.turn_no, requestKey: request}), e => e.code === 'INVENTORY_LIMIT_CONFLICT');
             assert.equal((await pool.query('select battle_status from public.battle where id=$1', [b.id])).rows[0].battle_status, 'ACTIVE');

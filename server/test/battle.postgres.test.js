@@ -19,7 +19,7 @@ import {createTrainingRepository} from '../src/modules/training/repository.js';
 const rejects = (p, code) => assert.rejects(p, e => e.code === code);
 test('PVE PostgreSQL transactions, snapshots, registration and concurrency', {skip: process.env.RUN_BATTLE_DB_TESTS !== '1'}, async t => {
     const raw = createPool(), schema = `test_pve_${randomUUID().replaceAll('-', '')}`;
-    const tables = ['food_grade', 'auth_user', 'game_character', 'food_config', 'item', 'inventory', 'action_log', 'system_config', 'battle', 'battle_log', 'area',
+    const tables = ['area_recipe','food_grade', 'auth_user', 'game_character', 'food_config', 'item', 'inventory', 'action_log', 'system_config', 'battle', 'battle_log', 'area',
         'daily_reset_state', 'daily_reset_run', 'monster', 'monster_action', 'monster_drop', 'area_monster', 'investigation_result', 'investigation_reward', 'unique_discovery', 'clue',
         'recipe', 'character_recipe', 'shop_product', 'shop_purchase', 'blood_pack_purchase_day', 'storage', 'gacha', 'gacha_reward'];
     const migrated = (await raw.query("select to_regclass('public.recipe_discovery') is not null as ready")).rows[0].ready;
@@ -49,6 +49,8 @@ const c = await raw.connect(); return {
             }
             await ddl.query('commit');
         } catch (e) {await ddl.query('rollback'); throw e;} finally {ddl.release();}
+        const view=(await raw.query("select pg_get_viewdef('public.investigation_progress'::regclass,true) definition")).rows[0].definition;
+        const viewClient=await raw.connect();try{await viewClient.query('begin');await viewClient.query('set local search_path to '+schema+',public');await viewClient.query('create view '+schema+'.investigation_progress as '+view.replaceAll('public.',schema+'.'));await viewClient.query('commit');}finally{viewClient.release();}
         await raw.query(`insert into ${schema}.system_config select * from public.system_config`);
         const account = async (role = 'USER') => (await pool.query(`insert into public.auth_user(role,mastodon_instance,mastodon_account_id,oauth_verified_at)
             values($1,'https://example.invalid',$2,now()) returning *`, [role, randomUUID()])).rows[0];
@@ -73,12 +75,12 @@ const c = await raw.connect(); return {
         await pool.query(`insert into public.investigation_result(area_id,result_grade,result_text,weight,is_unique,investigation_rate_value)
             values($1,'NORMAL','DEV result',1,false,0)`, [area.id]);
         const item = (await pool.query("insert into public.item(name,category) values('DEV drop','MATERIAL') returning *")).rows[0];
-        const pack = (await pool.query(`insert into public.item(name,category,usable,use_target,effect_type,effect_value,battle_usable)
-            values('DEV pack','CONSUMABLE',true,'SELF','BLOOD_PACK',30,true) returning *`)).rows[0];
+        const pack = (await pool.query(`insert into public.item(name,category,usable,use_target,effect_type,effect_value,battle_usable,blood_pack_kind)
+            values('DEV pack','CONSUMABLE',true,'SELF','BLOOD_PACK',30,true,'STANDARD') returning *`)).rows[0];
         const monsterBody = {            
 name: 'DEV isolated monster', description: null, image_url: null, max_hp: 100, atk: 20, def: 10, agi: 10, is_active: true,
             actions: [{name: 'attack', action_type: 'ATTACK', probability: 100, multiplier: 1, is_active: true, sort_order: 0}],
-            areas: [{area_id: area.id, weight: 1}], drops: [{item_id: item.id, drop_rate: 100, min_quantity: 2, max_quantity: 2, is_ingredient: true}]        
+            areas: [{area_id: area.id, weight: 1}], drops: [{item_id: item.id, drop_rate: 100, min_quantity: 1, max_quantity: 1, is_ingredient: true, ingredient_role:'BASE'}]
 };
         let monster = await masters.saveAdminMonster(admin.id, null, {...monsterBody, requestKey: randomUUID()});
         const investigation = createInvestigationRepository(pool, {random: () => 0, battleRepository: repo});
@@ -105,7 +107,7 @@ name: 'DEV isolated monster', description: null, image_url: null, max_hp: 100, a
         });
         await t.test('admin changes do not change active monster/actions/drops snapshots', async () => {
             const b = await start();
-            await masters.saveAdminMonster(admin.id, monster.id, {...monsterBody, atk: 100, actions: [{...monsterBody.actions[0], action_type: 'FLEE'}], drops: [{...monsterBody.drops[0], min_quantity: 3, max_quantity: 3}], requestKey: randomUUID()});
+            await masters.saveAdminMonster(admin.id, monster.id, {...monsterBody, atk: 100, actions: [{...monsterBody.actions[0], action_type: 'FLEE'}], drops: [{...monsterBody.drops[0], ingredient_role:'BASE'}], requestKey: randomUUID()});
             const r = await command(b); assert.equal(r.resolved.enemyDamage, 11); assert.equal(r.battle.declaration.action_type, 'ATTACK');
             monster = await masters.saveAdminMonster(admin.id, monster.id, {...monsterBody, requestKey: randomUUID()});
         });
@@ -120,8 +122,8 @@ name: 'DEV isolated monster', description: null, image_url: null, max_hp: 100, a
             try {await assert.rejects(masters.saveAdminMonster(admin.id, monster.id, {...monsterBody, atk: 999, requestKey: randomUUID()}), /injected/);} finally {failLog = false;}
             assert.equal((await masters.getAdminMonster(monster.id)).atk, 20);
             await masters.saveAdminAbilitySettings(admin.id, {settings, requestKey: randomUUID()});
-            const updated = await masters.saveAdminRecord(admin.id, 'items', pack.id, {effect_value: 45, battle_usable: true}, randomUUID());
-            assert.equal(updated.effect_value, 45);
+            await rejects(masters.saveAdminRecord(admin.id, 'items', pack.id, {effect_value: 45, battle_usable: true}, randomUUID()),'BLOOD_PACK_CONFIG_INVALID'); const updated=(await pool.query('select * from public.item where id=$1',[pack.id])).rows[0];
+            assert.equal(updated.effect_value, 30);
             await masters.saveAdminRecord(admin.id, 'items', pack.id, {effect_value: 30}, randomUUID());
         });
         await t.test('simultaneous death victory applies death once and rewards once', async () => {
@@ -131,11 +133,11 @@ name: 'DEV isolated monster', description: null, image_url: null, max_hp: 100, a
             const concurrent = await Promise.allSettled([command(b, {requestKey: key}), command(b)]);
             assert.equal(concurrent.filter(x => x.status === 'fulfilled').length, 1);
             const r = concurrent.find(x => x.status === 'fulfilled').value; assert.equal(r.battle.battle_status, 'VICTORY'); assert.equal(r.character.status, 'DEAD');
-            assert.equal(r.character.death_count, count + 1); assert.equal(r.rewards[0].quantity, 2);
+            assert.equal(r.character.death_count, count + 1); assert.equal(r.rewards[0].quantity, 1);
             const committed = (await pool.query("select request_key from public.action_log where target_id=$1 and action_type='BATTLE_COMMAND'", [b.id])).rows[0].request_key;
             await rejects(command(b, {requestKey: committed}), 'DUPLICATE_REQUEST'); await rejects(command(b), 'BATTLE_FINISHED');
             assert.equal((await current()).death_count, count + 1);
-            assert.equal((await pool.query('select quantity from public.inventory where character_id=$1 and item_id=$2', [character.id, item.id])).rows[0].quantity, 2);
+            assert.equal((await pool.query('select quantity from public.inventory where character_id=$1 and item_id=$2', [character.id, item.id])).rows[0].quantity, 1);
         });
         await t.test('low positive blood attacks are free; item before damage', async () => {
             let b = await start(); await pool.query('update public.game_character set blood=4 where id=$1', [character.id]);
@@ -206,7 +208,7 @@ name: 'DEV isolated monster', description: null, image_url: null, max_hp: 100, a
             await shop.buyProduct(user.id, product.id, 1, randomUUID());
             await store.deposit(user.id, pack.id, 1, randomUUID());
             await store.withdraw(user.id, pack.id, 1, randomUUID());
-            await pool.query("update public.item set effect_type='BLOOD_PACK',effect_value=10 where id=$1", [pack.id]);
+            await pool.query("update public.item set effect_type='BLOOD_PACK',effect_value=10,blood_pack_kind='FREE' where id=$1", [pack.id]);
             await pool.query("update public.game_character set status='NEAR_DEATH',hp=100,blood=0 where id=$1", [target]);
             await packs.transferBloodPack(user.id, target, pack.id, 1, randomUUID());
             const healed = await packs.useBloodPack(other.id, pack.id, randomUUID());
@@ -216,7 +218,7 @@ name: 'DEV isolated monster', description: null, image_url: null, max_hp: 100, a
             const rp = (await pool.query("insert into public.item(name,category,transferable,usable,battle_usable,use_target) values('RP','ETC',true,false,false,'NONE') returning id")).rows[0];
             await pool.query('insert into public.gacha_reward(gacha_id,item_id,quantity,weight,max_stock,remaining_stock) values($1,$2,1,17,2,2)', [g.id, rp.id]);
             const catalog = (await gacha.getGachaCatalog(other.id)).gachas;
-            assert.equal('rewards' in catalog[0], false);
+            assert.ok(Array.isArray(catalog[0].rewards)); assert.ok(catalog[0].rewards.every(r=>!('weight' in r)));
             await pool.query('update public.game_character set currency=10 where id=$1', [target]);
             const drawn = await gacha.drawGacha(other.id, g.id, randomUUID());
             assert.equal(drawn.currency, 9); assert.equal('weight' in drawn.reward, false); assert.equal('totalWeight' in drawn.reward, false);

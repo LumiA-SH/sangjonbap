@@ -44,6 +44,8 @@ test('isolated PostgreSQL midnight ordering', {skip: !process.env.ISOLATED_PG_CO
             await ddl.query('commit');
         } finally {ddl.release();}
         // Copy only configuration, never accounts or operational gameplay records.
+        const view=(await raw.query("select pg_get_viewdef('public.investigation_progress'::regclass,true) definition")).rows[0].definition;
+        const viewClient=await raw.connect();try{await viewClient.query('begin');await viewClient.query('set local search_path to '+schema+',public');await viewClient.query('create view '+schema+'.investigation_progress as '+view.replaceAll('public.',schema+'.'));await viewClient.query('commit');}finally{viewClient.release();}
         await raw.query(`insert into ${schema}.system_config select * from public.system_config on conflict do nothing`);
         await pool.query('insert into public.daily_reset_state(singleton) values(true)');
         await t.test('pre-midnight action crossing boundary rolls back resources and log', async () => {

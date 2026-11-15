@@ -318,9 +318,9 @@ query(sql, params) {
             await dead(1);
             await rejects(inventory.deposit(users[1], itemId, 1, randomUUID()), 'CHARACTER_DEAD');
             await rejects(inventory.withdraw(users[1], itemId, 1, randomUUID()), 'CHARACTER_DEAD');
-            assert.ok(Array.isArray(await investigation.getInvestigationAreas(users[1]))); // v0.2 permits information reads while DEAD.
+            assert.ok(Array.isArray((await investigation.getInvestigationAreas(users[1])).areas)); // v0.2 permits information reads while DEAD.
             await revive();
-            assert.ok(Array.isArray(await investigation.getInvestigationAreas(users[1])));
+            assert.ok(Array.isArray((await investigation.getInvestigationAreas(users[1])).areas));
             assert.equal((await inventory.deposit(users[1], itemId, 1, randomUUID())).type, 'OK');
             assert.equal((await inventory.withdraw(users[1], itemId, 1, randomUUID())).type, 'OK');
         });

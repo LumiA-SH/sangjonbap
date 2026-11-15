@@ -19,10 +19,10 @@ test('PostgreSQL cooking and meals with isolated fixtures', {skip: process.env.R
         for (let n = 0; n < 4; n++) items.push((await setup.query("insert into public.item(name,category) values ($1,'ETC') returning id", [`DEV cooking item ${randomUUID()}`])).rows[0].id);
         await setup.query("insert into public.food_config(item_id,blood_recovery,stat_growth_enabled,stat_growth_rate,stat_growth_target,stat_growth_value) values ($1,30,true,100,'ATK',3)", [items[2]]);
         await setup.query('insert into public.food_config(item_id,blood_recovery) values ($1,5)', [items[3]]);
-        recipeId = (await setup.query(`insert into public.recipe(name,discovery_grade,learn_cost,success_rate,result_item_id,failure_item_id) values ($1,'COMMON',10,100,$2,$3) returning id`, [`DEV cooking recipe ${randomUUID()}`, items[2], items[3]])).rows[0].id;
+        recipeId = (await setup.query(`insert into public.recipe(name,discovery_grade,learn_cost,success_rate,result_item_id,failure_item_id) values ($1,'COMMON',2,100,$2,$3) returning id`, [`DEV cooking recipe ${randomUUID()}`, items[2], items[3]])).rows[0].id;
         await setup.query('insert into public.recipe_ingredient(recipe_id,item_id,quantity) values ($1,$2,3),($1,$3,1)', [recipeId, items[0], items[1]]);
         await setup.query("insert into public.recipe_discovery(recipe_id,character_id,source_type,source_id) values($1,$2,'INVESTIGATION',1)", [recipeId, characters[1]]);
-        await setup.query('insert into public.shop_product(recipe_id,price,purchase_limit) values($1,1,1)', [recipeId]);
+        await setup.query('insert into public.shop_product(recipe_id,price,purchase_limit) values($1,2,1)', [recipeId]);
         await setup.query('commit');
         setupDone = true;
     } catch (e) {await setup.query('rollback'); throw e;}
@@ -54,10 +54,10 @@ character: await get(),
     }
     try {
         await scenario('learn charges once and catalog shows learning; repeated learning/key rejected', async () => {
-            const key = randomUUID(); assert.equal((await learn(key)).currency, 99);
+            const key = randomUUID(); assert.equal((await learn(key)).currency, 98);
             await rejects(learn(key), 'DUPLICATE_REQUEST'); await rejects(learn(), 'RECIPE_ALREADY_LEARNED');
             assert.equal((await repo.getCookingCatalog(users[0])).recipes.find(r => r.id === recipeId).learned, true);
-            assert.equal((await get()).currency, 99);
+            assert.equal((await get()).currency, 98);
         });
         await scenario('success consumes all materials and one AP, produces three', async () => {
             await learn(); const r = await cook();

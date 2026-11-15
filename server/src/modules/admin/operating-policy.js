@@ -8,7 +8,7 @@ export const eventNames=['death','revive','area_unlock','monster_discovery','clu
 export const policyDefaults={
  anemia:{enabled:false,stages:[]},
  announcements:{events:Object.fromEntries(eventNames.map(name=>[name,{enabled:false,template:'',visibility:null,deduplicate:true,retryEnabled:false,maxAttempts:null,retryMinutes:null,thresholds:[]}]))},
- homepage:{enabled:false,accountId:null,noticeTag:null,eventTag:null,limit:null,publicOnly:true,excludeReplies:true},
+ homepage:{enabled:false,accountId:null,noticeTag:null,eventTag:null,limit:null,publicOnly:true,excludeReplies:true,excludeBoosts:true},
  recovery:{recipe:'HOLD',gacha:'HOLD',battle:'HOLD'}
 };
 const invalid=()=>{throw new AppError(400,'INVALID_POLICY','정책의 필수값과 범위를 확인하세요.');};

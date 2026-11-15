@@ -24,7 +24,7 @@ release: () => c.release(), query(q, p) {
 };        
 }    
 };
-    const tables = ['food_grade', 'daily_reset_state', 'auth_user', 'game_character', 'item', 'inventory', 'action_log', 'system_config', 'recipe', 'recipe_ingredient', 'character_recipe', 'food_config',
+    const tables = ['area_recipe','food_grade', 'daily_reset_state', 'auth_user', 'game_character', 'item', 'inventory', 'action_log', 'system_config', 'recipe', 'recipe_ingredient', 'character_recipe', 'food_config',
         'shop_product', 'shop_purchase', 'blood_pack_purchase_day', 'area', 'investigation_result', 'investigation_reward', 'unique_discovery', 'clue',
         'monster', 'monster_action', 'monster_drop', 'area_monster', 'battle', 'battle_log', 'gacha'];
     const migrated = (await raw.query("select to_regclass('public.recipe_discovery') is not null as ready")).rows[0].ready;
@@ -41,6 +41,8 @@ release: () => c.release(), query(q, p) {
                 await ddl.query(`alter table ${schema}.${r.tbl.replace('public.', '')} add constraint ${r.conname} ${rewrite(r.def)}`);
             await ddl.query('commit');
         } catch (e) {await ddl.query('rollback'); throw e;} finally {ddl.release();}
+        const view=(await raw.query("select pg_get_viewdef('public.investigation_progress'::regclass,true) definition")).rows[0].definition;
+        const viewClient=await raw.connect();try{await viewClient.query('begin');await viewClient.query('set local search_path to '+schema+',public');await viewClient.query('create view '+schema+'.investigation_progress as '+view.replaceAll('public.',schema+'.'));await viewClient.query('commit');}finally{viewClient.release();}
         await raw.query(`insert into ${schema}.system_config select * from public.system_config`);
         await pool.query(readFileSync(new URL('../../supabase/migrations/20261101032815_common_rules_v02.sql', import.meta.url), 'utf8'));
         const item = (await pool.query("insert into public.item(name,category) values('isolated ingredient','MATERIAL') returning *")).rows[0];
@@ -64,7 +66,7 @@ release: () => c.release(), query(q, p) {
             const a = (await pool.query("insert into public.area(name,is_open,encounter_rate) values('recipe area',true,0) returning *")).rows[0];
             const result = (await pool.query(`insert into public.investigation_result(area_id,result_grade,result_text,weight,is_unique,investigation_rate_value)
                 values($1,'NORMAL','recipe clue',1,true,5) returning *`, [a.id])).rows[0];
-            await pool.query('insert into public.investigation_reward(investigation_result_id,recipe_id,quantity,probability) values($1,$2,1,100)', [result.id, r.id]);
+            await pool.query('insert into public.area_recipe(area_id,recipe_id,drop_rate,weight) values($1,$2,100,1)', [a.id,r.id]);
             return a;
         };
         const inspect = async id => (await pool.query('select * from public.game_character where id=$1', [id])).rows[0];
@@ -78,17 +80,17 @@ release: () => c.release(), query(q, p) {
             assert.equal(catalog.recipes[0].id, legacy.id); assert.equal(catalog.recipes[0].learned, true); assert.equal(catalog.recipes[0].discovery_grade, null);
         });
         await t.test('free discovery, separate result unique, exact grade prices and duplicate exclusion', async () => {
-            for (const [grade, price] of [['COMMON', 1], ['RARE', 2], ['SPECIAL', 3]]) {
+            for (const [grade, price] of [['COMMON', 2], ['RARE', 3], ['SPECIAL', 4]]) {
                 const r = await recipe(grade), a = await source(r), key = randomUUID(), before = await inspect(users[0].c.id);
                 const first = await inv.investigate(users[0].u.id, a.id, key);
-                assert.equal(first.firstDiscovery, true); assert.equal(first.area.investigation_rate, 5);
+                assert.equal(first.firstDiscovery, true); assert.equal(first.area.investigation_rate, 100);
                 assert.equal(first.rewards[0].firstDiscovery, true); assert.equal(first.rewards[0].price, price);
                 assert.equal((await inspect(users[0].c.id)).currency, before.currency);
                 const product = (await shop.getShopProducts(users[1].u.id)).find(p => p.recipe_id === r.id);
                 assert.equal(product.price, price); assert.equal(product.learned, false);
                 await rejects(inv.investigate(users[0].u.id, a.id, key), 'DUPLICATE_REQUEST');
                 const repeat = await inv.investigate(users[1].u.id, a.id, randomUUID());
-                assert.equal(repeat.firstDiscovery, false); assert.equal(repeat.area.investigation_rate, 5); assert.deepEqual(repeat.rewards, []);
+                assert.equal(repeat.firstDiscovery, false); assert.equal(repeat.area.investigation_rate, 100); assert.deepEqual(repeat.rewards, []);
                 const buyerBefore = await inspect(users[1].c.id);
                 const bought = await shop.buyProduct(users[1].u.id, product.id, 1, randomUUID());
                 assert.equal(bought.currency, buyerBefore.currency - price); assert.equal(bought.learned, true);
@@ -118,7 +120,7 @@ release: () => c.release(), query(q, p) {
             const before = await inspect(users[2].c.id), key = randomUUID();
             const results = await Promise.allSettled([cook.learnRecipe(users[2].u.id, r.id, key), cook.learnRecipe(users[2].u.id, r.id, key)]);
             assert.equal(results.filter(x => x.status === 'fulfilled').length, 1);
-            assert.equal((await inspect(users[2].c.id)).currency, before.currency - 2);
+            assert.equal((await inspect(users[2].c.id)).currency, before.currency - 3);
             await rejects(cook.learnRecipe(users[2].u.id, r.id, randomUUID()), 'RECIPE_ALREADY_LEARNED');
             const hidden = await recipe(); await rejects(cook.learnRecipe(users[2].u.id, hidden.id, randomUUID()), 'RECIPE_NOT_DISCOVERED');
         });
@@ -147,7 +149,7 @@ release: () => c.release(), query(q, p) {
             await pool.query('update public.game_character set currency=10 where id=$1', [u.c.id]);
             const results = await Promise.allSettled([shop.buyProduct(u.u.id, p.id, 1, key), shop.buyProduct(u.u.id, p.id, 1, randomUUID())]);
             assert.equal(results.filter(x => x.status === 'fulfilled').length, 1);
-            assert.equal((await inspect(u.c.id)).currency, 9); assert.equal((await inspect(u.c.id)).status, 'NEAR_DEATH');
+            assert.equal((await inspect(u.c.id)).currency, 8); assert.equal((await inspect(u.c.id)).status, 'NEAR_DEATH');
             await pool.query("update public.game_character set status='ALIVE',blood=100 where id=$1", [u.c.id]);
         });
         await t.test('ordinary shop and single cooking success/failure remain unchanged', async () => {
@@ -172,8 +174,8 @@ release: () => c.release(), query(q, p) {
             const m = (await pool.query("insert into public.monster(name,max_hp,atk,def,agi) values('recipe monster',1,1,0,0) returning *")).rows[0];
             await pool.query('insert into public.area_monster(area_id,monster_id,weight) values($1,$2,1)', [a.id, m.id]);
             await pool.query("insert into public.monster_action(monster_id,name,action_type,probability,multiplier) values($1,'attack','ATTACK',100,1)", [m.id]);
-            await pool.query('insert into public.monster_drop(monster_id,recipe_id,drop_rate) values($1,$2,100)', [m.id, r.id]);
-            await pool.query('insert into public.monster_drop(monster_id,item_id,drop_rate,is_ingredient) values($1,$2,100,true)', [m.id, item.id]);
+            await pool.query('insert into public.area_recipe(area_id,recipe_id,drop_rate,weight) values($1,$2,100,1)', [a.id,r.id]);
+            await pool.query("insert into public.monster_drop(monster_id,item_id,drop_rate,is_ingredient,ingredient_role) values($1,$2,100,true,'BASE')", [m.id, item.id]);
             const start = async user => {
                 const c = await pool.connect(); try {                    
 await c.query('begin'); const pc = await lockCharacterByUser(c, user.u.id);
@@ -190,7 +192,7 @@ await c.query('begin'); const pc = await lockCharacterByUser(c, user.u.id);
             assert.equal(snap.drops.filter(x => x.recipe_id).length, 0);
             await rejects(shop.buyProduct(users[2].u.id, (await pool.query('select id from public.shop_product where recipe_id=$1', [r.id])).rows[0].id, 1, randomUUID()), 'BATTLE_ACTIVE');
             const cross = await recipe();
-            await pool.query('insert into public.monster_drop(monster_id,recipe_id,drop_rate) values($1,$2,100)', [m.id, cross.id]);
+            await pool.query('insert into public.area_recipe(area_id,recipe_id,drop_rate,weight) values($1,$2,100,1)', [a.id,cross.id]);
             const crossBattle = await start(users[3]), crossArea = await source(cross);
             const crossResults = await Promise.all([command(users[3], crossBattle), inv.investigate(users[4].u.id, crossArea.id, randomUUID())]);
             assert.equal(crossResults.flatMap(x => x.rewards).filter(x => x.recipeId === cross.id).length, 1);

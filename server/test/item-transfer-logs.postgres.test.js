@@ -63,7 +63,7 @@ const c = await raw.connect(); return {
             assert.deepEqual((await quantities()).map(r => r.quantity), [1, 4]);
         });
         await t.test('blood-pack endpoint uses the same two-party logging without changing item effects', async () => {
-            const pack = (await pool.query("insert into public.item(name,category,transferable,effect_type,effect_value,usable,use_target) values('팩','CONSUMABLE',true,'BLOOD_PACK',10,true,'SELF') returning *")).rows[0];
+            const pack = (await pool.query("insert into public.item(name,category,transferable,effect_type,effect_value,usable,use_target,blood_pack_kind,battle_usable) values('팩','CONSUMABLE',true,'BLOOD_PACK',10,true,'SELF','FREE',true) returning *")).rows[0];
             await pool.query('insert into public.inventory(character_id,item_id,quantity) values($1,$2,1)', [sender.c.id, pack.id]);
             await createBloodPackRepository(pool).transferBloodPack(sender.u.id, recipient.c.id, pack.id, 1, randomUUID());
             const log = (await records.getActionRecords(recipient.u.id))[0]; assert.equal(log.action_type, 'BLOOD_PACK_RECEIVE'); assert.equal(log.detail.itemName, '팩');

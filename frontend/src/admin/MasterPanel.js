@@ -592,22 +592,41 @@ export function MasterEditor({kind, record, onSaved, onDenied, onBusy}) {
             </p>
         )}
 
-        {kind==='foods' ? <>
-          {section('음식 기본 정보',['name','image_url'],'음식 이름 변경은 연결된 아이템의 이름에도 반영됩니다. 인벤토리·상점의 연결은 유지됩니다.')}
-          {section('음식 구분',['is_failure'])}
-          {failureFood ? section('실패요리 RP 효과',['rp_effect_texts','rp_effect_text'],'섭취 시 문구 후보 중 하나를 사용합니다. 실제 자원·능력치 효과는 적용되지 않습니다.') : <>
-            {section('음식 등급 · 효과',['grade_id','blood_recovery','stat_growth_enabled','stat_growth_target'],selectedGrade?`선택 등급: 혈량 +${selectedGrade.blood_recovery} · 성장 확률 ${selectedGrade.stat_growth_rate}%`:'등급을 선택하면 해당 등급의 효과를 사용합니다.')}
-            <details className="admin-editor-reference"><summary>기존 RP 문구 확인 · 수정</summary>{section('RP 문구',['rp_effect_text','rp_effect_texts'])}</details>
+        {kind === 'foods' ? <>
+          {section('음식 기본 정보', ['name', 'image_url'], '음식 이름 변경은 연결된 아이템의 이름에도 반영됩니다. 인벤토리·상점의 연결은 유지됩니다.')}
+
+          {section('음식 등급 설정', ['grade_id'],
+              selectedGrade
+                  ? `선택 등급: ${selectedGrade.name} · 혈량 +${selectedGrade.blood_recovery} · 성장 확률 ${selectedGrade.stat_growth_rate}%`
+                  : grades.length
+                      ? '음식 등급을 선택하세요. 등급별 혈량 회복량과 성장 확률이 적용됩니다.'
+                      : '등록된 음식 등급이 없습니다. 음식 등급 관리에서 먼저 등급을 등록해 주세요.')}
+
+          {section('음식 구분', ['is_failure'])}
+
+          {failureFood ? (
+              section('실패요리 RP 효과', ['rp_effect_texts', 'rp_effect_text'], '섭취 시 문구 후보 중 하나를 사용합니다. 실제 자원·능력치 효과는 적용되지 않습니다.')
+          ) : <>
+            {section('음식 효과', ['blood_recovery', 'stat_growth_enabled', 'stat_growth_target'],
+                selectedGrade ? `등급 기본 혈량 회복 +${selectedGrade.blood_recovery} · 성장 확률 ${selectedGrade.stat_growth_rate}%` : '음식 등급을 선택하면 해당 등급의 효과를 사용합니다.')}
+            <details className="admin-editor-reference">
+              <summary>기존 RP 문구 확인 · 수정</summary>
+              {section('RP 문구', ['rp_effect_text', 'rp_effect_texts'])}
+            </details>
           </>}
-          <details className="admin-editor-reference" open={!record}><summary>연결 아이템 {record?'확인':'선택'}</summary>{renderFields(['item_id'])}</details>
-        </> : kind==='recipes' ? <>
-          {section('레시피 기본 정보',['name','discovery_grade','description','image_url','is_active'])}
-          {section('조리 설정',['success_rate','result_quantity'])}
-          {section('완성 음식 · 실패 음식',['result_item_id','failure_item_id'])}
-        </> : kind==='areas' ? <>
-          {section('구역 기본 정보',['name','description','image_url','sort_order'])}
-          {section('공개 · 조우 설정',['is_open','auto_unlock','unlock_at','encounter_rate'])}
-        </> : section('기본 정보',Object.keys(defaults[kind]))}
+
+          <details className="admin-editor-reference" open={!record}>
+            <summary>연결 아이템 {record ? '확인' : '선택'}</summary>
+            {renderFields(['item_id'])}
+          </details>
+        </> : kind === 'recipes' ? <>
+          {section('레시피 기본 정보', ['name', 'discovery_grade', 'description', 'image_url', 'is_active'])}
+          {section('조리 설정', ['success_rate', 'result_quantity'])}
+          {section('완성 음식 · 실패 음식', ['result_item_id', 'failure_item_id'])}
+        </> : kind === 'areas' ? <>
+          {section('구역 기본 정보', ['name', 'description', 'image_url', 'sort_order'])}
+          {section('공개 · 조우 설정', ['is_open', 'auto_unlock', 'unlock_at', 'encounter_rate'])}
+        </> : section('기본 정보', Object.keys(defaults[kind]))}
 
         {child && (
             <fieldset className="admin-wide" disabled={busy}>
