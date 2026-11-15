@@ -82,6 +82,37 @@ test('PostgreSQL character care, rollback and concurrency', {
     async function scenario(name, fn) {await t.test(name, async () => {await reset(); await fn();});}
 
     try {
+        await scenario('care recipient logs are atomic and duplicate-safe; self healing has one log', async () => {
+            const key = randomUUID();
+            await heal(0, 1, key);
+            await rejects(heal(0, 1, key), 'DUPLICATE_REQUEST');
+            const received = await logs('HEAL_RECEIVE');
+            assert.equal(received.length, 1);
+            assert.equal(String(received[0].character_id), String(ids[1]));
+            assert.equal(received[0].detail.before.target.hp, 50);
+            assert.equal(received[0].detail.after.target.hp, 70);
+            assert.equal(received[0].detail.source_request_key, key);
+            await heal(2, 2);
+            assert.equal((await logs('HEAL_RECEIVE')).length, 1);
+            await dead(1);
+            await revive();
+            assert.equal((await logs('REVIVE_RECEIVE')).length, 1);
+            assert.equal((await logs('REVIVE')).length, 1);
+        });
+        await scenario('recipient log failure rolls back care and provider log', async () => {
+            const failing = createCharacterCareService(createCharacterCareRepository({async connect() {
+                const client = await pool.connect();
+                return {query(sql, params) {
+                    if (sql.includes('insert into public.action_log') && params?.includes('HEAL_RECEIVE')) throw new Error('recipient log failure');
+                    return client.query(sql, params);
+                }, release: () => client.release()};
+            }}));
+            await assert.rejects(failing.heal(users[0], ids[1], {requestKey: randomUUID()}), /recipient log failure/);
+            assert.equal((await get(0)).blood, 100);
+            assert.equal((await get(1)).hp, 50);
+            assert.equal((await logs('HEAL')).length, 0);
+            assert.equal((await logs('HEAL_RECEIVE')).length, 0);
+        });
         await scenario('ACTIVE battle forbids self healing and provider healing another character', async () => {
             await pool.query("update public.battle set battle_status='ACTIVE' where id=$1", [battleId]);
             await rejects(heal(1, 1), 'TARGET_IN_ACTIVE_BATTLE');

@@ -9,7 +9,7 @@ import {startDailyScheduler} from './modules/daily/scheduler.js';
 const config = loadConfig();
 const pool = config.mode === 'supabase' ? createPool(config) : null;
 
-const repository = pool ? createGameRepository(pool) : createMemoryRepository(config.userId);
+const repository = pool ? createGameRepository(pool,{systemFeedEnv:process.env}) : createMemoryRepository(config.userId);
 
 await repository.check();
 

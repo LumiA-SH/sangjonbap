@@ -1,3 +1,4 @@
+import SystemFeed,{feedTitles} from './public/SystemFeed';
 import GuidePage from './public/GuidePage';
 import PublicHome from './public/PublicHome';
 import CharacterDirectory from './public/CharacterDirectory';
@@ -21,7 +22,7 @@ import DicePanel from './dev/DicePanel';
 import './AccountMenu.css';
 
 const FALLBACK_IMAGE = publicAsset('test.png');
-const publicTabs = ['home', 'world', 'system', 'schedule', 'roster'];
+const publicTabs = ['feed-activity','feed-notice','feed-event','home', 'world', 'system', 'schedule', 'roster'];
 
 function NavIcon({name, className = ''}) {
   return <img src={publicAsset(`assets/decor/icon-${name}.svg`)} alt="" aria-hidden="true" className={className}/>;
@@ -659,29 +660,24 @@ export default function App() {
                       </div>
                     </DashboardCard>
 
-                    <DashboardCard title="최근 기록" subtitle="ACTIVITY LOG" action={<button type="button" className="survival-card-link" onClick={() => navigate('records')}>더보기 ›</button>} className="survival-activity">
-                      <div className="survival-empty">
-                        <span>MASTODON FEED</span>
-                        <p>생존밥 자동 공지 기록 연동 예정</p>
-                      </div>
+                    <DashboardCard title="최근 기록" subtitle="ACTIVITY LOG" action={<button type="button" className="survival-card-link" onClick={() => navigate('feed-activity')}>더보기 ›</button>} className="survival-activity">
+                      <SystemFeed kind="activity" preview active={view==='home'}/>
                     </DashboardCard>
 
-                    <DashboardCard title="현재 진행 중인 이벤트" subtitle="EVENT" className="survival-event">
+                    <DashboardCard title="이벤트" subtitle="EVENT" action={<button type="button" className="survival-card-link" onClick={()=>navigate('feed-event')}>더보기 ›</button>} className="survival-event">
                       <div className="survival-event-banner">
                         <GameImage alt="이벤트 배너 임시 이미지" className="survival-event-image"/>
                         <div className="survival-event-overlay">
                           <span>EVENT</span>
-                          <strong>스토리 이벤트 준비 중</strong>
-                          <small>운영진 이벤트 등록 기능 연동 예정</small>
+                          <strong>시스템 계정 이벤트</strong>
+                          <small>운영진이 게시한 이벤트 소식</small>
                         </div>
                       </div>
+                      <SystemFeed kind="event" preview active={view==='home'}/>
                     </DashboardCard>
 
-                    <DashboardCard title="공지사항" subtitle="NOTICE" className="survival-notice">
-                      <div className="survival-empty">
-                        <span>OFFICIAL NOTICE</span>
-                        <p>운영진 공지사항 연동 예정</p>
-                      </div>
+                    <DashboardCard title="공지사항" subtitle="NOTICE" action={<button type="button" className="survival-card-link" onClick={()=>navigate('feed-notice')}>더보기 ›</button>} className="survival-notice">
+                      <SystemFeed kind="notice" preview active={view==='home'}/>
                     </DashboardCard>
                   </div>
               )}
@@ -695,6 +691,7 @@ export default function App() {
               )}
 
               {(busy || message) && <p className="dev-message" role="status" aria-live="polite">{busy ? '처리 중…' : message}</p>}
+              {view.startsWith('feed-') && <section className="survival-card"><h2>{feedTitles[view.slice(5)]}</h2><button type="button" onClick={()=>navigate('home')}>홈으로 돌아가기</button><SystemFeed key={view} kind={view.slice(5)}/></section>}
               {['world', 'system', 'schedule'].includes(view) && <GuidePage key={view} kind={view}/>}
               {view === 'roster' && <CharacterDirectory recordId={route.record} onOpen={record => go({admin: false, tab: 'roster', record})} onBack={() => go({admin: false, tab: 'roster'})} canReadDetails={loggedIn && !!user?.character_id}/>}
               {loggedIn && !user?.character_id && <CharacterCreationPanel/>}
@@ -720,7 +717,7 @@ export default function App() {
                     </div>
 
                     <div className="survival-page" style={display('records')}>
-                      <RecordsPanel/>
+                      <RecordsPanel active={view==='records'}/>
                     </div>
 
                     <div className="survival-page" style={display('inventory')}>

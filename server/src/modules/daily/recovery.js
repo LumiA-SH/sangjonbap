@@ -49,7 +49,7 @@ export async function applyDailyCharacterReset(client,before,{day,bloodDecay,dec
         [before.id,mode==='MANUAL_TEST']
     );
     const active=(await client.query(
-        "select id,turn_no from public.battle where character_id=$1 and battle_status='ACTIVE' order by id for update",
+        "select id,turn_no,snapshot,monster_id from public.battle where character_id=$1 and battle_status='ACTIVE' order by id for update",
         [before.id]
     )).rows;
     let battlesInterrupted=0;
@@ -66,7 +66,11 @@ export async function applyDailyCharacterReset(client,before,{day,bloodDecay,dec
         await writeActionLog(client,{
             characterId:before.id,category:'BATTLE',actionType:'BATTLE_MIDNIGHT_INTERRUPTED',
             targetType:'BATTLE',targetId:battle.id,description:'자정 일반 PVE 전투 중단',
-            detail:{day,mode,turnNo:battle.turn_no,characterHp:after.hp}
+            detail:{day,mode,turnNo:battle.turn_no,characterHp:after.hp,
+                monsterName:battle.snapshot?.monster?.name||`마물 #${battle.monster_id}`,
+                battleStatus:'FLED',endReason:'MIDNIGHT_INTERRUPTED',
+                before:{hp:before.hp,blood:before.blood,ap:before.ap,currency:before.currency},
+                after:{hp:after.hp,blood:after.blood,ap:after.ap,currency:after.currency}}
         });
         battlesInterrupted++;
     }

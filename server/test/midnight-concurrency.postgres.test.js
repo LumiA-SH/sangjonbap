@@ -208,6 +208,10 @@ release: () => client.release(), async query(q, p) {
             assert.equal((await row()).currency, 5); assert.equal((await row()).hp, 70);
             assert.equal((await row()).blood,Math.max(0,blood-10));
             assert.equal(ended.fled_actor_type,null);
+            const detail=(await pool.query("select detail from public.action_log where action_type='BATTLE_MIDNIGHT_INTERRUPTED' and target_id=$1",[b.id])).rows[0].detail;
+            assert.equal(detail.monsterName,`마물 #${monster.id}`);assert.equal(detail.endReason,'MIDNIGHT_INTERRUPTED');
+            assert.equal(detail.before.hp,70);assert.equal(detail.after.hp,70);assert.equal(detail.before.blood,blood);assert.equal(detail.after.blood,Math.max(0,blood-10));
+            assert.equal(detail.before.currency,detail.after.currency);
             assert.equal((await battles.getBattle(c.userId,b.id)).battle.end_reason,'MIDNIGHT_INTERRUPTED');
             await assert.rejects(battles.commandBattle(c.userId,b.id,{requestKey:randomUUID(),turnNo:1,action:'ATTACK'}),{code:'BATTLE_FINISHED'});
             }

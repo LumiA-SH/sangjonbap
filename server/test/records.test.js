@@ -47,6 +47,7 @@ test('production cookie auth permits own records, blocks unlinked users and non-
     const calls = [];
     const repo = {
         getOAuthSession: async () => user,
+        getSystemFeed: async(kind,before)=>({enabled:true,records:[],nextBefore:null,kind}),
         listAdminRecords: async () => [], getAdminRecord: async () => ({}), saveAdminRecord: async () => ({})
     };
     for (const name of ['getActionRecords', 'getClueRecords', 'getDiscoveryRecords', 'getAdminActionRecords']) {
@@ -58,6 +59,8 @@ test('production cookie auth permits own records, blocks unlinked users and non-
     t.after(() => new Promise(resolve => server.close(resolve)));
     const base = `http://127.0.0.1:${server.address().port}/api`;
     const get = (path, auth = true) => fetch(base + path, {headers: auth ? {Cookie: '__Host-sangjonbap-session=' + 'a'.repeat(64)} : {}});
+    assert.equal((await get('/public/system-feed?kind=notice',false)).status,200);
+    assert.equal((await get('/public/system-feed?accountId=other',false)).status,400);
     assert.equal((await get('/records/clues', false)).status, 401);
     assert.equal((await get('/records/action-logs?requestKey=12345678-1234-4234-8234-123456789012', false)).status, 401);
     assert.equal((await get('/records/action-logs')).status, 200);
@@ -80,4 +83,37 @@ test('production cookie auth permits own records, blocks unlinked users and non-
 
 test('request key filtering remains scoped to session owner', async () => {
     let query, params; await createRecordsRepository({query: async (q, p) => {query = q; params = p; return {rows: []};}}).getActionRecords('7', null, false, '12345678-1234-4234-8234-123456789012'); assert.match(query, /u.id=\$1 and u.is_active and c.is_active/); assert.match(query, /l.request_key=\$4::uuid/); assert.deepEqual(params, ['7', null, false, '12345678-1234-4234-8234-123456789012']);
+});
+import {createSystemFeedRepository,postText} from '../src/modules/public-content/system-feed.js';
+const homepagePolicy=()=>({enabled:true,accountId:'123',noticeTag:'공지',eventTag:'이벤트',limit:3,publicOnly:true,excludeReplies:true,excludeBoosts:true});
+const statusPost=(id,extra={})=>({id,account:{id:'123'},visibility:'public',content:'<p>소식 &amp; 안내</p>',created_at:'2026-11-15T00:00:00Z',tags:[{name:'공지'}],...extra});
+function feedFixture(policy=homepagePolicy(),rows=[statusPost('9')]){
+ const calls=[];const pool={async query(sql){assert.match(sql,/^select /);return {rows:[{config_value:policy}]};}};
+ const fetcher=async(url,options)=>{calls.push({url,options});return new Response(JSON.stringify(url.includes('/statuses?')?rows:{id:'123',username:'System',acct:'System'}),{status:200});};
+ return {repo:createSystemFeedRepository(pool,{fetcher}),calls,policy};
+}
+test('System feed respects disabled policy without external requests and validates query',async()=>{
+ const {repo,calls}=feedFixture({...homepagePolicy(),enabled:false});assert.deepEqual(await repo.getSystemFeed(),{enabled:false,records:[],nextBefore:null});assert.equal(calls.length,0);
+ await assert.rejects(repo.getSystemFeed('private'),{code:'INVALID_FEED_QUERY'});await assert.rejects(repo.getSystemFeed('activity','../secrets'),{code:'INVALID_FEED_QUERY'});
+});
+test('System feed shares cache, filters tags/visibility/replies/boosts and never sends OAuth tokens',async()=>{
+ const {repo,calls,policy}=feedFixture(homepagePolicy(),[statusPost('9'),statusPost('8',{visibility:'private'}),statusPost('7',{visibility:'unlisted'}),statusPost('6',{tags:[{name:'이벤트'}]}),statusPost('5',{in_reply_to_id:'1'}),statusPost('4',{reblog:statusPost('2')}),statusPost('3',{account:{id:'999'}})]);
+ const [a,n,e]=await Promise.all([repo.getSystemFeed(),repo.getSystemFeed('notice'),repo.getSystemFeed('event')]);assert.deepEqual(a.records.map(r=>r.id),['9','6']);assert.deepEqual(n.records.map(r=>r.id),['9']);assert.deepEqual(e.records.map(r=>r.id),['6']);assert.equal(calls.length,2);
+ assert.deepEqual(Object.keys(a.records[0]).sort(),['id','text','warning','createdAt','url','boosted'].sort());assert.equal(a.records[0].text,'소식 & 안내');assert.ok(calls.every(c=>!c.options.headers.Authorization&&c.options.redirect==='error'&&c.url.startsWith('https://survival-bob.site/')));
+ policy.publicOnly=false;assert.ok((await repo.getSystemFeed()).records.some(r=>r.id==='7'));
+ policy.enabled=false;assert.equal((await repo.getSystemFeed()).records.length,0);
+});
+test('System feed pagination preserves filtered remainder and private boosted posts stay hidden',async()=>{
+ const policy={...homepagePolicy(),limit:1,excludeBoosts:false,publicOnly:false};const {repo}=feedFixture(policy,[statusPost('9'),statusPost('8'),statusPost('7',{reblog:statusPost('2',{visibility:'direct'})})]);const r=await repo.getSystemFeed();assert.equal(r.nextBefore,'9');assert.deepEqual((await repo.getSystemFeed('activity','9')).records.map(x=>x.id),['8']);
+ assert.equal(postText('<script>secret()</script><p>&lt;img onerror=x&gt;<br>본문</p>'),'<img onerror=x>\n본문');
+});
+test('System feed fails closed for wrong account, upstream failures and throttles retries',async()=>{
+ for(const mode of ['wrong','429','network','invalid']){let calls=0;const repo=createSystemFeedRepository({async query(){return {rows:[{config_value:homepagePolicy()}]};}},{fetcher:async()=>{calls++;if(mode==='network')throw Error('internal secret');if(mode==='429')return new Response('',{status:429,headers:{'retry-after':'60'}});if(mode==='invalid')return new Response('not json');return new Response(JSON.stringify({id:'123',username:'runner',acct:'runner'}));}});
+ await assert.rejects(repo.getSystemFeed(),{code:'SYSTEM_FEED_UNAVAILABLE'});await assert.rejects(repo.getSystemFeed(),{code:'SYSTEM_FEED_UNAVAILABLE'});assert.equal(calls,1);}
+});
+test('System feed uses only System credentials, verifies the owner and reports read permission failures safely',async()=>{
+ const calls=[],env={MASTODON_SYSTEM_ACCESS_TOKEN:'fake-system-token',MASTODON_SYSTEM_ACCOUNT_ID:'123',MASTODON_CLIENT_SECRET:'never-use-login-secret'};
+ const repo=createSystemFeedRepository({async query(){return {rows:[{config_value:homepagePolicy()}]};}},{env,fetcher:async(url,options)=>{calls.push({url,options});return url.endsWith('verify_credentials')?new Response(JSON.stringify({id:'123',username:'System',acct:'System'})):new Response('',{status:403});}});
+ await assert.rejects(repo.getSystemFeed(),e=>e.code==='SYSTEM_FEED_AUTH_REQUIRED'&&!e.message.includes('token'));
+ assert.equal(calls.length,2);assert.ok(calls.every(c=>c.options.headers.Authorization==='Bearer fake-system-token'&&!JSON.stringify(c).includes('never-use-login-secret')));
 });

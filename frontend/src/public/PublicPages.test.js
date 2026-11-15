@@ -123,3 +123,27 @@ test('action record summaries distinguish midnight interruption and retain legac
  expect(actionSummary({detail:{monsterName:'마물',battleStatus:'VICTORY',currencyReward:2,rewards:[{name:'재료',quantity:1}]}})).toContain('재료 ×1');
  expect(actionSummary({description:'과거 기록'})).toBe('과거 기록');
 });
+import SystemFeed from './SystemFeed';
+test('System posts use actual text, same-category more link, KST and safe rendering',async()=>{
+ const more=jest.fn();api.mockResolvedValue({enabled:true,records:[{id:'9',text:'<img src=x onerror=alert(1)>\n실제 소식',createdAt:'2026-11-15T00:00:00Z',url:'https://survival-bob.site/@System/9'}],nextBefore:'9'});
+ await act(async()=>root.render(<SystemFeed kind="notice" preview onMore={more}/>));expect(api).toHaveBeenCalledWith('/public/system-feed?kind=notice');expect(div.textContent).toContain('실제 소식');expect(div.textContent).toContain('KST');expect(div.querySelector('img')).toBeNull();await act(async()=>button('더보기 ›').click());expect(more).toHaveBeenCalledTimes(1);
+ await act(async()=>root.render(<SystemFeed key="full" kind="notice"/>));await act(async()=>button('이전 게시글').click());expect(api).toHaveBeenCalledWith('/public/system-feed?kind=notice&before=9');
+});
+test('System feed distinguishes disabled, empty, error and retry states',async()=>{
+ api.mockResolvedValue({enabled:false,records:[],nextBefore:null});await act(async()=>root.render(<SystemFeed/>));expect(div.textContent).toContain('연동 준비 중');
+ api.mockRejectedValueOnce(Error('연결 실패'));await act(async()=>root.render(<SystemFeed key="error"/>));expect(div.querySelector('[role=alert]').textContent).toContain('연결 실패');api.mockResolvedValue({enabled:true,records:[],nextBefore:null});await act(async()=>button('다시 불러오기').click());expect(div.textContent).toContain('표시할 게시글이 없습니다');
+});
+import RecordsPanel from '../dev/RecordsPanel';
+import {readLocation} from '../admin/navigation';
+test('feed navigation survives URL reload and personal records refresh when returning to the tab',async()=>{
+ const old=window.location.hash;for(const kind of ['activity','notice','event']){window.location.hash='#game/feed-'+kind;expect(readLocation().tab).toBe('feed-'+kind);}window.location.hash=old;
+ api.mockResolvedValue({records:[],nextBefore:null});await act(async()=>root.render(<RecordsPanel active={false}/>));expect(api).not.toHaveBeenCalled();await act(async()=>root.render(<RecordsPanel active/>));expect(api).toHaveBeenCalledWith('/records/action-logs');const n=api.mock.calls.length;
+ await act(async()=>root.render(<RecordsPanel active={false}/>));await act(async()=>root.render(<RecordsPanel active/>));expect(api.mock.calls.length).toBe(n+1);
+});
+test('record summaries show batch outcomes and historical combat results without changing logs',()=>{
+ const batch={action_type:'COOK',detail:{successCount:2,failureCount:1,outputs:[{name:'음식',quantity:6},{name:'실패 음식',quantity:1}]}};
+ expect(actionSummary(batch)).toContain('요리 성공 2회 · 실패 1회');expect(actionSummary(batch)).toContain('음식 ×6');
+ const combat={action_type:'BATTLE_COMMAND',detail:{before:{hp:70},resolved:{status:'FLED',fledActor:'MONSTER',hp:65}}};
+ const saved=JSON.stringify(combat);expect(actionSummary(combat)).toContain('마물 도주');expect(actionSummary(combat)).toContain('HP 70 → 65');expect(JSON.stringify(combat)).toBe(saved);
+ expect(actionSummary({action_type:'BATTLE_MIDNIGHT_INTERRUPTED',detail:{monsterName:'마물',before:{hp:70,ap:1},after:{hp:70,ap:10}}})).toContain('상대: 마물');
+});

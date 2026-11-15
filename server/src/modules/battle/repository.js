@@ -535,7 +535,8 @@ export function createBattleRepository(pool,{random=randomUnit}={}) {
                         before:{
                             hp:before.hp,
                             blood:before.blood,
-                            ap:before.ap
+                            ap:before.ap,
+                            currency:before.currency
                         },
                         resolved,
                         rewards,

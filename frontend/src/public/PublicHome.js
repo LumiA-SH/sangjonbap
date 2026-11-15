@@ -1,3 +1,4 @@
+import SystemFeed from './SystemFeed';
 import {apiUrl} from '../api/client';
 import {publicAsset} from '../publicAsset';
 import MobileLoginHelp from '../MobileLoginHelp';
@@ -83,7 +84,7 @@ export default function PublicHome({
                     <span>OFFICIAL NOTICE</span>
                     <h3>공지사항</h3>
                 </div>
-                <p>운영진 공지사항 연동 준비 중입니다.</p>
+                <SystemFeed kind="notice" preview onMore={()=>onNavigate('feed-notice')}/>
             </section>
         </section>
     );

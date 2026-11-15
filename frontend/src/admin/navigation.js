@@ -1,7 +1,7 @@
 import {useEffect, useState} from 'react';
 
 export const gameTabs = [
- 'home', 'world', 'system', 'schedule', 'roster', 'character',
+ 'feed-activity','feed-notice','feed-event','home', 'world', 'system', 'schedule', 'roster', 'character',
  'investigation', 'battle', 'cooking', 'inventory', 'shop', 'records', 'gacha'
 ];
 

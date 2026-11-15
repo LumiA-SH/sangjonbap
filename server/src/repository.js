@@ -1,3 +1,4 @@
+import {createSystemFeedRepository} from './modules/public-content/system-feed.js';
 import {createPublicContentRepository} from './modules/public-content/repository.js';
 import {createInteractionRepository} from './modules/character/interactions.js';
 import {createBattleRepository} from './modules/battle/repository.js';
@@ -18,7 +19,7 @@ import {createRecordsRepository} from './modules/records/repository.js';
 import {createDiceRepository} from './modules/dice/repository.js';
 
 // Factory only: no connections, listeners or schedulers are started here.
-export function createGameRepository(pool) {
+export function createGameRepository(pool,{systemFeedEnv={}}={}) {
     const characterRepository = createPostgresRepository(pool);
     const inventoryRepository = createInventoryRepository(pool);
     const battleRepository = createBattleRepository(pool);
@@ -26,6 +27,7 @@ export function createGameRepository(pool) {
     return {
         ...createOAuthRepository(pool),
         ...createPublicContentRepository(pool),
+        ...createSystemFeedRepository(pool,{env:systemFeedEnv}),
         recoverDailyReset:createDailyRecovery(pool),
         ...createTrainingRepository(pool),
         ...createBloodPackRepository(pool),

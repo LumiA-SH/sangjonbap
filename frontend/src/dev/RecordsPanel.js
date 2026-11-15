@@ -116,7 +116,7 @@ function RecordDetail({record, kind}) {
   );
 }
 
-export default function RecordsPanel({admin = false, onDenied}) {
+export default function RecordsPanel({admin = false, onDenied, active = true}) {
   const [kind, setKind] = useState('action-logs');
   const [records, setRecords] = useState([]);
   const [next, setNext] = useState(null);
@@ -153,14 +153,14 @@ export default function RecordsPanel({admin = false, onDenied}) {
   }
 
   useEffect(() => {
-    load();
+    if(active)load();
 
     return () => {
       request.current = null;
     };
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [path]);
+  }, [path,active]);
 
   function changeSection(value) {
     if (busy || kind === value) return;

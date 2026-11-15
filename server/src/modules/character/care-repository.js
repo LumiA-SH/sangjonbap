@@ -74,6 +74,19 @@ export function createCharacterCareRepository(pool) {
                     },
                     requestKey
                 });
+                if (!sameCharacter) {
+                    await writeActionLog(client, {
+                        characterId: target.id, category: 'CHARACTER', actionType: action + '_RECEIVE',
+                        targetType: 'CHARACTER', targetId: provider.id,
+                        description: plan.revive ? provider.name + '에게 부활을 받았습니다.' : provider.name + '에게 치료를 받았습니다.',
+                        detail: {
+                            provider_id: String(provider.id), target_id: String(target.id),
+                            provider_name: provider.name, target_name: target.name, blood_cost: plan.cost,
+                            source_request_key: requestKey,
+                            before: {provider: characterState(provider), target: characterState(target)}, after: result
+                        }
+                    });
+                }
                 await commitGameTransaction(client);
                 return result;
             } catch (error) {
