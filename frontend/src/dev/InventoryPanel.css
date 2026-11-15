@@ -433,6 +433,66 @@
     font-size: 11px;
 }
 
+
+.inventory-item-info .inventory-item-disabled {
+    color: #e6c7c9;
+    font-weight: 750;
+}
+
+.inventory-properties .inventory-item-disabled {
+    border-color: #d4bec0;
+    color: #650c13;
+}
+
+.inventory-use-action {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 18px;
+    padding: 14px 16px;
+    border: 1px solid #dddddd;
+    border-radius: 7px;
+    background: #f5f5f5;
+}
+
+.inventory-use-action > div {
+    flex: 1 1 180px;
+    min-width: 0;
+}
+
+.inventory-use-action h4 {
+    margin: 0 0 6px;
+    color: #242428;
+    font-size: 14px;
+}
+
+.inventory-use-action p {
+    margin: 0;
+    color: #666666;
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.inventory-use-action button {
+    flex: 0 0 auto;
+    min-height: 42px;
+    padding: 10px 16px;
+    background: #650c13;
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.inventory-use-action button:hover:not(:disabled) {
+    background: #80141e;
+}
+
+.inventory-use-action button:disabled {
+    opacity: 0.45;
+}
+
 .inventory-storage-form {
     display: flex;
     flex-direction: column;

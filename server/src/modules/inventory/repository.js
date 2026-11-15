@@ -83,15 +83,16 @@ export function createInventoryRepository(pool) {
         async getStorage() {
             const r = await pool.query(
                 `select s.item_id,s.quantity,
-                m.name,m.category,m.description,m.image_url,
-                m.usable,m.use_target,m.effect_type,m.effect_value,m.transferable
-         from public.storage s
-         join public.item m on m.id=s.item_id
-         where m.is_active and s.quantity>0
-         order by m.category,m.name,m.id`
+                        m.name,m.category,m.description,m.image_url,
+                        m.usable,m.use_target,m.effect_type,m.effect_value,
+                        m.transferable,m.battle_usable,m.is_active
+                 from public.storage s
+                          left join public.item m on m.id=s.item_id
+                 order by m.category nulls last,m.name nulls last,s.item_id`
             );
             return r.rows;
         },
+
 
         async deposit(userId, itemId, quantity, requestKey) {
             const client = await pool.connect();

@@ -21,13 +21,14 @@ function itemCount(items) {
   return items.reduce((total, item) => total + Number(item.quantity || 0), 0);
 }
 
-export default function InventoryPanel({inventory = [], storage = [], character, errors = {}, busy, run, refresh, notify}) {
+export default function InventoryPanel({inventory = [], storage = [], cookingCatalog = null, character, errors = {}, busy, run, refresh, notify}) {
   const [tab, setTab] = useState('inventory');
   const [selectedIds, setSelectedIds] = useState({inventory: null, storage: null});
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('ALL');
   const [quantity, setQuantity] = useState('1');
   const [pending, setPending] = useState(false);
+  const [useFailure, setUseFailure] = useState('');
   const sending = useRef(false);
 
   const group = tab === 'inventory'
@@ -38,7 +39,7 @@ export default function InventoryPanel({inventory = [], storage = [], character,
   const filtered = group.items.filter(item => {
     const matchesCategory = category === 'ALL' || item.category === category;
     const keyword = query.trim().toLowerCase();
-    const matchesQuery = !keyword || `${item.name} ${item.description || ''}`.toLowerCase().includes(keyword);
+    const matchesQuery = !keyword || `${item.name || ''} ${item.description || ''}`.toLowerCase().includes(keyword);
     return matchesCategory && matchesQuery;
   });
 
@@ -48,30 +49,48 @@ export default function InventoryPanel({inventory = [], storage = [], character,
   const validQuantity = !!selectedItem && Number.isSafeInteger(itemId) && itemId > 0 &&
       Number.isSafeInteger(amount) && amount > 0 && amount <= Number(selectedItem.quantity);
 
-  const disabled = busy || pending || character?.in_active_battle || character?.status === 'DEAD' ||
+  const disabled = busy || pending || !character || character.in_active_battle || character.status === 'DEAD' ||
       !!errors.inventory || !!errors.storage;
-  const canMove = !disabled && selectedItem?.transferable && validQuantity;
+
+  const storageUnavailable = tab === 'storage' && selectedItem?.is_active !== true;
+  const canMove = !disabled && !storageUnavailable && selectedItem?.transferable && validQuantity;
+
+  const selectedFood = tab === 'inventory' && selectedItem
+      ? cookingCatalog?.foods?.find(food => String(food.item_id) === String(selectedItem.item_id))
+      : null;
+
+  const useType = tab !== 'inventory' || !selectedItem ? null
+      : selectedFood ? 'FOOD'
+          : selectedItem.usable && selectedItem.effect_type === 'BLOOD_PACK' && selectedItem.use_target === 'SELF' ? 'BLOOD_PACK'
+              : null;
+
+  const mealLimitReached = !!selectedFood && Number(cookingCatalog?.dailyMealCount) >= Number(cookingCatalog?.dailyMealLimit);
+  const canUse = !!useType && !disabled && !mealLimitReached && Number(selectedItem?.quantity) > 0;
 
   function changeTab(value) {
     setTab(value);
     setQuery('');
     setCategory('ALL');
     setQuantity('1');
+    setUseFailure('');
   }
 
   function selectItem(id) {
     setSelectedIds(current => ({...current, [tab]: String(id)}));
     setQuantity('1');
+    setUseFailure('');
   }
 
   function changeQuery(value) {
     setQuery(value);
     setQuantity('1');
+    setUseFailure('');
   }
 
   function changeCategory(value) {
     setCategory(value);
     setQuantity('1');
+    setUseFailure('');
   }
 
   async function moveItem(event) {
@@ -100,6 +119,44 @@ export default function InventoryPanel({inventory = [], storage = [], character,
     }
   }
 
+  async function useItem() {
+    if (sending.current || !canUse) return;
+
+    const id = String(selectedItem.item_id);
+    const name = selectedItem.name;
+    const path = useType === 'FOOD'
+        ? `/cooking/foods/${id}/eat`
+        : `/inventory/blood-packs/${id}/use`;
+
+    sending.current = true;
+    setPending(true);
+    setUseFailure('');
+
+    try {
+      await run(async () => {
+        try {
+          await api(path, {method: 'POST', body: {requestKey: crypto.randomUUID()}});
+        } catch (error) {
+          setUseFailure(`${error.code || 'ITEM_USE_FAILED'}: ${error.message}`);
+          return;
+        }
+
+        let synced = false;
+
+        try {
+          synced = await refresh();
+        } catch {
+          // 사용 처리는 성공했으므로 결과를 유지한다.
+        }
+
+        notify(`${name} ${useType === 'FOOD' ? '식사' : '사용'} 완료${synced ? '' : ' · 일부 상태 갱신 실패, 새로고침 필요'}`);
+      });
+    } finally {
+      sending.current = false;
+      setPending(false);
+    }
+  }
+
   return (
       <section className="survival-inventory" aria-labelledby="inventory-title">
         <header className="inventory-header">
@@ -119,8 +176,8 @@ export default function InventoryPanel({inventory = [], storage = [], character,
 
         {errors.inventory && <p className="inventory-notice" role="alert">개인 인벤토리 조회 실패: {errors.inventory} · 이전 표시값일 수 있습니다.</p>}
         {errors.storage && <p className="inventory-notice" role="alert">공용창고 조회 실패: {errors.storage} · 이전 표시값일 수 있습니다.</p>}
-        {character?.in_active_battle && <p className="inventory-notice">전투 중에는 창고 입출고와 아이템 양도를 할 수 없습니다.</p>}
-        {character?.status === 'DEAD' && <p className="inventory-notice">사망한 캐릭터는 아이템을 이동할 수 없습니다.</p>}
+        {character?.in_active_battle && <p className="inventory-notice">전투 중에는 일반 인벤토리의 아이템 사용·창고 입출고·양도가 제한됩니다. 전투 아이템은 전투 화면에서 사용하세요.</p>}
+        {character?.status === 'DEAD' && <p className="inventory-notice">사망한 캐릭터는 아이템을 사용하거나 이동할 수 없습니다.</p>}
 
         <div className="inventory-workspace">
           <div className="inventory-browser">
@@ -149,16 +206,21 @@ export default function InventoryPanel({inventory = [], storage = [], character,
 
               {filtered.length ? (
                   <div className="inventory-item-list">
-                    {filtered.map(item => (
-                        <button type="button" key={item.item_id} className={`inventory-item-card${String(selectedItem?.item_id) === String(item.item_id) ? ' is-selected' : ''}`} aria-pressed={String(selectedItem?.item_id) === String(item.item_id)} onClick={() => selectItem(item.item_id)}>
-                          <ItemImage key={`${item.item_id}:${item.image_url || ''}`} item={item}/>
-                          <div className="inventory-item-info">
-                            <strong>{item.name}</strong>
-                            <small>{item.category || '기타'}</small>
-                          </div>
-                          <span className="inventory-item-count">× {item.quantity}</span>
-                        </button>
-                    ))}
+                    {filtered.map(item => {
+                      const inactive = tab === 'storage' && item.is_active !== true;
+
+                      return (
+                          <button type="button" key={item.item_id} className={`inventory-item-card${String(selectedItem?.item_id) === String(item.item_id) ? ' is-selected' : ''}${inactive ? ' is-unavailable' : ''}`} aria-pressed={String(selectedItem?.item_id) === String(item.item_id)} onClick={() => selectItem(item.item_id)}>
+                            <ItemImage key={`${item.item_id}:${item.image_url || ''}`} item={item}/>
+                            <div className="inventory-item-info">
+                              <strong>{item.name || `아이템 ID ${item.item_id}`}</strong>
+                              <small>{item.category || '기타'}</small>
+                              {inactive && <small className="inventory-item-disabled">비활성 · 조회 전용</small>}
+                            </div>
+                            <span className="inventory-item-count">× {item.quantity}</span>
+                          </button>
+                      );
+                    })}
                   </div>
               ) : (
                   <div className="inventory-empty">
@@ -180,7 +242,7 @@ export default function InventoryPanel({inventory = [], storage = [], character,
                     <ItemImage key={`${selectedItem.item_id}:${selectedItem.image_url || ''}`} item={selectedItem} large/>
                     <div>
                       <span className="inventory-detail-category">{selectedItem.category || '기타'}</span>
-                      <h4>{selectedItem.name}</h4>
+                      <h4>{selectedItem.name || `아이템 ID ${selectedItem.item_id}`}</h4>
                       <p>보유 수량 <strong>{selectedItem.quantity}개</strong></p>
                     </div>
                   </div>
@@ -191,7 +253,26 @@ export default function InventoryPanel({inventory = [], storage = [], character,
                     <span>{selectedItem.transferable ? '이동 가능' : '이동 불가'}</span>
                     {selectedItem.battle_usable && <span>전투 사용 가능</span>}
                     {selectedItem.usable && <span>사용 가능</span>}
+                    {storageUnavailable && <span className="inventory-item-disabled">비활성 아이템</span>}
                   </div>
+
+                  {tab === 'inventory' && (selectedItem.usable || selectedFood) && (
+                      <div className="inventory-use-action">
+                        <div>
+                          <h4>아이템 사용</h4>
+                          <p>
+                            {useType === 'FOOD' ? `음식 섭취 · 오늘 식사 ${cookingCatalog.dailyMealCount}/${cookingCatalog.dailyMealLimit}회`
+                                : useType === 'BLOOD_PACK' ? `혈량 +${selectedItem.effect_value} · 1개 소모`
+                                    : '현재 일반 인벤토리에서 사용할 수 있는 효과가 설정되지 않았습니다.'}
+                          </p>
+                        </div>
+                        <button type="button" disabled={!canUse} onClick={useItem}>
+                          {useType === 'FOOD' ? '식사하기' : useType === 'BLOOD_PACK' ? '아이템 사용' : '사용 불가'}
+                        </button>
+                      </div>
+                  )}
+
+                  {useFailure && <p className="inventory-notice" role="alert">{useFailure}</p>}
 
                   <form className="inventory-storage-form" onSubmit={moveItem}>
                     <div className="inventory-storage-heading">
@@ -200,11 +281,12 @@ export default function InventoryPanel({inventory = [], storage = [], character,
                     </div>
                     <label htmlFor="inventory-move-quantity">이동 수량</label>
                     <div className="inventory-storage-controls">
-                      <input id="inventory-move-quantity" type="number" min="1" max={selectedItem.quantity} step="1" value={quantity} disabled={disabled || !selectedItem.transferable} onChange={event => setQuantity(event.target.value)}/>
+                      <input id="inventory-move-quantity" type="number" min="1" max={selectedItem.quantity} step="1" value={quantity} disabled={disabled || storageUnavailable || !selectedItem.transferable} onChange={event => setQuantity(event.target.value)}/>
                       <button type="submit" disabled={!canMove}>{group.action}</button>
                     </div>
-                    {!selectedItem.transferable && <p>이 아이템은 공용창고로 이동할 수 없습니다.</p>}
-                    {!validQuantity && selectedItem.transferable && <p>1개 이상, 보유 수량 이하로 입력해 주세요.</p>}
+                    {storageUnavailable && <p>비활성 아이템은 보관 내역을 조회할 수 있지만 꺼낼 수 없습니다.</p>}
+                    {!selectedItem.transferable && !storageUnavailable && <p>이 아이템은 공용창고로 이동할 수 없습니다.</p>}
+                    {!validQuantity && selectedItem.transferable && !storageUnavailable && <p>1개 이상, 보유 수량 이하로 입력해 주세요.</p>}
                   </form>
                 </>
             ) : (

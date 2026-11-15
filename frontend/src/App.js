@@ -106,6 +106,28 @@ function getKstDay(date) {
   return `${values.year}-${values.month}-${values.day}`;
 }
 
+function getMainCharacterStatus(character) {
+  if (!character) return '-';
+
+  const hp = Number(character.hp);
+  if (character.status === 'DEAD' || (character.hp != null && Number.isFinite(hp) && hp <= 0)) {
+    return '사망';
+  }
+
+  const blood = Number(character.blood);
+  if (character.status === 'NEAR_DEATH' || (character.blood != null && Number.isFinite(blood) && blood <= 0)) {
+    return '빈사';
+  }
+
+  if (character.blood == null || !Number.isFinite(blood) || blood > 100) return '미확인';
+  if (blood >= 80) return '정상';
+  if (blood >= 60) return '빈혈';
+  if (blood >= 30) return '중증 빈혈';
+  if (blood >= 1) return '중증 빈혈 2단계';
+
+  return '미확인';
+}
+
 function HomeDailyTraining({character, busy, run, refresh, today}) {
   const [completed, setCompleted] = useState(null);
   const [message, setMessage] = useState('');
@@ -528,7 +550,7 @@ export default function App() {
                             <div className="survival-identity-name">{character?.name || '불러오는 중'}</div>
                             <span className="survival-role-badge">{character?.role || '생존자'}</span>
                             <p>헌터등급 <b>{character?.hunter_grade ?? '-'}</b> <span className="survival-divider">|</span> 이능등급 <b>{character?.ability_grade ?? '-'}</b></p>
-                            <p>상태: {character?.status ?? '-'}</p>
+                            <p>상태: <strong>{getMainCharacterStatus(character)}</strong></p>
                           </div>
                         </div>
 
@@ -668,7 +690,7 @@ export default function App() {
                     </div>
 
                     <div className="survival-page" style={display('inventory')}>
-                      <InventoryPanel character={character} inventory={inventory} storage={storage} errors={errors} busy={busy} run={run} refresh={refreshAll} notify={setMessage}/>
+                      <InventoryPanel character={character} inventory={inventory} storage={storage} cookingCatalog={cooking} errors={errors} busy={busy} run={run} refresh={refreshAll} notify={setMessage}/>
                     </div>
 
                     <div className="survival-page" style={display('investigation')}>
