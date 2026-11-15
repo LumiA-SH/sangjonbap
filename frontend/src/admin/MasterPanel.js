@@ -262,7 +262,7 @@ export function validateDraft(kind, draft) {
   return '';
 }
 
-function MasterEditor({kind, record, onSaved, onDenied, onBusy}) {
+export function MasterEditor({kind, record, onSaved, onDenied, onBusy}) {
   const [draft, setDraft] = useState(() =>
       Object.fromEntries(
           Object.entries(defaults[kind]).map(([k, v]) => [k, record?.[k] ?? v])
@@ -437,63 +437,7 @@ function MasterEditor({kind, record, onSaved, onDenied, onBusy}) {
     }
   }
 
-  return (
-      <form onSubmit={save} className="admin-form">
-        <h3>
-          {record ? (
-              kind === 'foods'
-                  ? <><AdminReferenceName itemId={record.item_id} eager onDenied={onDenied}/> 상세/수정</>
-                  : `${record.name || '등록 정보'} 상세/수정`
-          ) : '새로 등록'}
-        </h3>
-
-        {kind === 'foods' && (
-            <>
-              <p>
-                음식 이름은 연결된 아이템의 이름입니다.
-                이름을 변경하면 인벤토리·상점 등에서도 같은 이름으로 표시됩니다.
-              </p>
-              <p>음식 등급을 선택하면 혈량 회복량과 능력치 성장 확률이 해당 등급의 설정을 따릅니다. 실패요리에는 수치 효과가 적용되지 않습니다. 현재 실패 판정: {record?.effective_failure ? '예' : '아니오'}</p>
-              <p>
-                능력치 성장: {draft.stat_growth_enabled
-                  ? selectedGrade
-                      ? `${selectedGrade.name} · ${Number(selectedGrade.stat_growth_rate)}% 확률 · ${draft.stat_growth_target || '대상 미선택'} +1`
-                      : '성장 대상과 음식 등급을 선택하세요.'
-                  : '적용 안 함'}
-              </p>
-            </>
-        )}
-
-        {kind === 'areas' && (
-            <>
-              <p>공개 허용과 공개 시각으로 접근을 제어합니다. 조사율은 발견된 고유 조사결과·마물·레시피에 따라 자동 계산되며 직접 수정할 수 없습니다.</p>
-              <p>현재 조사율: {record ? `${Number(record.investigation_rate).toFixed(2)}%` : '구역 등록 후 자동 계산'}</p>
-            </>
-        )}
-
-        {kind === 'recipes' && (
-            <>
-              <p>기본 성공률 80%, 성공 3개 / 실패 1개. 성공률·성공 수량 변경은 다음 요리부터 적용됩니다. 실패 재료는 max(1, floor(수량/2))입니다.</p>
-              <p>상점 판매 가격 (등급별 자동 적용): {recipePrices[draft.discovery_grade] ? `${recipePrices[draft.discovery_grade]}코인` : '등급 선택 후 자동 결정'}</p>
-              <p>완성 음식과 실패 요리는 먼저 아이템·음식 설정에 등록되어 있어야 합니다. 필요한 식재료는 아이템 메뉴에서 등록합니다.</p>
-            </>
-        )}
-
-        {kind === 'gachas' && (
-            <p>
-              운영 시간대: KST (Asia/Seoul). ISO 시각에 +09:00을 입력하세요. 기간 제한을 끄면 저장된 시각과 관계없이 추첨합니다.
-              <br/>
-              {['start_at', 'end_at'].map(k => (
-                  <span key={k}>
-                            {k === 'start_at' ? '시작' : '종료'} KST: {draft[k] && Number.isFinite(Date.parse(draft[k]))
-                      ? new Date(draft[k]).toLocaleString('ko-KR', {timeZone: 'Asia/Seoul'})
-                      : '미설정'}{' '}
-                        </span>
-              ))}
-            </p>
-        )}
-
-        {Object.entries(defaults[kind])
+  const renderFields = keys => (keys.map(k=>[k,defaults[kind][k]])
             .filter(([k]) => k !== child && k !== 'area_recipes' &&
                 !(kind === 'foods' && k === 'stat_growth_value'))
             .map(([k, v]) =>
@@ -536,7 +480,7 @@ function MasterEditor({kind, record, onSaved, onDenied, onBusy}) {
                         }}
                     />
                 ) : (
-                    <label key={k}>
+                    <label key={k} className={['description','rp_effect_text','rp_effect_texts'].includes(k)?'admin-field-wide':typeof v==='boolean'?'admin-field-check':undefined}>
                       {kind==='foods'&&k==='name'
                           ? '음식 이름'
                           : kind==='recipes'
@@ -599,7 +543,65 @@ function MasterEditor({kind, record, onSaved, onDenied, onBusy}) {
                       )}
                     </label>
                 )
-            )}
+            ));
+  const section = (title,keys,note) => <section className="admin-editor-section" key={title}><h4>{title}</h4><div className="admin-editor-grid">{renderFields(keys)}</div>{note&&<p className="admin-editor-note">{note}</p>}</section>;
+  const failureFood = kind==='foods'&&(draft.is_failure||(record?.effective_failure&&!record?.is_failure));
+
+  return (
+      <form onSubmit={save} className="admin-form admin-structured-editor">
+        <header className="admin-editor-heading"><small>{record ? `EDIT / ${record.id}` : 'CREATE / NEW'}</small><h3>
+          {record ? (
+              kind === 'foods'
+                  ? <><AdminReferenceName itemId={record.item_id} eager onDenied={onDenied}/> 상세/수정</>
+                  : `${record.name || '등록 정보'} 상세/수정`
+          ) : '새로 등록'}
+        </h3></header>
+
+        {kind === 'areas' && (
+            <>
+              <p>공개 허용과 공개 시각으로 접근을 제어합니다. 조사율은 발견된 고유 조사결과·마물·레시피에 따라 자동 계산되며 직접 수정할 수 없습니다.</p>
+              <p>현재 조사율: {record ? `${Number(record.investigation_rate).toFixed(2)}%` : '구역 등록 후 자동 계산'}</p>
+            </>
+        )}
+
+        {kind === 'recipes' && (
+            <>
+              <p>기본 성공률 80%, 성공 3개 / 실패 1개. 성공률·성공 수량 변경은 다음 요리부터 적용됩니다. 실패 재료는 max(1, floor(수량/2))입니다.</p>
+              <p>상점 판매 가격 (등급별 자동 적용): {recipePrices[draft.discovery_grade] ? `${recipePrices[draft.discovery_grade]}코인` : '등급 선택 후 자동 결정'}</p>
+              <p>완성 음식과 실패 요리는 먼저 아이템·음식 설정에 등록되어 있어야 합니다. 필요한 식재료는 아이템 메뉴에서 등록합니다.</p>
+            </>
+        )}
+
+        {kind === 'gachas' && (
+            <p>
+              운영 시간대: KST (Asia/Seoul). ISO 시각에 +09:00을 입력하세요. 기간 제한을 끄면 저장된 시각과 관계없이 추첨합니다.
+              <br/>
+              {['start_at', 'end_at'].map(k => (
+                  <span key={k}>
+                            {k === 'start_at' ? '시작' : '종료'} KST: {draft[k] && Number.isFinite(Date.parse(draft[k]))
+                      ? new Date(draft[k]).toLocaleString('ko-KR', {timeZone: 'Asia/Seoul'})
+                      : '미설정'}{' '}
+                        </span>
+              ))}
+            </p>
+        )}
+
+        {kind==='foods' ? <>
+          {section('음식 기본 정보',['name','image_url'],'음식 이름 변경은 연결된 아이템의 이름에도 반영됩니다. 인벤토리·상점의 연결은 유지됩니다.')}
+          {section('음식 구분',['is_failure'])}
+          {failureFood ? section('실패요리 RP 효과',['rp_effect_texts','rp_effect_text'],'섭취 시 문구 후보 중 하나를 사용합니다. 실제 자원·능력치 효과는 적용되지 않습니다.') : <>
+            {section('음식 등급 · 효과',['grade_id','blood_recovery','stat_growth_enabled','stat_growth_target'],selectedGrade?`선택 등급: 혈량 +${selectedGrade.blood_recovery} · 성장 확률 ${selectedGrade.stat_growth_rate}%`:'등급을 선택하면 해당 등급의 효과를 사용합니다.')}
+            <details className="admin-editor-reference"><summary>기존 RP 문구 확인 · 수정</summary>{section('RP 문구',['rp_effect_text','rp_effect_texts'])}</details>
+          </>}
+          <details className="admin-editor-reference" open={!record}><summary>연결 아이템 {record?'확인':'선택'}</summary>{renderFields(['item_id'])}</details>
+        </> : kind==='recipes' ? <>
+          {section('레시피 기본 정보',['name','discovery_grade','description','image_url','is_active'])}
+          {section('조리 설정',['success_rate','result_quantity'])}
+          {section('완성 음식 · 실패 음식',['result_item_id','failure_item_id'])}
+        </> : kind==='areas' ? <>
+          {section('구역 기본 정보',['name','description','image_url','sort_order'])}
+          {section('공개 · 조우 설정',['is_open','unlock_at','encounter_rate'])}
+        </> : section('기본 정보',Object.keys(defaults[kind]))}
 
         {child && (
             <fieldset className="admin-wide" disabled={busy}>
@@ -727,11 +729,11 @@ function MasterEditor({kind, record, onSaved, onDenied, onBusy}) {
             </details>
         )}
 
-        <button disabled={busy || imageUploading}>
+        <footer className="admin-editor-footer"><button disabled={busy || imageUploading}>
           {imageUploading ? '이미지 업로드 중…' : busy ? '저장 중…' : '저장'}
         </button>
 
-        <p role="alert">{message}</p>
+        <p role="alert">{message}</p></footer>
       </form>
   );
 }

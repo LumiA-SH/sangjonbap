@@ -1,3 +1,4 @@
+import {MasterEditor} from '../admin/MasterPanel';
 import OperatingPolicyPanel from '../admin/OperatingPolicyPanel';
 import StorageAdminPanel from '../admin/StorageAdminPanel';
 import BalancePanel from '../admin/BalancePanel';
@@ -78,4 +79,17 @@ test('announcement editor offers disabled dice policy without changing persisted
  expect(div.textContent).toContain('1D100 결과');expect(legacy.events.dice).toBeUndefined();
  const field=[...div.querySelectorAll('fieldset')].find(f=>f.querySelector('legend')?.textContent==='1D100 결과');expect(field.querySelector('input[type="checkbox"]').checked).toBe(false);
  expect(api.mock.calls.every(c=>!c[1]?.method)).toBe(true);
+});
+
+
+test('food detail name is first and save preserves linked item and RP',async()=>{
+ const record={id:'7',item_id:'9',name:'기존 음식',blood_recovery:10,is_failure:true,rp_effect_text:'기존 문구',rp_effect_texts:['첫 문구']};
+ api.mockImplementation(async(p,o)=>o?.method?{record}:{records:[],record:{id:'9',name:'기존 음식'}});
+ await act(async()=>root.render(<MasterEditor kind="foods" record={record} onSaved={jest.fn()} onDenied={jest.fn()} onBusy={jest.fn()}/>));
+ const first=div.querySelector('.admin-editor-section input');expect(first.value).toBe('기존 음식');
+ expect(div.querySelector('.admin-editor-section h4').textContent).toBe('음식 기본 정보');
+ expect(div.textContent).toContain('실패요리 RP 효과');expect(div.querySelector('.admin-editor-reference').open).toBe(false);
+ await act(async()=>Simulate.change(first,{target:{value:'수정 음식'}}));await act(async()=>Simulate.submit(div.querySelector('form')));
+ const saved=api.mock.calls.find(c=>c[1]?.method==='PATCH');expect(saved[0]).toBe('/admin/foods/7');
+ expect(saved[1].body).toEqual(expect.objectContaining({name:'수정 음식',rp_effect_text:'기존 문구',rp_effect_texts:['첫 문구']}));expect(saved[1].body).not.toHaveProperty('item_id');
 });

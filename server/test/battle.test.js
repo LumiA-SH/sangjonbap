@@ -102,6 +102,7 @@ test('blood pack applies before attack, uses configured amount and cap', () => {
         usable: true,
         battle_usable: true,
         use_target: 'SELF',
+        category: 'CONSUMABLE',
         effect_type: 'BLOOD_PACK',
         effect_value: 40
     };
@@ -174,7 +175,7 @@ test('admin monster validator rejects duplicate rewards, malformed quantities an
         agi: 10,
         areas: [],
         drops: [
-            {item_id: '1', drop_rate: 20, min_quantity: 1, max_quantity: 2, is_ingredient: true}
+            {item_id: '1', drop_rate: 100, min_quantity: 1, max_quantity: 1, is_ingredient: true, ingredient_role: 'BASE'}
         ],
         actions: [
             {name: 'attack', action_type: 'ATTACK', probability: 100, multiplier: 1, is_active: true, sort_order: 0}
