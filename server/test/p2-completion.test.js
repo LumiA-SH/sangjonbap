@@ -1,3 +1,4 @@
+import {createAdminInvestigationOperations} from '../src/modules/admin/investigation-operations.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -28,6 +29,7 @@ await c.query('begin'); await c.query('create schema ' + s); await c.query('crea
             } finally {await c.query('rollback'); c.release();}
         });
         await raw.query('create schema ' + schema); for (const {tablename} of (await raw.query("select tablename from pg_tables where schemaname='public'")).rows) await raw.query('create table ' + schema + '.' + tablename + '(like public.' + tablename + ' including all)');
+        await pool.query(fs.readFileSync(new URL('../../supabase/migrations/20261115145255_clue_manual_publication.sql',import.meta.url),'utf8'));
         await pool.query('insert into public.daily_reset_state(singleton) values(true)'); await raw.query('insert into ' + schema + '.system_config select * from public.system_config');
         const account = async role => {const c = (await pool.query("insert into public.game_character(name,hunter_grade,atk,def,agi,hp,blood,ap,currency) values('test','B',20,20,20,80,80,7,10) returning *")).rows[0]; const u = (await pool.query("insert into public.auth_user(role,mastodon_instance,mastodon_account_id,character_id) values($1,'mock',$2,$3) returning *", [role, key(), c.id])).rows[0]; return {c, u};}; const owner = await account('ADMIN'), runner = await account('USER');
         const item = (await pool.query("insert into public.item(name,category,transferable) values('food','FOOD',true) returning id")).rows[0].id;
@@ -56,6 +58,40 @@ await c.query('begin'); await c.query('create schema ' + s); await c.query('crea
             await pool.query('update public.clue set is_discovered=true,first_discoverer_id=$2,discovered_at=now() where id=$1', [id, runner.c.id]); saved = await admin.getAdminClue(id); const before = (await pool.query('select * from public.area where id=$1', [area])).rows[0]; assert.equal((await records.getClueRecords(runner.u.id)).length, 1);
             const updated = await admin.saveAdminClue(owner.u.id, id, {...body, title: 'edited', is_public: false, expectedVersion: saved.version, requestKey: key()}); assert.equal(updated.record.first_discoverer_id, runner.c.id); assert.equal(updated.record.is_discovered, true); assert.equal((await records.getClueRecords(runner.u.id)).length, 0); assert.deepEqual((await pool.query('select * from public.area where id=$1', [area])).rows[0], before);
             await assert.rejects(admin.saveAdminClue(owner.u.id, id, {...body, expectedVersion: saved.version, requestKey: key()}), {code: 'ADMIN_EDIT_CONFLICT'});
+        });
+        await t.test('unassigned clues can be manually published without forging discovery; audit and access remain enforced',async()=>{
+            const body={title:'manual clue',content:'content',related_target:null,area_id:null,is_public:true,reason:'QA',requestKey:key()};
+            let saved=await admin.saveAdminClue(owner.u.id,null,body);
+            const records=createRecordsRepository(pool), id=saved.record.id;
+            assert.equal(saved.record.area_id,null);
+            const area=(await pool.query("insert into public.area(name) values('unassigned test') returning id")).rows[0].id;
+            const operations=createAdminInvestigationOperations(pool);
+            assert.ok((await operations.getAdminInvestigation(area)).clues.some(r=>r.id===id));
+            const linked=await operations.saveAdminInvestigation(owner.u.id,area,null,{result_text:'clue',weight:1,is_unique:true,clue_id:id,is_active:true,rewards:[],requestKey:key()});
+            assert.ok(linked);
+
+            assert.ok(!(await records.getClueRecords(runner.u.id)).some(r=>r.id===id));
+            await assert.rejects(admin.saveAdminClue(runner.u.id,id,{...body,manually_published:true,expectedVersion:saved.version,requestKey:key()}),{code:'ADMIN_REQUIRED'});
+            saved=await admin.saveAdminClue(owner.u.id,id,{...body,manually_published:true,expectedVersion:saved.version,requestKey:key()});
+            assert.ok((await records.getClueRecords(runner.u.id)).some(r=>r.id===id));
+            assert.equal(saved.record.is_discovered,false);assert.equal(saved.record.first_discoverer_id,null);assert.equal(saved.record.discovered_at,null);
+            fault=true;await assert.rejects(admin.saveAdminClue(owner.u.id,id,{...body,is_public:false,expectedVersion:saved.version,requestKey:key()}),/audit fault/);fault=false;
+            assert.deepEqual(await admin.getAdminClue(id),saved);
+            await admin.saveAdminClue(owner.u.id,id,{...body,is_public:false,expectedVersion:saved.version,requestKey:key()});
+            assert.ok(!(await records.getClueRecords(runner.u.id)).some(r=>r.id===id));
+        });
+        await t.test('admin log filters cover older pages, counts and literal search without granting runner access',async()=>{
+            await pool.query("insert into public.action_log(character_id,category,action_type,description) select $1,'TRAINING','DAILY_TRAINING','filter QA' from generate_series(1,35)",[runner.c.id]);
+            const logs=createRecordsRepository(pool);
+            const first=await logs.getAdminActionRecords(owner.u.id,null,'TRAINING','filter QA');
+            assert.equal(first.length,31);assert.ok(first.every(r=>r.category==='TRAINING'));
+            const second=await logs.getAdminActionRecords(owner.u.id,first[29].id,'TRAINING','filter QA');
+            assert.equal(second.length,5);
+            const counts=await logs.getAdminLogCategories(owner.u.id,'filter QA');
+            assert.equal(counts.find(r=>r.category==='TRAINING').count,'35');
+            assert.deepEqual(await logs.getAdminLogCategories(runner.u.id),[]);
+            assert.deepEqual(await logs.getAdminActionRecords(runner.u.id),[]);
+            assert.deepEqual(await logs.getAdminActionRecords(owner.u.id,null,null,"' OR 1=1 --"),[]);
         });
         await t.test('character detail edits preserve life state, detect concurrent edits and roll back on audit failure', async () => {
             let saved = await admin.getAdminCharacterDetails(runner.c.id); const body = {hunter_grade: 'S', has_ability: true, ability_grade: 'B', recipe_ids: [], daily_meal_count: 3, daily_training_done: true, death_count: 0, revive_count: 0, reason: 'test', expectedVersion: saved.version, requestKey: key()};

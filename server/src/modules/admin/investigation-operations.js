@@ -183,7 +183,7 @@ async function records(c, areaId) {
 async function areaRecipeRecords(c, areaId) {
     const rows = (await c.query(
         `select ar.recipe_id::text as recipe_id,
-             r.name as recipe_name,
+             r.name as recipe_name, r.is_active,
                 ar.weight,
                 ar.drop_rate,
                 d.discovered_at
@@ -198,6 +198,7 @@ async function areaRecipeRecords(c, areaId) {
     return rows.map(row => ({
         recipe_id: row.recipe_id,
         recipe_name: row.recipe_name,
+        is_active: row.is_active,
         weight: row.weight,
         drop_rate: Number(row.drop_rate),
         discovered: row.discovered_at !== null,
@@ -215,10 +216,11 @@ export function createAdminInvestigationOperations(pool) {
                         title,
                         is_public,
                         is_discovered,
+                        manually_published,
                         first_discoverer_id,
                         discovered_at
                  from public.clue
-                 where area_id = $1
+                 where area_id = $1 or area_id is null
                  order by id`,
                 [areaId]
             )).rows;
@@ -261,12 +263,12 @@ export function createAdminInvestigationOperations(pool) {
 
                 if (body.clue_id) {
                     const clue = await c.query(
-                        'select id from public.clue where id=$1 and area_id=$2 for share',
+                        'select id from public.clue where id=$1 and (area_id=$2 or area_id is null) for share',
                         [body.clue_id, areaId]
                     );
 
                     if (!clue.rowCount) {
-                        fail('CLUE_NOT_FOUND', '같은 지역의 단서를 선택하세요.', 404);
+                        fail('CLUE_NOT_FOUND', '같은 구역 또는 구역 미지정 단서를 선택하세요.', 404);
                     }
                 }
 

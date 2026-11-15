@@ -111,7 +111,7 @@ export default function GachaStockEditor({record, onSaved, onDenied, onBusy}) {
   return (
       <form className="admin-form admin-structured-editor" onSubmit={save}>
         <header className="admin-editor-heading"><small>{record?'수정 / '+record.id:'신규 등록'}</small><h3>{draft.name||'가챠 등록'}</h3></header><section className="admin-editor-section"><h4>가챠 기본 정보 · 운영 기간</h4>
-        <p>1회 코인 1개 · RP 아이템 1개. 양도 가능하며 사용 효과가 없는 아이템만 등록합니다.</p>
+        <p>1회 코인 1개 · 아이템 1개. 레시피를 제외한 아이템·음식을 보상으로 등록합니다.</p>
 
         <label>
           이름
@@ -161,12 +161,11 @@ export default function GachaStockEditor({record, onSaved, onDenied, onBusy}) {
                         onResolved={handleNameResolved}
                         onDenied={onDenied}
                     />
-                ) : '새 RP 보상')}
+                ) : '새 보상')}
               </legend>
 
               <ItemPicker
-                  rpOnly
-                  label="RP 보상"
+                  label="보상 아이템"
                   value={row.item_id}
                   disabled={busy || !!row.id}
                   onDenied={onDenied}

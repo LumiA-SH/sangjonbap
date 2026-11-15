@@ -271,7 +271,9 @@ export function mountExtendedAdminRoutes(router, repo) {
     });
 
     router.get('/action-logs', async (req, res) => {
-        const before = recordsCursor(req.query);
+        const {category=null,q='',...cursorQuery}=req.query;
+        if((category!==null&&(typeof category!=='string'||!/^[A-Z_]{1,50}$/.test(category)))||typeof q!=='string'||q.length>100) throw new AppError(400,'INVALID_LOG_FILTER','로그 분류와 검색어를 확인하세요.');
+        const before = recordsCursor(cursorQuery);
 
         if (!repo.getAdminActionRecords) {
             throw new AppError(
@@ -281,9 +283,9 @@ export function mountExtendedAdminRoutes(router, repo) {
             );
         }
 
-        ok(res, recordsPage(
-            await repo.getAdminActionRecords(req.auth.user.id, before)
-        ));
+        const rows=await repo.getAdminActionRecords(req.auth.user.id,before,category,q.trim());
+        const categories=await repo.getAdminLogCategories(req.auth.user.id,q.trim());
+        ok(res,{...recordsPage(rows),categories});
     });
 
     // ========================================

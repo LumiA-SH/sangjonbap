@@ -97,6 +97,7 @@ async function readAreaMonsters(client, areaId) {
              m.id::text as monster_id,
              m.name,
              m.is_active,
+             m.first_discoverer_id,
              am.area_id::text as assigned_area_id,
              a.name as assigned_area_name,
              am.weight
@@ -116,6 +117,7 @@ async function readAreaMonsters(client, areaId) {
             monster_id: String(row.monster_id),
             name: row.name,
             is_active: row.is_active,
+            discovered: row.first_discoverer_id != null,
             weight: Number(row.weight)
         }));
 

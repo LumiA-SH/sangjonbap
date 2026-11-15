@@ -47,6 +47,7 @@ test('production cookie auth permits own records, blocks unlinked users and non-
     const calls = [];
     const repo = {
         getOAuthSession: async () => user,
+        getAdminLogCategories: async()=>[],
         getSystemFeed: async(kind,before)=>({enabled:true,records:[],nextBefore:null,kind}),
         listAdminRecords: async () => [], getAdminRecord: async () => ({}), saveAdminRecord: async () => ({})
     };
@@ -76,7 +77,12 @@ test('production cookie auth permits own records, blocks unlinked users and non-
     assert.equal((await get('/records/clues')).status, 403);
     user = {...user, role: 'ADMIN'};
     assert.equal((await get('/admin/action-logs?before=9')).status, 200);
-    assert.deepEqual(calls.at(-1), {name: 'getAdminActionRecords', args: ['7', '9']});
+    assert.deepEqual(calls.at(-1), {name: 'getAdminActionRecords', args: ['7', '9', null, '']});
+    assert.equal((await get('/admin/action-logs?category=COOKING&q=요리&before=9')).status,200);
+    assert.deepEqual(calls.at(-1).args,['7','9','COOKING','요리']);
+    assert.equal((await get('/admin/action-logs?category=bad')).status,400);
+    assert.equal((await get('/admin/action-logs?q=a&q=b')).status,400);
+    assert.equal((await get('/admin/action-logs?userId=8')).status,400);
     user = {...user, role: 'USER'};
     assert.equal((await get('/admin/action-logs')).status, 403);
 });

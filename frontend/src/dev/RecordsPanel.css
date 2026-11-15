@@ -641,3 +641,10 @@
         text-align: left;
     }
 }
+.admin-log-tabs {display:flex;gap:8px;overflow-x:auto;padding:8px 0;}
+.admin-log-tabs button {flex:0 0 auto;white-space:nowrap;}
+.admin-log-tabs button[aria-selected="true"] {font-weight:700;outline:2px solid currentColor;outline-offset:-2px;}
+.admin-log-tabs button span {margin-left:6px;font-size:.85em;}
+.admin-log-search {display:flex;align-items:end;gap:8px;flex-wrap:wrap;}
+.admin-log-search label {flex:1 1 240px;min-width:0;}
+.admin-log-search input {width:100%;box-sizing:border-box;}

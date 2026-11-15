@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
 import {createGachaRepository} from '../src/modules/gacha/repository.js';
-import {requireRpItem, validateStockChange} from '../src/modules/gacha/rules.js';
+import {requireRewardItem, validateStockChange} from '../src/modules/gacha/rules.js';
 import {saveGachaStock} from '../src/modules/admin/gacha-stock.js';
 
 const rp = {id: '8', name: 'RP 물품', description: '추억을 적는 물품', is_active: true, transferable: true, usable: false, battle_usable: false, effect_type: null, effect_value: null, use_target: 'NONE', category: 'ETC'};
@@ -46,8 +46,8 @@ test('one stock draw charges one, grants one RP item with description, persists 
     assert(f.calls.some(sql => sql === 'select * from public.gacha where id=$1 for update'));
     assert(f.calls.some(sql => sql.includes('gacha_reward') && sql.endsWith('for update')));
 });
-test('sold out, missing stock, insufficient coin, non-RP items never debit or grant', async () => {
-    for (const [options, code] of [[{stock: 0}, 'GACHA_SOLD_OUT'], [{stock: null}, 'GACHA_STOCK_HOLD'], [{currency: 0}, 'NOT_ENOUGH_CURRENCY'], [{item: {...rp, usable: true}}, 'GACHA_RP_ITEM_REQUIRED'], [{food: true}, 'GACHA_RP_ITEM_REQUIRED']]) {
+test('sold out, missing stock, insufficient coin, inactive items never debit or grant', async () => {
+    for (const [options, code] of [[{stock: 0}, 'GACHA_SOLD_OUT'], [{stock: null}, 'GACHA_STOCK_HOLD'], [{currency: 0}, 'NOT_ENOUGH_CURRENCY'], [{item: {...rp, is_active: false}}, 'GACHA_ITEM_UNAVAILABLE']]) {
         const f = fixture(options), before = structuredClone(f.state());
         await assert.rejects(f.repo.drawGacha('u', '4', randomUUID()), e => e.code === code); assert.deepEqual(f.state(), before);
         assert.equal(f.calls.some(sql => sql.startsWith('update public.gacha_reward')), false);
@@ -61,9 +61,18 @@ test('audit failure rolls back stock, coins and inventory together', async () =>
     const f = fixture({failLog: true}), before = structuredClone(f.state());
     await assert.rejects(f.repo.drawGacha('u', '4', randomUUID()), /injected/); assert.deepEqual(f.state(), before); assert.equal(f.calls.at(-1), 'rollback');
 });
-test('RP requirement rejects all usable/combat/nontransferable/food variants without changing normal items', () => {
-    assert.doesNotThrow(() => requireRpItem(rp));
-    for (const patch of [{is_active: false}, {usable: true}, {battle_usable: true}, {transferable: false}, {effect_type: 'BLOOD_PACK'}, {effect_value: 10}, {use_target: 'SELF'}, {category: 'FOOD'}]) assert.throws(() => requireRpItem({...rp, ...patch}), e => e.code === 'GACHA_RP_ITEM_REQUIRED');
+test('reward items allow every item category and effect but exclude recipes, missing and inactive items', () => {
+ for(const category of ['MATERIAL','CONSUMABLE','FOOD','ETC']) assert.doesNotThrow(()=>requireRewardItem({...rp,category,usable:true,transferable:false,effect_type:'BLOOD_PACK'}));
+ for(const item of [null,{...rp,is_active:false},{...rp,category:'RECIPE'}]) assert.throws(()=>requireRewardItem(item),e=>e.code==='GACHA_ITEM_UNAVAILABLE');
+});
+test('food and consumable rewards are granted without consuming their effects',async()=>{
+ for(const category of ['FOOD','CONSUMABLE']){
+ const f=fixture({item:{...rp,category,usable:true,effect_type:'BLOOD_PACK',effect_value:10},food:category==='FOOD'});
+ const before=structuredClone(f.state().character);
+ await f.repo.drawGacha('u','4',randomUUID());
+ assert.equal(f.state().inventory,1);assert.equal(f.state().stock,0);
+ assert.deepEqual(f.state().character,{...before,currency:before.currency-1});
+ }
 });
 test('stock edit preserves already awarded count and rejects stale administrator draft', () => {
     const before = {max_stock: 4, remaining_stock: 2};
@@ -79,10 +88,10 @@ test('admin stock update preserves reward IDs; legacy history blocks inferred st
     historical = true;
     await assert.rejects(saveGachaStock(c, '4', {rewards: [{id: '7', item_id: '8', max_stock: null, remaining_stock: null}]}, [{item_id: '8', max_stock: 3, remaining_stock: 3}]), e => e.code === 'GACHA_STOCK_MIGRATION_HOLD');
 });
-test('inactive new reward still requires RP item; legacy inactive record can remain unresolved', async () => {
+test('inactive new reward still requires active item; legacy inactive record can remain unresolved', async () => {
     const calls = [];
-    const c = {async query(sql, p) {const dailyGateResult = dailyGateFixture(sql); if (dailyGateResult) return dailyGateResult; calls.push(sql); return sql.startsWith('select * from public.item') ? {rows: [{...rp, usable: true}]} : {rows: [], rowCount: 0};} };
-    await assert.rejects(saveGachaStock(c, '4', null, [{item_id: '8', max_stock: 1, remaining_stock: 1, is_active: false}]), e => e.code === 'GACHA_RP_ITEM_REQUIRED');
+    const c = {async query(sql, p) {const dailyGateResult = dailyGateFixture(sql); if (dailyGateResult) return dailyGateResult; calls.push(sql); return sql.startsWith('select * from public.item') ? {rows: [{...rp, is_active: false}]} : {rows: [], rowCount: 0};} };
+    await assert.rejects(saveGachaStock(c, '4', null, [{item_id: '8', max_stock: 1, remaining_stock: 1, is_active: false}]), e => e.code === 'GACHA_ITEM_UNAVAILABLE');
     assert.equal(calls.some(sql => sql.startsWith('insert')), false);
     await saveGachaStock(c, '4', {rewards: [{id: '7', item_id: '8', max_stock: null, remaining_stock: null}]}, [{item_id: '8', max_stock: null, remaining_stock: null, is_active: false}]);
     assert(calls.some(sql => sql.startsWith('update public.gacha_reward set is_active=false')));

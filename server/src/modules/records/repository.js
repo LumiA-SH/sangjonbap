@@ -5,6 +5,8 @@ const logColumns = `l.id,l.created_at,l.character_id,c.name as character_name,l.
 const logCursor = `($2::bigint is null or (l.created_at,l.id)<
     (select created_at,id from public.action_log where id=$2))`;
 
+const adminLogSearch = `($4::text='' or strpos(lower(concat_ws(' ',c.name,ac.name,l.action_type,l.description,l.detail::text,to_char(l.created_at at time zone 'Asia/Seoul','YYYY-MM-DD HH24:MI:SS'))),lower($4))>0)`;
+
 export function playerActionRecord(row) {
     if (row.category !== 'GACHA' && row.action_type !== 'GACHA_DRAW') return row;
     // Historical logs may predate v0.2 and still contain reward weights or candidate lists.
@@ -29,12 +31,24 @@ export function createRecordsRepository(pool) {
                 order by l.created_at desc,l.id desc limit 31`, requestKey===null?[userId,before,investigationsOnly]:[userId,before,investigationsOnly,requestKey]);
             return result.rows.map(playerActionRecord);
         },
-        async getAdminActionRecords(userId, before = null) {
-            const result = await pool.query(`select ${logColumns},l.admin_user_id from public.action_log l
+        async getAdminActionRecords(userId, before = null, category = null, query = '') {
+            const result = await pool.query(`select ${logColumns},l.admin_user_id,ac.name as admin_name from public.action_log l
                 left join public.game_character c on c.id=l.character_id
+                left join public.auth_user au on au.id=l.admin_user_id
+                left join public.game_character ac on ac.id=au.character_id
                 where exists (select 1 from public.auth_user where id=$1 and is_active and role='ADMIN')
-                  and ${logCursor} order by l.created_at desc,l.id desc limit 31`, [userId, before]);
+                  and ($3::text is null or l.category=$3) and ${adminLogSearch}
+                  and ${logCursor} order by l.created_at desc,l.id desc limit 31`, [userId, before, category, query]);
             return result.rows;
+        },
+        async getAdminLogCategories(userId, query = '') {
+            return (await pool.query(`select l.category,count(*)::text as count from public.action_log l
+                left join public.game_character c on c.id=l.character_id
+                left join public.auth_user au on au.id=l.admin_user_id
+                left join public.game_character ac on ac.id=au.character_id
+                where exists(select 1 from public.auth_user where id=$1 and is_active and role='ADMIN')
+                and ${adminLogSearch.replaceAll('$4','$2')}
+                group by l.category order by l.category`,[userId,query])).rows;
         },
         async getDiscoveryRecords(userId, before = null) {
             const result = await pool.query(`select d.id,d.discovered_at,r.result_text,a.id as area_id,a.name as area_name,
@@ -46,11 +60,11 @@ export function createRecordsRepository(pool) {
             return result.rows;
         },
         async getClueRecords(userId, before = null) {
-            const result = await pool.query(`select cl.id,cl.title,cl.content,cl.related_target,cl.discovered_at,
+            const result = await pool.query(`select cl.id,cl.title,cl.content,cl.related_target,cl.discovered_at,cl.is_discovered,cl.manually_published,
                 cl.first_discoverer_id as character_id,c.name as character_name,a.id as area_id,a.name as area_name
                 from public.clue cl left join public.area a on a.id=cl.area_id
                 left join public.game_character c on c.id=cl.first_discoverer_id
-                where ${account} and cl.is_discovered=true and cl.is_public=true and ($2::bigint is null or cl.id<$2)
+                where ${account} and (cl.is_discovered=true or cl.manually_published=true) and cl.is_public=true and ($2::bigint is null or cl.id<$2)
                 order by cl.id desc limit 31`, [userId, before]);
             return result.rows;
         }

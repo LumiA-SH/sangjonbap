@@ -3,7 +3,7 @@ import {beginGameTransaction, commitGameTransaction, rollbackGameTransaction} fr
 import {requireNoActiveBattle} from '../../shared/actions.js';
 import {AppError} from '../../shared/http.js';
 import {lockCharacterByUser, changeCharacterResources, changeInventoryQuantity, writeActionLog} from '../../shared/game.js';
-import {validateRewards, selectReward, requirePeriod, requireRpItem} from './rules.js';
+import {validateRewards, selectReward, requirePeriod, requireRewardItem} from './rules.js';
 
 const fail = (code, message, status = 409) => {throw new AppError(status, code, message);};
 
@@ -119,14 +119,8 @@ export function createGachaRepository(pool, {random} = {}) {
                         [id]
                     )).rows[0];
 
-                    requireRpItem(item);
+                    requireRewardItem(item);
 
-                    if ((await client.query(
-                        'select 1 from public.food_config where item_id=$1',
-                        [id]
-                    )).rowCount) {
-                        fail('GACHA_RP_ITEM_REQUIRED', '음식 효과가 연결된 아이템은 가챠 RP 보상으로 사용할 수 없습니다.');
-                    }
 
                     items.set(id, item);
                 }

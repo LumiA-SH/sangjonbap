@@ -1,4 +1,4 @@
-import {requireRpItem,validateStockChange} from '../gacha/rules.js';
+import {requireRewardItem,validateStockChange} from '../gacha/rules.js';
 import {fail} from './transaction.js';
 
 // Caller holds the gacha parent and all referenced item locks. Keep reward IDs/history.
@@ -16,8 +16,7 @@ export async function saveGachaStock(client,gachaId,before,rewards) {
         validateStockChange(old.get(row.item_id),row);
         if(row.is_active!==false||!old.has(row.item_id)) {
             const item=(await client.query('select * from public.item where id=$1',[row.item_id])).rows[0];
-            requireRpItem(item);
-            if((await client.query('select 1 from public.food_config where item_id=$1',[row.item_id])).rowCount)fail('GACHA_RP_ITEM_REQUIRED','음식 효과가 있는 아이템은 RP 보상으로 사용할 수 없습니다.');
+            requireRewardItem(item);
         }
         await client.query(`insert into public.gacha_reward(gacha_id,item_id,quantity,weight,is_active,max_stock,remaining_stock)
             values($1,$2,1,1,$3,$4,$5) on conflict(gacha_id,item_id) do update set

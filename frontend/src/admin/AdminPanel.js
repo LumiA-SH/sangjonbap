@@ -18,7 +18,7 @@ import BattleAdminPanel from './BattleAdminPanel';
 import ItemPicker from './ItemPicker';
 import BalancePanel from './BalancePanel';
 import CharacterOperationsPanel from './CharacterOperationsPanel';
-import AreaHubPanel from './AreaHubPanel';
+import AreaHubPanel,{AreaDiscoveryPanel} from './AreaHubPanel';
 import ImageUploadField from './ImageUploadField';
 import AdminReferenceName, {invalidateAdminNames} from './AdminReferenceName';
 import AdminDeleteControl from './AdminDeleteControl';
@@ -669,7 +669,8 @@ export default function AdminPanel({
             return <div className="admin-guide-workspace"><nav className="admin-guide-tabs" aria-label="안내 콘텐츠 종류">{[["world","세계관"],["system","시스템 안내"],["schedule","러닝 일정"]].map(([id,label])=><button type="button" key={id} aria-pressed={kind===`guide-${id}`} onClick={()=>setKind(`guide-${id}`)}>{label}</button>)}</nav><ContentAdminPanel key={kind} kind={kind.slice(6)} onDenied={denied}/></div>;
         }
 
-        if (kind==='area-hub'||kind==='investigation'||(kind==='areas'&&!recordId)) {
+        if(kind==='area-hub')return <AreaDiscoveryPanel onDenied={denied} onManage={id=>onNavigate?onNavigate({menu:'areas',area:String(id),record:null,after:null}):setKind('areas')}/>;
+        if (kind==='investigation'||(kind==='areas'&&recordId!=='new')) {
             return <AreaHubPanel key={deleteRevision} route={route} onNavigate={onNavigate} onDenied={denied}/>;
         }
 

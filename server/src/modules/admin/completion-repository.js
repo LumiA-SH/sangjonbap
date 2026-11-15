@@ -108,7 +108,7 @@ export function createAdminCompletionRepository(pool) {
    }
 
    return (await pool.query(
-       'select id,title,area_id,is_public,is_discovered from public.clue where id>$2 and strpos(lower(title),lower($1))>0 order by id limit 100',
+       'select id,title,area_id,is_public,is_discovered,manually_published from public.clue where id>$2 and strpos(lower(title),lower($1))>0 order by id limit 100',
        [query,after]
    )).rows;
   },
@@ -119,13 +119,16 @@ export function createAdminCompletionRepository(pool) {
   },
 
   saveAdminClue(actor,id,body) {
+   body={...body,area_id:body.area_id||null};
    const fields=['title','content','related_target','area_id','is_public'];
+   if(Object.hasOwn(body,'manually_published')) fields.push('manually_published');
+   if(Object.hasOwn(body,'manually_published')&&typeof body.manually_published!=='boolean') invalid('직접 공개 설정을 확인하세요.');
    const {key,reason:why}=input(body,fields);
 
    if(typeof body.title!=='string'||!body.title.trim()||body.title.length>100||
        typeof body.content!=='string'||body.content.length>10000||
        (body.related_target!==null&&(typeof body.related_target!=='string'||body.related_target.length>200))||
-       !validId(body.area_id)||typeof body.is_public!=='boolean') {
+       (body.area_id!==null&&!validId(body.area_id))||typeof body.is_public!=='boolean') {
     invalid('단서 제목·내용·구역·공개 설정을 확인하세요.');
    }
 
@@ -151,7 +154,7 @@ export function createAdminCompletionRepository(pool) {
     if(before) {
      match(before,body.expectedVersion);
 
-     if(String(before.area_id)!==body.area_id&&
+     if(body.area_id!==null&&String(before.area_id)!==String(body.area_id)&&
          (await c.query(
              'select 1 from public.investigation_result where clue_id=$1 and area_id<>$2 limit 1',
              [id,body.area_id]
@@ -165,12 +168,12 @@ export function createAdminCompletionRepository(pool) {
 
     if(id) {
      await c.query(
-         `update public.clue set ${fields.map((k,i)=>`${k}=$${i+1}`).join(',')} where id=$6`,
+         `update public.clue set ${fields.map((k,i)=>`${k}=$${i+1}`).join(',')} where id=$${values.length+1}`,
          [...values,id]
      );
     } else {
      saved=(await c.query(
-         `insert into public.clue(${fields.join(',')}) values($1,$2,$3,$4,$5) returning id`,
+         `insert into public.clue(${fields.join(',')}) values(${values.map((_,i)=>`$${i+1}`).join(',')}) returning id`,
          values
      )).rows[0].id;
     }

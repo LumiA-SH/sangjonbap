@@ -1,4 +1,5 @@
-import {useEffect, useRef, useState} from 'react';
+import AdminReferenceName from './AdminReferenceName';
+import {Fragment, useEffect, useRef, useState} from 'react';
 import {api} from '../api/client';
 import ItemPicker from './ItemPicker';
 import ImageUploadField from './ImageUploadField';
@@ -125,12 +126,7 @@ function AreaBasicEditor({area, busy, onSave, onDenied}) {
                                onChange={e => change('name', e.target.value)}/>
                     </label>
 
-                    <label>
-                        표시 순서
-                        <input required type="number" min="0" step="1"
-                               disabled={busy} value={draft.sort_order}
-                               onChange={e => change('sort_order', numberValue(e.target.value))}/>
-                    </label>
+
                 </div>
 
                 <label>
@@ -146,6 +142,12 @@ function AreaBasicEditor({area, busy, onSave, onDenied}) {
                                   onUploadingChange={setUploading}/>
 
                 <div className="area-hub-form-grid">
+                    <label>
+                        표시 순서
+                        <input required type="number" min="0" step="1"
+                               disabled={busy} value={draft.sort_order}
+                               onChange={e => change('sort_order', numberValue(e.target.value))}/>
+                    </label>
                     <label>
                         마물 조우율 (%)
                         <input required type="number" min="0" max="100" step=".01"
@@ -188,9 +190,6 @@ function InvestigationEditor({areaId, data, busy, onSave, onDenied, onRemove}) {
 
     const results = data.results || [];
     const clues = data.clues || [];
-    const totalWeight = results
-        .filter(row => row.is_active)
-        .reduce((sum, row) => sum + Number(row.weight || 0), 0);
 
     function startNew() {
         setEditingId('new');
@@ -356,82 +355,22 @@ function InvestigationEditor({areaId, data, busy, onSave, onDenied, onRemove}) {
         );
     }
 
-    return (
-        <AreaSection
-            title="조사 결과·보상"
-            description="구역별 조사 결과, 고유 여부, 연결 단서, 아이템 보상을 한곳에서 관리합니다."
-            count={results.length}
-        >
-            <div className="area-hub-buttons">
-                <button type="button" disabled={busy} onClick={startNew}>
-                    조사 결과 추가
-                </button>
-            </div>
-
-            {editingId === 'new' && renderForm()}
-
-            <div className="area-hub-list">
-                {results.map(row => {
-                    const clue = clues.find(
-                        item => String(item.id) === String(row.clue_id)
-                    );
-
-                    const chance = row.is_active && totalWeight > 0
-                        ? Number(row.weight) / totalWeight * 100
-                        : 0;
-
-                    const editing = editingId === String(row.id);
-
-                    return (
-                        <div className={`area-hub-list-item${editing ? ' is-editing' : ''}`}
-                             key={row.id}>
-                            <div className="area-hub-list-top">
-                                <div className="area-hub-list-info">
-                                    <strong>{row.result_text}</strong>
-
-                                    <small>
-                                        {row.is_unique ? '고유 결과' : '일반 결과'}
-                                        {' · '}
-                                        {row.is_active ? '활성' : '비활성'}
-                                    </small>
-
-                                    <small>
-                                        선택 가중치 {row.weight}
-                                        {' · '}
-                                        선택 비율 {displayPercent(chance)}
-                                    </small>
-
-                                    <small>
-                                        제공 단서: {clue?.title || (row.clue_id ? '연결 단서 확인 필요' : '없음')}
-                                    </small>
-
-                                    <small>
-                                        아이템 보상 {(row.rewards || []).length}종
-                                        {row.discovery ? ' · 최초 발견 완료' : ''}
-                                    </small>
-                                </div>
-
-                                <div className="admin-record-actions">
-                                    <button type="button" disabled={busy}
-                                            onClick={() => editing ? cancel() : startEdit(row)}>
-                                        {editing ? '닫기' : '수정'}
-                                    </button>
-                                    <AdminDeleteControl menu="investigation-results" recordId={String(row.id)} areaId={String(areaId)} disabled={busy} onDenied={onDenied}
-                                        onDeleted={async()=>{if(editing)cancel();await onRemove('results');}}/>
-                                </div>
-                            </div>
-
-                            {editing && renderForm()}
-                        </div>
-                    );
-                })}
-            </div>
-
-            {!results.length && (
-                <p className="area-hub-empty">등록된 조사 결과가 없습니다.</p>
-            )}
-        </AreaSection>
-    );
+    return <AreaSection title="조사 결과" description="일반 결과와 고유 결과를 구분해 관리합니다." count={results.length}>
+        {[false,true].map(unique=><section className="area-result-group" key={String(unique)}><h4>{unique?'고유 결과':'일반 결과'}</h4>
+          <div className="area-result-scroll"><table className="admin-log-table"><thead><tr><th>결과 이름 · 본문</th><th>가중치</th><th>보상 아이템</th><th>발견 여부</th><th>관리</th></tr></thead><tbody>
+          {results.filter(row=>!!row.is_unique===unique).map(row=><Fragment key={row.id}><tr>
+            <td><button type="button" disabled={busy} aria-expanded={editingId===String(row.id)} onClick={()=>editingId===String(row.id)?cancel():startEdit(row)}>{row.result_text || '내용 없음'} {editingId===String(row.id)?'▴':'▾'}</button></td>
+            <td>{row.weight}<small>{row.is_active?'활성':'비활성'}</small></td>
+            <td>{(row.rewards||[]).map((reward,i)=><div key={i}><AdminReferenceName itemId={reward.item_id} onDenied={onDenied}/> ×{reward.quantity}</div>)}{!row.rewards?.length&&'없음'}</td>
+            <td>{unique?(row.discovery?'발견':'미발견'):'—'}</td>
+            <td><AdminDeleteControl menu="investigation-results" recordId={String(row.id)} areaId={String(areaId)} disabled={busy} onDenied={onDenied} onDeleted={async()=>{if(editingId===String(row.id))cancel();await onRemove('results');}}/></td>
+          </tr>{editingId===String(row.id)&&<tr><td colSpan="5">{renderForm()}</td></tr>}</Fragment>)}
+          {!results.some(row=>!!row.is_unique===unique)&&<tr><td colSpan="5">등록된 {unique?'고유':'일반'} 결과가 없습니다.</td></tr>}
+          </tbody></table></div>
+          <button type="button" disabled={busy} onClick={()=>{startNew();setDraft({...emptyResult(),is_unique:unique});}}>{unique?'고유':'일반'} 결과 추가</button>
+          {editingId==='new'&&draft?.is_unique===unique&&renderForm()}
+        </section>)}
+    </AreaSection>;
 }
 
 function MonsterEditor({areaId, data, busy, onSave}) {
@@ -653,7 +592,7 @@ function RecipeEditor({areaId, data, recipes, busy, onSave}) {
                         );
 
                         return (
-                            <fieldset className="area-hub-fieldset" key={`${index}-${row.recipe_id}`}>
+                            <fieldset className="area-hub-fieldset area-recipe-row" key={`${index}-${row.recipe_id}`}>
                                 <legend>
                                     {recipe?.name || row.recipe_name || `레시피 후보 ${index + 1}`}
                                     {row.discovered ? ' · 최초 발견 완료' : ''}
@@ -782,8 +721,9 @@ function ClueEditor({areaId, data, busy, onSave, onDenied, onRemove}) {
                 title: response.record.title,
                 content: response.record.content,
                 related_target: response.record.related_target,
-                area_id: String(areaId),
-                is_public: response.record.is_public
+                area_id: response.record.area_id,
+                is_public: response.record.is_public,
+                manually_published: !!response.record.manually_published
             });
             setReason('');
         } catch (e) {
@@ -820,7 +760,6 @@ function ClueEditor({areaId, data, busy, onSave, onDenied, onRemove}) {
                 method: loaded ? 'PATCH' : 'POST',
                 body: {
                     ...draft,
-                    area_id: String(areaId),
                     reason,
                     ...(loaded ? {expectedVersion: loaded.version} : {}),
                     requestKey: crypto.randomUUID()
@@ -863,9 +802,14 @@ function ClueEditor({areaId, data, busy, onSave, onDenied, onRemove}) {
                 <label className="area-hub-checkbox">
                     <input type="checkbox" checked={draft.is_public} disabled={busy}
                            onChange={e => change('is_public', e.target.checked)}/>
-                    발견 후 공개 허용
+                    아카이브 공개 허용
                 </label>
 
+                <label className="area-hub-checkbox">
+                    <input type="checkbox" checked={!!draft.manually_published} disabled={busy}
+                           onChange={e=>change('manually_published',e.target.checked)}/>
+                    운영진 직접 공개 (발견 기록 유지)
+                </label>
                 <label>
                     수정 사유
                     <input required maxLength={500} disabled={busy}
@@ -922,7 +866,7 @@ function ClueEditor({areaId, data, busy, onSave, onDenied, onRemove}) {
                                         {clue.is_discovered ? '발견 완료' : '미발견'}
                                         {' · '}
                                         {typeof clue.is_public === 'boolean'
-                                            ? clue.is_public ? '발견 후 공개' : '비공개'
+                                            ? !clue.is_public ? '비공개' : clue.manually_published ? '운영진 직접 공개' : '발견 후 공개'
                                             : '공개 설정은 수정에서 확인'}
                                     </small>
 
@@ -966,7 +910,7 @@ function ClueEditor({areaId, data, busy, onSave, onDenied, onRemove}) {
 
 export default function AreaHubPanel({route, onNavigate, onDenied}) {
     const [localAreaId, setLocalAreaId] = useState('');
-    const areaId = route?.area || localAreaId;
+    const areaId = route?.area || (route?.record !== 'new' ? route?.record : null) || localAreaId;
 
     const [areas, setAreas] = useState([]);
     const [recipes, setRecipes] = useState([]);
@@ -977,7 +921,8 @@ export default function AreaHubPanel({route, onNavigate, onDenied}) {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
     const [message, setMessage] = useState('');
-    const [section, setSection] = useState('results');
+    const [section, setSection] = useState('base');
+    useEffect(()=>setSection('base'),[areaId]);
     const [areaSearch, setAreaSearch] = useState('');
     const [revision, setRevision] = useState({
         base: 0,
@@ -1148,7 +1093,7 @@ export default function AreaHubPanel({route, onNavigate, onDenied}) {
         <section className="area-hub admin-record-workspace"><div className="admin-list-pane">
             <header className="area-hub-heading">
                 <div>
-                    <h2>구역 조사 관리</h2>
+                    <h2>구역 관리</h2>
                     <p>한 구역의 조사 결과, 마물, 레시피, 단서를 이 페이지에서 관리합니다.</p>
                 </div>
 
@@ -1220,7 +1165,7 @@ export default function AreaHubPanel({route, onNavigate, onDenied}) {
                         </div>
                     </div>
 
-                    <nav className="area-hub-buttons" aria-label="구역 관리 항목">{[["base","구역 설정"],["results","조사 결과·보상"],["monsters","마물 배치"],["recipes","레시피 발견"],["clues","단서 공개"]].map(([id,label])=><button type="button" key={id} disabled={busy} aria-pressed={section===id} onClick={()=>{setSection(id);setError('');setMessage('');}}>{label}</button>)}</nav>
+                    <nav className="area-hub-buttons" aria-label="구역 관리 항목">{[["base","기본 정보"],["results","조사 결과"],["monsters","마물 배치"],["recipes","레시피 발견"],["clues","단서 공개"]].map(([id,label])=><button type="button" key={id} disabled={busy} aria-pressed={section===id} onClick={()=>{setSection(id);setError('');setMessage('');}}>{label}</button>)}</nav>
                     <div className="area-hub-sections">
                         {section==='base' && (<AreaBasicEditor
                             key={`${areaId}:${revision.base}`}
@@ -1257,4 +1202,32 @@ export default function AreaHubPanel({route, onNavigate, onDenied}) {
         <div className="area-hub-feedback" aria-live="polite">{error && <p className="area-hub-error" role="alert">{error}</p>}{message && <p className="area-hub-message" role="status">{message}</p>}</div>
         </div></section>
     );
+}
+export function AreaDiscoveryPanel({onDenied,onManage}) {
+ const [rows,setRows]=useState([]),[expanded,setExpanded]=useState(null),[busy,setBusy]=useState(true),[error,setError]=useState('');
+ useEffect(()=>{let live=true;(async()=>{
+  try {
+   const areas=await loadAll('areas'), result=[];
+   for(const area of areas){
+    if(!live)return;
+    const [data,monsters]=await Promise.all([api('/admin/areas/'+area.id+'/results'),api('/admin/areas/'+area.id+'/monsters')]);
+    result.push({area,groups:[
+     {title:'고유 조사 결과',items:data.results.filter(r=>r.is_unique&&r.is_active).map(r=>({id:r.id,name:r.result_text,found:!!r.discovery}))},
+     {title:'마물',items:monsters.assignments.filter(r=>r.is_active).map(r=>({id:r.monster_id,name:r.name,found:r.discovered}))},
+     {title:'레시피',items:data.areaRecipes.filter(r=>r.is_active!==false).map(r=>({id:r.recipe_id,name:r.recipe_name,found:!!r.discovered}))}
+    ]});
+   }
+   if(live)setRows(result);
+  }catch(e){if(live){setError(e.message);if([401,403].includes(e.status))onDenied?.(e.message);}}
+  finally{if(live)setBusy(false);}
+ })();return()=>{live=false;};},[onDenied]);
+ const count=items=>items.filter(x=>x.found).length+' / '+items.length;
+ return <section className="area-discovery-page"><h2>조사 현황</h2><p>구역별 발견 현황과 미발견 대상을 확인합니다.</p>
+ {busy&&<p role="status">조사 현황을 불러오는 중…</p>}{error&&<p role="alert">{error}</p>}
+ <div className="area-discovery-scroll"><table className="admin-log-table"><thead><tr><th>구역</th><th>현재 조사율</th><th>고유 결과</th><th>마물</th><th>레시피</th><th>합계</th></tr></thead><tbody>
+ {rows.map(({area,groups})=><Fragment key={area.id}><tr><td><button type="button" aria-expanded={expanded===area.id} aria-label={area.name+' 발견 대상 펼치기'} onClick={()=>setExpanded(expanded===area.id?null:area.id)}>{expanded===area.id?'−':'+'}</button> {area.name}<small> ID {area.id}</small></td><td>{Number(area.calculated_investigation_rate||0)}%</td>{groups.map(g=><td key={g.title}>{count(g.items)}</td>)}<td>{count(groups.flatMap(g=>g.items))}</td></tr>
+ {expanded===area.id&&<tr><td colSpan="6"><div className="area-discovery-details">{groups.map(g=><section key={g.title}><h3>{g.title}</h3><table><tbody>{g.items.map(item=><tr key={item.id}><td>{item.name}</td><td>{item.found===undefined?'확인 필요':item.found?'발견':'미발견'}</td></tr>)}{!g.items.length&&<tr><td>등록된 항목 없음</td></tr>}<tr><th>합계</th><td>{count(g.items)}</td></tr></tbody></table></section>)}</div><button type="button" onClick={()=>onManage(area.id)}>이 구역 관리</button></td></tr>}</Fragment>)}
+ {!busy&&!error&&!rows.length&&<tr><td colSpan="6">등록된 구역이 없습니다.</td></tr>}
+ {!!rows.length&&<tr><th>구역별 합계</th><td>—</td>{[0,1,2].map(i=><td key={i}>{count(rows.flatMap(r=>r.groups[i].items))}</td>)}<td>{count(rows.flatMap(r=>r.groups.flatMap(g=>g.items)))}</td></tr>}
+ </tbody></table></div></section>;
 }

@@ -7,8 +7,9 @@ const empty = {
  title: '',
  content: '',
  related_target: null,
- area_id: '',
- is_public: true
+ area_id: null,
+ is_public: true,
+ manually_published: false
 };
 
 export default function ClueAdminPanel({onDenied, recordId, onOpen}) {
@@ -154,7 +155,7 @@ export default function ClueAdminPanel({onDenied, recordId, onOpen}) {
  return (
      <section className="admin-record-workspace"><div className="admin-list-pane">
       <h2>단서 등록·수정</h2>
-      <p>미발견 단서는 공개 설정과 관계없이 숨깁니다. 발견자·발견 시각·조사율은 이 화면에서 변경하지 않습니다.</p>
+      <p>구역 없이 단서를 등록할 수 있습니다. 운영진 직접 공개는 발견자·발견 시각·조사율을 변경하지 않습니다.</p>
 
       <form onSubmit={e => {
        e.preventDefault();
@@ -181,7 +182,7 @@ export default function ClueAdminPanel({onDenied, recordId, onOpen}) {
              <small>
               {r.is_discovered ? '발견' : '미발견'}
               {' · '}
-              {r.is_public ? '공개 허용' : '비공개'}
+              {!r.is_public ? '비공개' : r.manually_published ? '운영진 직접 공개' : r.is_discovered ? '아카이브 공개' : '발견 대기'}
              </small>
             </div>
 
@@ -237,11 +238,11 @@ export default function ClueAdminPanel({onDenied, recordId, onOpen}) {
            </label>
 
            <label>
-            관련 구역
-            <select required disabled={busy}
+            관련 구역 (선택)
+            <select disabled={busy}
                     value={draft.area_id || ''}
-                    onChange={e => setDraft({...draft, area_id: e.target.value})}>
-             <option value="">선택</option>
+                    onChange={e => setDraft({...draft, area_id: e.target.value || null})}>
+             <option value="">구역 지정 안 함</option>
              {areas.map(a => (
                  <option key={a.id} value={a.id}>{a.name}</option>
              ))}
@@ -249,7 +250,7 @@ export default function ClueAdminPanel({onDenied, recordId, onOpen}) {
            </label>
 
            </div></section><section className="admin-editor-section"><h4>공개 · 발견 상태</h4><label>
-            발견 후 공개 허용
+            아카이브 공개 허용
             <input type="checkbox" disabled={busy}
                    checked={draft.is_public}
                    onChange={e => setDraft({
@@ -258,6 +259,13 @@ export default function ClueAdminPanel({onDenied, recordId, onOpen}) {
                    })}/>
            </label>
 
+           <label>
+            운영진 직접 공개 (발견 전에도 아카이브 표시)
+            <input type="checkbox" disabled={busy} checked={!!draft.manually_published}
+                   onChange={e=>setDraft({...draft,manually_published:e.target.checked})}/>
+           </label>
+           <p>아카이브 표시: {!draft.is_public ? '비공개' : draft.manually_published || loaded?.record.is_discovered ? '공개' : '발견 대기'}</p>
+           {!loaded && <p>발견 여부: 미발견 (신규 단서)</p>}
            {loaded && (
                <p>
                 발견 여부: {loaded.record.is_discovered ? '발견' : '미발견'} ·

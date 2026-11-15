@@ -69,6 +69,7 @@ function RecordDetail({record, kind}) {
             <span>관련 캐릭터</span>
             <strong>{record.character_name || '이름 미기록'}</strong>
           </div>
+          {kind === 'clues' && <div><span>발견 상태</span><strong>{record.is_discovered ? '발견 완료' : record.manually_published ? '운영진 공개 · 미발견' : '미발견'}</strong></div>}
           {record.area_name && (
               <div>
                 <span>조사 지역</span>
@@ -125,7 +126,15 @@ export default function RecordsPanel({admin = false, onDenied, active = true}) {
   const [error, setError] = useState('');
   const [selectedId, setSelectedId] = useState(null);
   const request = useRef(null);
-  const path = admin ? '/admin/action-logs' : `/records/${kind}`;
+  const [category,setCategory]=useState('');
+  const [query,setQuery]=useState('');
+  const [search,setSearch]=useState('');
+  const [categories,setCategories]=useState([]);
+  const filters=new URLSearchParams();
+  if(category)filters.set('category',category);
+  if(search)filters.set('q',search);
+  const path = admin ? '/admin/action-logs'+(filters.toString()?'?'+filters:'') : `/records/${kind}`;
+  const total=categories.reduce((sum,row)=>sum+Number(row.count),0);
   const selectedSection = sections.find(item => item.id === kind);
   const selectedRecord = records.find(record => String(record.id) === selectedId) || records[0] || null;
 
@@ -138,10 +147,11 @@ export default function RecordsPanel({admin = false, onDenied, active = true}) {
     setNext(null);
 
     try {
-      const data = await api(path + (before ? `?before=${encodeURIComponent(before)}` : ''));
+      const data = await api(path + (before ? `${path.includes('?')?'&':'?'}before=${encodeURIComponent(before)}` : ''));
       if (sequence !== request.current) return;
 
       setRecords(data.records);
+      if(admin)setCategories(data.categories||[]);
       setNext(data.nextBefore);
     } catch (e) {
       if (sequence !== request.current) return;
@@ -174,7 +184,15 @@ export default function RecordsPanel({admin = false, onDenied, active = true}) {
         <section className="admin-operations-page" aria-label="운영진 전체 행동 로그">
           <h2>운영진 전체 행동 로그</h2>
           <p>관리자 변경을 포함한 전체 행동 기록 · 한 번에 30건</p>
-          <button disabled={busy} onClick={() => load()}>기록 새로고침</button>
+          <nav className="admin-log-tabs" role="tablist" aria-label="행동 로그 분류">
+            {[{category:'',count:total},...categories].map(row=><button type="button" role="tab" key={row.category} aria-selected={category===row.category} disabled={busy} onClick={()=>setCategory(row.category)}>{row.category?displayLabel(row.category):'전체'} <span>{row.count}</span></button>)}
+          </nav>
+          <form className="admin-log-search" onSubmit={e=>{e.preventDefault();if(search===query.trim())load();else setSearch(query.trim());}}>
+            <label>로그 검색<input value={query} maxLength={100} onChange={e=>setQuery(e.target.value)} placeholder="캐릭터명·행동·결과·시간 검색"/></label>
+            <button disabled={busy}>검색</button>
+            <button type="button" disabled={busy} onClick={()=>load()}>기록 새로고침</button>
+          </form>
+          <p>{category?displayLabel(category):'전체'} 로그 · {category?categories.find(row=>row.category===category)?.count||0:total}건 · 현재 페이지 {records.length}건</p>
           {busy && <p role="status">불러오는 중…</p>}
           {error && <p role="alert">{error}</p>}
           {!busy && !error && records.length === 0 && <p>공개되거나 기록된 항목이 없습니다.</p>}
@@ -186,12 +204,12 @@ export default function RecordsPanel({admin = false, onDenied, active = true}) {
               <tbody>
               {records.map(record => (
                   <tr key={record.id}>
-                    <td>{record.created_at || '시각 미기록'}</td>
-                    <td>{record.character_name || '이름 미기록'}<small>ID {record.character_id || '-'}</small></td>
+                    <td>{recordDate(record.created_at)}</td>
+                    <td>{record.character_name || record.admin_name || (record.admin_user_id ? '운영진' : '이름 미기록')}<small>ID {record.character_id || record.admin_user_id || '-'}</small></td>
                     <td>{actionLabel(record)}<small>ID {record.id}</small></td>
                     <td>
                       {actionSummary(record)}
-                      {record.target_type && <p>대상: {record.target_type} {record.target_id}</p>}
+                      {record.target_type && <p>대상: {displayLabel(record.target_type)} {record.target_id}</p>}
                       {record.detail && <details><summary>상세 JSON</summary><pre>{JSON.stringify(record.detail, null, 2)}</pre></details>}
                     </td>
                   </tr>

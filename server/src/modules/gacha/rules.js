@@ -19,9 +19,9 @@ export function selectReward(rewards, random = randomUnit) {
     const selected=chooseResult(candidates.map(row=>({...row,weight:row.remaining_stock})),random);
     return candidates.find(row=>row.id===selected.id);
 }
-export function requireRpItem(item) {
-    if(!item?.is_active||item.transferable!==true||item.usable!==false||item.battle_usable!==false||item.effect_type!=null||item.effect_value!=null||item.use_target!=='NONE'||item.category==='FOOD')
-        throw new AppError(409,'GACHA_RP_ITEM_REQUIRED','가챠는 양도 가능하며 사용·전투·음식 효과가 없는 RP 아이템만 등록할 수 있습니다.');
+export function requireRewardItem(item) {
+    if(!item?.is_active || !['MATERIAL','CONSUMABLE','FOOD','ETC'].includes(item.category))
+        throw new AppError(409,'GACHA_ITEM_UNAVAILABLE','활성 상태의 일반 아이템·음식만 가챠 보상으로 등록할 수 있습니다.');
 }
 export function validateStockChange(before,after) {
     if(!Number.isInteger(after.max_stock)||after.max_stock<1||after.max_stock>2147483647||!Number.isInteger(after.remaining_stock)||after.remaining_stock<0||after.remaining_stock>after.max_stock)

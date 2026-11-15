@@ -70,6 +70,19 @@ await t.test(name, async () => {
                 await pool.query('update public.game_character set status=$1 where id=$2', [status, characters[0]]); await rejects(draw(), code);
             }
         });
+        await scenario('food-backed and consumable items are eligible rewards without applying effects', async()=>{
+            try {
+                await pool.query("update public.item set category='FOOD' where id=any($1::bigint[])",[items]);
+                await pool.query('insert into public.food_config(item_id,blood_recovery) select unnest($1::bigint[]),10',[items]);
+                const result=await draw();assert.equal(result.reward.quantity,1);
+                await pool.query('delete from public.food_config where item_id=any($1::bigint[])',[items]);
+                await pool.query("update public.item set category='CONSUMABLE' where id=any($1::bigint[])",[items]);
+                assert.equal((await draw()).reward.quantity,1);
+            }finally{
+                await pool.query('delete from public.food_config where item_id=any($1::bigint[])',[items]);
+                await pool.query("update public.item set category='ETC' where id=any($1::bigint[])",[items]);
+            }
+        });
         await scenario('inactive, future, expired and interior periods use DB clock', async () => {
             await pool.query('update public.gacha set is_active=false where id=$1', [gachas[0]]); await rejects(draw(), 'GACHA_NOT_FOUND');
             assert.equal((await repo.getGachaCatalog(users[0])).gachas.some(g => g.id === gachas[0]), false);
@@ -79,7 +92,7 @@ await t.test(name, async () => {
         });
         await scenario('unselected inactive reward rejects before any charge; empty rewards reject', async () => {
             await pool.query('update public.item set is_active=false where id=$1', [items[0]]);
-            const before = await snapshot(); await rejects(draw(), 'GACHA_RP_ITEM_REQUIRED'); assert.deepEqual(await snapshot(), before);
+            const before = await snapshot(); await rejects(draw(), 'GACHA_ITEM_UNAVAILABLE'); assert.deepEqual(await snapshot(), before);
             const c = await pool.connect(); await c.query('begin');
             try {
                 await c.query('delete from public.gacha_reward where gacha_id=$1', [gachas[0]]);
