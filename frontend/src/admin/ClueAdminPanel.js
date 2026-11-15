@@ -211,7 +211,7 @@ export default function ClueAdminPanel({onDenied, recordId, onOpen}) {
 
       </div><div className="admin-detail-pane">
       {draft && (
-          <form className="admin-form" onSubmit={save}>
+          <form className="admin-form admin-structured-editor" onSubmit={save}><header className="admin-editor-heading"><small>{loaded?'EDIT / CLUE':'CREATE / NEW'}</small><h3>{draft.title||'새 단서'}</h3></header><section className="admin-editor-section"><h4>단서 기본 정보</h4><div className="admin-editor-grid">
            <label>
             제목
             <input required maxLength={100} disabled={busy}
@@ -219,7 +219,7 @@ export default function ClueAdminPanel({onDenied, recordId, onOpen}) {
                    onChange={e => setDraft({...draft, title: e.target.value})}/>
            </label>
 
-           <label>
+           <label className="admin-field-wide">
             내용
             <textarea maxLength={10000} disabled={busy}
                       value={draft.content}
@@ -248,7 +248,7 @@ export default function ClueAdminPanel({onDenied, recordId, onOpen}) {
             </select>
            </label>
 
-           <label>
+           </div></section><section className="admin-editor-section"><h4>공개 · 발견 상태</h4><label>
             발견 후 공개 허용
             <input type="checkbox" disabled={busy}
                    checked={draft.is_public}
@@ -273,7 +273,7 @@ export default function ClueAdminPanel({onDenied, recordId, onOpen}) {
                    onChange={e => setReason(e.target.value)}/>
            </label>
 
-           <details className="admin-wide">
+           </section><details className="admin-wide">
             <summary>변경 전후 비교</summary>
             <pre>{JSON.stringify({
              before: loaded?.record || null,
@@ -281,7 +281,7 @@ export default function ClueAdminPanel({onDenied, recordId, onOpen}) {
             }, null, 2)}</pre>
            </details>
 
-           <button disabled={busy}>단서 저장</button>
+           <footer className="admin-editor-footer"><button disabled={busy}>단서 저장</button></footer>
           </form>
       )}
 

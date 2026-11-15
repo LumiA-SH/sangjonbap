@@ -84,7 +84,7 @@ const effectHelp={
     SMOKE:'다음 PC 도주 판정에 설정 수치만큼 %p 추가'
 };
 
-function Editor({kind,record,seed,onSaved,onDenied}) {
+export function Editor({kind,record,seed,onSaved,onDenied,deleteControl}) {
     const fields=kind==='items'?emptyItem:emptyProduct;
 
     const [draft,setDraft]=useState(()=>Object.fromEntries(
@@ -342,15 +342,20 @@ function Editor({kind,record,seed,onSaved,onDenied}) {
             );
         }
 
-        return <label key={key}>{fieldLabels[key]}{input}</label>;
+        return <label key={key} className={key==='description'?'admin-field-wide':typeof fields[key]==='boolean'?'admin-field-check':undefined}>{fieldLabels[key]}{input}</label>;
     }
 
     return (
-        <form className="admin-form" onSubmit={submit}>
-            <h3>{record?`${record.name||'등록 정보'} 상세/수정`:'새로 등록'}</h3>
-
-            {Object.keys(fields).map(renderField)}
-
+        <form className="admin-form admin-structured-editor" onSubmit={submit}>
+<header className="admin-editor-heading admin-editor-heading-actions"><div><small>{record?'EDIT / '+record.id:'CREATE / NEW'}</small><h3>{record?record.name||'등록 정보':'새로 등록'}</h3></div>{deleteControl}</header>
+{(kind==='items'?[
+ ['아이템 기본 정보',['name','category','description','image_url']],
+ ['사용 · 이동 설정',['is_active','transferable','usable','battle_usable']],
+ ['아이템 효과',['effect_type','blood_pack_kind','effect_value','use_target']]
+]:[
+ ['판매 아이템',['item_id']],['가격 · 노출 설정',['price','sort_order','is_active']],
+ ['구매 · 재고 제한',['purchase_limit','stock_limit','daily_limit']]
+]).map(([title,keys])=><section className="admin-editor-section" key={title}><h4>{title}</h4><div className="admin-editor-grid">{keys.map(renderField)}</div></section>)}
             {record&&
                 <details className="admin-wide">
                     <summary>변경 전후 확인</summary>
@@ -358,11 +363,11 @@ function Editor({kind,record,seed,onSaved,onDenied}) {
                 </details>
             }
 
-            <button disabled={busy||imageUploading}>
+            <footer className="admin-editor-footer"><button disabled={busy||imageUploading}>
                 {imageUploading?'이미지 업로드 중…':busy?'저장 중…':'저장'}
             </button>
 
-            <p role="status">{message}</p>
+            <p role="status">{message}</p></footer>
         </form>
     );
 }
@@ -762,7 +767,7 @@ export default function AdminPanel({
                 <ul className="admin-records">
                     {visibleRows.map(row=>(
                         <li key={row.id}>
-                            <div className="admin-record-summary">
+                            <button type="button" className="admin-record-summary admin-record-open" disabled={busy} aria-current={String(selected?.id)===String(row.id)?'true':undefined} onClick={()=>select(row)}>
                                 <strong>
                                     {kind==='items'
                                         ? row.name
@@ -781,27 +786,10 @@ export default function AdminPanel({
                                         : `${row.category||'아이템'} · ${row.is_active?'활성':'비활성'}`}
                                 </small>
 
-                                <details>
-                                    <summary>관리 번호</summary>
-                                    <span>등록 ID {row.id}</span>
-                                </details>
-                            </div>
+                                <small>등록 ID {row.id}</small>
+                            </button>
 
-                            <div className="admin-record-actions">
-                                <button disabled={busy} onClick={()=>select(row)}>상세/수정</button>
-                                <AdminDeleteControl menu={kind} recordId={String(row.id)} disabled={busy} onDenied={denied}
-                                    onDeleted={async()=>{
-                                        invalidateAdminNames();
-                                        if(String(selected?.id)===String(row.id)||String(recordId)===String(row.id)){
-                                            setSelected(null);
-                                            setEditorKey(value=>value+1);
-                                            onNavigate?.({record:null});
-                                        }
-                                        setDeleteRevision(value=>value+1);
-                                        await load(kind,route?.after);
-                                        setMessage('삭제 완료');
-                                    }}/>
-                            </div>
+
                         </li>
                     ))}
                 </ul>
@@ -831,6 +819,7 @@ export default function AdminPanel({
                         seed={kind==='products'?productSeed:null}
                         onDenied={denied}
                         onSaved={handleSaved}
+                        deleteControl={selected&&<AdminDeleteControl menu={kind} recordId={String(selected.id)} disabled={busy} onDenied={denied} onDeleted={async()=>{invalidateAdminNames();setSelected(null);setEditorKey(value=>value+1);onNavigate?.({record:null});setDeleteRevision(value=>value+1);await load(kind,route?.after);setMessage('삭제 완료');}}/>}
                     />
                 }
                 {!selected&&recordId!=='new'&&<p className="admin-empty-detail">목록에서 항목을 선택하거나 새로 등록하세요.</p>}

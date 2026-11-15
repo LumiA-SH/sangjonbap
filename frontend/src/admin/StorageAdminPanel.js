@@ -92,7 +92,7 @@ export default function StorageAdminPanel({onDenied}) {
       </div><div className="admin-detail-pane">
       {!selected && <p className="admin-empty-detail">목록에서 재고를 수정할 아이템을 선택하세요.</p>}
       {selected && (
-          <form className="admin-form" onSubmit={save}>
+          <form className="admin-form admin-structured-editor" onSubmit={save}><header className="admin-editor-heading"><small>EDIT / STORAGE</small><h3>{selected.name}</h3></header><section className="admin-editor-section"><h4>재고 조정</h4>
            <p>{selected.name}: 변경 전 {selected.quantity} → 변경 후 {quantity}</p>
 
            <label>
@@ -105,9 +105,9 @@ export default function StorageAdminPanel({onDenied}) {
             <input required maxLength={500} value={reason} disabled={busy} onChange={e => setReason(e.target.value)}/>
            </label>
 
-           <button disabled={busy || !Number.isInteger(quantity) || quantity < 0 || quantity > 2147483647 || !reason.trim()}>재고 저장</button>
+           </section><footer className="admin-editor-footer"><button disabled={busy || !Number.isInteger(quantity) || quantity < 0 || quantity > 2147483647 || !reason.trim()}>재고 저장</button>
            <button type="button" disabled={busy} onClick={() => setSelected(null)}>취소</button>
-          </form>
+          </footer></form>
       )}
 
       <p>조회 이후 입출고가 발생하면 저장을 거부합니다. 다시 검색해 현재 수량을 확인하세요.</p>

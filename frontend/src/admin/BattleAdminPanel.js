@@ -375,8 +375,8 @@ export default function BattleAdminPanel({onDenied, recordId, onOpen}) {
 
           </div><div className="admin-detail-pane">
           {(!onOpen || recordId === 'new' || id) && (
-              <form className="admin-form" onSubmit={saveMonster}>
-                <h3>{id ? `마물 ${id} 수정` : '신규 마물'}</h3>
+              <form className="admin-form admin-structured-editor" onSubmit={saveMonster}>
+                <header className="admin-editor-heading"><small>{id?'EDIT / '+id:'CREATE / NEW'}</small><h3>{draft.name||'신규 마물'}</h3></header><section className="admin-editor-section"><h4>마물 기본 정보 · 능력치</h4><div className="admin-editor-grid">
 
                 {['name', 'description'].map(k => (
                     <label key={k}>
@@ -410,7 +410,7 @@ export default function BattleAdminPanel({onDenied, recordId, onOpen}) {
                          onChange={e => change('is_active', e.target.checked)}/>
                 </label>
 
-                <h3>출현 지역</h3>
+                </div></section><section className="admin-editor-section"><h4>출현 지역</h4>
 
                 {draft.areas.map((a, i) => (
                     <fieldset key={i}>
@@ -445,7 +445,7 @@ export default function BattleAdminPanel({onDenied, recordId, onOpen}) {
                   지역 추가
                 </button>
 
-                <h3>마물 행동</h3>
+                </section><section className="admin-editor-section"><h4>마물 행동</h4>
 
                 {draft.actions.map((a, i) => (
                     <fieldset key={i}>
@@ -492,7 +492,7 @@ export default function BattleAdminPanel({onDenied, recordId, onOpen}) {
 
                 <p>활성 확률 합계: {actionProbability}%</p>
 
-                <h3>마물 보상</h3>
+                </section><section className="admin-editor-section"><h4>마물 보상</h4>
                 <p>기본 식재료는 1개 확정 지급합니다. 추가 식재료는 확률 합계 100% 이내에서 최대 1개만 지급하며, 일반 아이템은 별도로 추첨합니다.</p>
 
                 {draft.drops.map((d, i) => (
@@ -554,12 +554,12 @@ export default function BattleAdminPanel({onDenied, recordId, onOpen}) {
 
                 <p>추가 식재료 확률 합계: {bonusProbability}% (최대 100%)</p>
 
-                <details className="admin-wide">
+                </section><details className="admin-wide">
                   <summary>변경 전후 비교</summary>
                   <pre>{JSON.stringify({before: original, after: draft}, null, 2)}</pre>
                 </details>
 
-                <button disabled={busy || imageUploading}>마물 저장</button>
+                <footer className="admin-editor-footer"><button disabled={busy || imageUploading}>마물 저장</button></footer>
               </form>
           )}
           {onOpen&&!id&&recordId!=='new'&&<p className="admin-empty-detail">목록에서 마물을 선택하세요.</p>}

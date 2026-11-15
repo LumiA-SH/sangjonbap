@@ -1,3 +1,4 @@
+import {Editor} from '../admin/AdminPanel';
 import {MasterEditor} from '../admin/MasterPanel';
 import OperatingPolicyPanel from '../admin/OperatingPolicyPanel';
 import StorageAdminPanel from '../admin/StorageAdminPanel';
@@ -92,4 +93,15 @@ test('food detail name is first and save preserves linked item and RP',async()=>
  await act(async()=>Simulate.change(first,{target:{value:'수정 음식'}}));await act(async()=>Simulate.submit(div.querySelector('form')));
  const saved=api.mock.calls.find(c=>c[1]?.method==='PATCH');expect(saved[0]).toBe('/admin/foods/7');
  expect(saved[1].body).toEqual(expect.objectContaining({name:'수정 음식',rp_effect_text:'기존 문구',rp_effect_texts:['첫 문구']}));expect(saved[1].body).not.toHaveProperty('item_id');
+});
+
+test('item detail sections preserve editing and keep deletion in the heading',async()=>{
+ const record={id:'71',name:'긴 이름 아이템',category:'MATERIAL'};api.mockResolvedValue({record});
+ await act(async()=>root.render(<Editor kind="items" record={record} onSaved={jest.fn()} onDenied={jest.fn()} deleteControl={<button type="button">삭제</button>}/>));
+ expect([...div.querySelectorAll('.admin-editor-section h4')].map(x=>x.textContent)).toEqual(['아이템 기본 정보','사용 · 이동 설정','아이템 효과']);
+ expect(div.querySelector('.admin-editor-heading button').textContent).toBe('삭제');
+ const name=div.querySelector('.admin-editor-section input');expect(name.value).toBe('긴 이름 아이템');
+ await act(async()=>Simulate.change(name,{target:{value:'변경 아이템'}}));await act(async()=>Simulate.submit(div.querySelector('form')));
+ expect(api).toHaveBeenCalledWith('/admin/items/71',expect.objectContaining({method:'PATCH',body:expect.objectContaining({name:'변경 아이템',category:'MATERIAL'})}));
+ expect(div.querySelector('.admin-editor-footer [role=status]')).not.toBeNull();
 });

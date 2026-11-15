@@ -157,3 +157,14 @@
 .admin-panel .admin-editor-footer > p {flex-basis:100%;margin:0;}
 .admin-panel .admin-editor-footer > p:empty {display:none;}
 @media(max-width:650px){.admin-panel .admin-editor-grid{grid-template-columns:minmax(0,1fr);}.admin-panel .admin-editor-section,.admin-panel .admin-structured-editor .admin-editor-heading,.admin-panel .admin-editor-footer{padding:16px;}.admin-panel .admin-structured-editor > fieldset,.admin-panel .admin-structured-editor > details{margin:14px 16px;}}
+
+.admin-panel .admin-list-pane .admin-records > li {display:block;padding:0;min-height:0;height:auto;}
+.admin-panel .admin-list-pane .admin-record-open {display:block;position:relative;width:100%;min-width:0;margin:0;padding:14px 30px 14px 16px;text-align:left;background:transparent;color:var(--admin-text,#252b33);border:0;border-radius:0;white-space:normal;}
+.admin-panel .admin-list-pane .admin-record-open strong {display:block;width:100%;font-size:13px;line-height:1.6;white-space:normal;word-break:keep-all;overflow-wrap:anywhere;}
+.admin-panel .admin-list-pane .admin-record-open small {display:block;margin-top:5px;font-size:11px;line-height:1.5;color:var(--admin-muted);white-space:normal;}
+.admin-panel .admin-list-pane .admin-record-open::after {content:'›';position:absolute;right:12px;top:18px;color:#999;}
+.admin-panel .admin-list-pane .admin-record-open:hover,.admin-panel .admin-list-pane .admin-record-open[aria-current] {background:#faf0f1;}
+.admin-panel .admin-list-pane .admin-record-open:focus-visible {outline:2px solid var(--admin-red);outline-offset:-2px;}
+.admin-panel .admin-editor-heading-actions {display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.admin-panel .admin-editor-heading-actions > div {min-width:0;}
+.admin-panel .admin-editor-heading-actions h3 {overflow-wrap:anywhere;}

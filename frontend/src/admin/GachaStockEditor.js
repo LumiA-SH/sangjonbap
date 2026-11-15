@@ -109,8 +109,8 @@ export default function GachaStockEditor({record, onSaved, onDenied, onBusy}) {
   }
 
   return (
-      <form className="admin-form" onSubmit={save}>
-        <h3>{record ? `${draft.name} 수정` : '가챠 등록'}</h3>
+      <form className="admin-form admin-structured-editor" onSubmit={save}>
+        <header className="admin-editor-heading"><small>{record?'EDIT / '+record.id:'CREATE / NEW'}</small><h3>{draft.name||'가챠 등록'}</h3></header><section className="admin-editor-section"><h4>가챠 기본 정보 · 운영 기간</h4>
         <p>1회 코인 1개 · RP 아이템 1개. 양도 가능하며 사용 효과가 없는 아이템만 등록합니다.</p>
 
         <label>
@@ -133,7 +133,7 @@ export default function GachaStockEditor({record, onSaved, onDenied, onBusy}) {
             </label>
         ))}
 
-        <p>
+        </section><section className="admin-editor-section"><h4>보상 · 재고</h4><p>
           활성 보상 잔여 재고: {total} · {total ? '판매 가능' : '전체 품절'}
           {rows.some(r => r.is_active !== false && r.max_stock == null)
               ? ' · 재고 전환 HOLD'
@@ -249,8 +249,8 @@ export default function GachaStockEditor({record, onSaved, onDenied, onBusy}) {
 
         <p>신규 재고는 최대=잔여로 등록합니다. 운영 중 최대·잔여를 같은 수량만큼 조정하여 이미 당첨된 수량을 보존하세요. 동시 추첨으로 값이 바뀌면 새로 조회해야 합니다.</p>
 
-        <button disabled={busy}>저장</button>
-        <p role="alert">{message}</p>
+        </section><footer className="admin-editor-footer"><button disabled={busy}>저장</button>
+        <p role="alert">{message}</p></footer>
       </form>
   );
 }
