@@ -8,7 +8,6 @@ import {adminMenus,adminMenuGroups} from './navigation';
 import './admin.css';
 import './admin-ui-fixes.css';
 import './admin-organization.css';
-import OperatingPolicyPanel from './OperatingPolicyPanel';
 import DiagnosticsPanel from './DiagnosticsPanel';
 import MasterPanel from './MasterPanel';
 import RolePanel from './RolePanel';
@@ -17,7 +16,6 @@ import BattleAdminPanel from './BattleAdminPanel';
 import ItemPicker from './ItemPicker';
 import BalancePanel from './BalancePanel';
 import CharacterOperationsPanel from './CharacterOperationsPanel';
-import InvestigationAdminPanel from './InvestigationAdminPanel';
 import AreaHubPanel from './AreaHubPanel';
 import ImageUploadField from './ImageUploadField';
 import AdminReferenceName, {invalidateAdminNames} from './AdminReferenceName';
@@ -347,13 +345,13 @@ export function Editor({kind,record,seed,onSaved,onDenied,deleteControl}) {
 
     return (
         <form className="admin-form admin-structured-editor" onSubmit={submit}>
-<header className="admin-editor-heading admin-editor-heading-actions"><div><small>{record?'EDIT / '+record.id:'CREATE / NEW'}</small><h3>{record?record.name||'등록 정보':'새로 등록'}</h3></div>{deleteControl}</header>
+<header className="admin-editor-heading admin-editor-heading-actions"><div><small>{record?'EDIT / '+record.id:'CREATE / NEW'}</small><h3>{record?record.name||'등록 정보':'새로 등록'}</h3></div><div className="admin-editor-heading-controls"><label className="admin-editor-toggle"><input type="checkbox" checked={!!draft.is_active} disabled={busy} onChange={e=>change('is_active',e.target.checked)}/>활성</label>{deleteControl}</div></header>
 {(kind==='items'?[
  ['아이템 기본 정보',['name','category','description','image_url']],
- ['사용 · 이동 설정',['is_active','transferable','usable','battle_usable']],
+ ['사용 · 이동 설정',['transferable','usable','battle_usable']],
  ['아이템 효과',['effect_type','blood_pack_kind','effect_value','use_target']]
 ]:[
- ['판매 아이템',['item_id']],['가격 · 노출 설정',['price','sort_order','is_active']],
+ ['판매 아이템',['item_id']],['가격 · 노출 설정',['price','sort_order']],
  ['구매 · 재고 제한',['purchase_limit','stock_limit','daily_limit']]
 ]).map(([title,keys])=><section className="admin-editor-section" key={title}><h4>{title}</h4><div className="admin-editor-grid">{keys.map(renderField)}</div></section>)}
             {record&&
@@ -669,15 +667,14 @@ export default function AdminPanel({
             return <div className="admin-guide-workspace"><nav className="admin-guide-tabs" aria-label="안내 콘텐츠 종류">{[["world","세계관"],["system","시스템 안내"],["schedule","러닝 일정"]].map(([id,label])=><button type="button" key={id} aria-pressed={kind===`guide-${id}`} onClick={()=>setKind(`guide-${id}`)}>{label}</button>)}</nav><ContentAdminPanel key={kind} kind={kind.slice(6)} onDenied={denied}/></div>;
         }
 
-        if (kind==='area-hub') {
+        if (kind==='area-hub'||kind==='investigation'||(kind==='areas'&&!recordId)) {
             return <AreaHubPanel key={deleteRevision} route={route} onNavigate={onNavigate} onDenied={denied}/>;
         }
 
         if (kind==='storage') return <StorageAdminPanel onDenied={denied}/>;
         if (kind==='clues') return <ClueAdminPanel key={deleteRevision} onDenied={denied} recordId={recordId} onOpen={onNavigate?openRecord:undefined}/>;
-        if (kind==='policies') return <OperatingPolicyPanel onDenied={denied}/>;
+        if (kind==='policies'||kind==='food-grades') return <BalancePanel key={kind} initialTab={kind==='policies'?'policies':'foods'} onDenied={denied}/>;
         if (kind==='diagnostics') return <DiagnosticsPanel onDenied={denied}/>;
-        if (kind==='investigation') return <InvestigationAdminPanel key={deleteRevision} onDenied={denied} route={route} onNavigate={onNavigate}/>;
         if (kind==='characters') return <CharacterOperationsPanel onDenied={denied} recordId={recordId} onOpen={onNavigate?openRecord:undefined}/>;
         if (kind==='balance') return <BalancePanel onDenied={denied}/>;
         if (kind==='logs') return <RecordsPanel admin onDenied={denied}/>;

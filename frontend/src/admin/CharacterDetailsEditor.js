@@ -97,7 +97,7 @@ export default function CharacterDetailsEditor({id, onDenied, onSaved}) {
       <p>상태·HP·혈량과 최초 발견 기록은 변경하지 않습니다. 횟수 정정은 과거 이력을 재작성하지 않으며, 자정 복구의 생사 이력 확인이 보수적으로 보류될 수 있습니다.</p>
 
       {draft && (
-          <form className="admin-form" onSubmit={save}>
+          <form className="admin-form admin-structured-editor" onSubmit={save}><section className="admin-editor-section"><h4>헌터 · 이능 등급</h4><div className="admin-editor-grid">
            <label>
             헌터 등급
             <select value={draft.hunter_grade} disabled={busy} onChange={e => setDraft({...draft, hunter_grade: e.target.value})}>
@@ -118,6 +118,7 @@ export default function CharacterDetailsEditor({id, onDenied, onSaved}) {
             </select>
            </label>
 
+           </div></section><section className="admin-editor-section"><h4>일일 상태 · 누적 횟수</h4><div className="admin-editor-grid">
            {['daily_meal_count', 'death_count', 'revive_count'].map(k => (
                <label key={k}>
                 {countLabels[k]}
@@ -130,7 +131,7 @@ export default function CharacterDetailsEditor({id, onDenied, onSaved}) {
             <input type="checkbox" disabled={busy} checked={draft.daily_training_done} onChange={e => setDraft({...draft, daily_training_done: e.target.checked})}/>
            </label>
 
-           <div className="admin-wide">
+           </div></section><section className="admin-editor-section">
             <h4>학습 레시피</h4>
             <ul>
              {draft.recipe_ids.map(r => (
@@ -144,19 +145,19 @@ export default function CharacterDetailsEditor({id, onDenied, onSaved}) {
             <RecipePicker required={false} label="학습 추가 레시피" value={recipe} onChange={setRecipe} disabled={busy} onDenied={onDenied}/>
             <button type="button" disabled={busy || !recipe || draft.recipe_ids.includes(recipe)} onClick={() => setDraft({...draft, recipe_ids: [...draft.recipe_ids, recipe]})}>학습 추가</button>
             <p>이미 최초 발견된 레시피만 새로 학습시킬 수 있습니다. 발견 이력·보상·상점 등록은 변경하지 않습니다.</p>
-           </div>
+           </section>
 
-           <label>
+           <section className="admin-editor-section"><label>
             수정 사유
             <input required maxLength={500} value={reason} disabled={busy} onChange={e => setReason(e.target.value)}/>
            </label>
 
-           <details className="admin-wide">
+           </section><details className="admin-wide">
             <summary>변경 전후 비교</summary>
             <pre>{JSON.stringify({before: loaded.record, after: draft}, null, 2)}</pre>
            </details>
 
-           <button disabled={busy || !reason.trim()}>상세 설정 저장</button>
+           <footer className="admin-editor-footer"><button disabled={busy || !reason.trim()}>상세 설정 저장</button></footer>
           </form>
       )}
 

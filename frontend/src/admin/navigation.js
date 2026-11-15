@@ -19,9 +19,9 @@ export const adminMenus = [
  ['area-hub', '조사 현황'],
  ['areas', '구역 관리'],
  ['investigation', '조사 결과·보상'],
- ['storage', '공용창고 재고'],
+ ['storage', '공용창고'],
  ['clues', '단서 · 아카이브'],
- ['characters', '캐릭터 운영 관리'],
+ ['characters', '캐릭터 운영'],
  ['balance', '공통 밸런스'],
  ['policies', '운영 정책'],
  ['battle', '마물'],
@@ -35,7 +35,7 @@ export const adminMenuGroups = [
  {title:'대시보드',description:'운영 현황과 최근 기록',menus:['dashboard']},
  {title:'데이터',description:'아이템 · 음식 · 레시피 · 마물 · 단서 · 구역',menus:['items','foods','recipes','battle','clues','areas','area-hub']},
  {title:'운영',description:'캐릭터 · 상점 · 가챠 · 창고 · 공통 설정',menus:['characters','products','gachas','storage','balance','guide-world','logs','diagnostics']},
- {title:'세부 관리',description:'기존 세부 설정과 권한 관리',menus:['food-grades','investigation','policies','users']}
+ {title:'권한 관리',description:'운영진 계정과 권한',menus:['users']}
 ];
 
 export function readLocation() {

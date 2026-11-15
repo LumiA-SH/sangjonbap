@@ -1,9 +1,11 @@
+import ImageUploadField from '../admin/ImageUploadField';
+import {adminMenuGroups} from '../admin/navigation';
 import {actionLabel,actionSummary} from '../dev/recordSummary';
 import {Editor} from '../admin/AdminPanel';
 import {MasterEditor} from '../admin/MasterPanel';
 import OperatingPolicyPanel from '../admin/OperatingPolicyPanel';
 import StorageAdminPanel from '../admin/StorageAdminPanel';
-import BalancePanel from '../admin/BalancePanel';
+import BalancePanel,{FoodGradeSettings} from '../admin/BalancePanel';
 import AreaHubPanel from '../admin/AreaHubPanel';
 import ItemPicker from '../admin/ItemPicker';
 import React,{act} from 'react';
@@ -63,7 +65,7 @@ test('storage list opens adjacent editor and preserves quantity conflict guard',
  expect(api).toHaveBeenCalledWith('/admin/storage/7',expect.objectContaining({method:'PATCH',body:expect.objectContaining({quantity:6,expectedQuantity:4,reason:'검수'})}));
 });
 test('balance groups retain every existing editable setting',async()=>{
- api.mockResolvedValue({settings:{}});await act(async()=>root.render(<BalancePanel onDenied={jest.fn()}/>));
+ api.mockResolvedValue({settings:{}});await act(async()=>root.render(<BalancePanel initialTab="actions" onDenied={jest.fn()}/>));
  expect([...div.querySelectorAll('legend')].map(e=>e.textContent)).toEqual(['치료','조사 · 요리','일일훈련']);
  expect(div.querySelectorAll('input[type=number]')).toHaveLength(11);
 });
@@ -146,4 +148,53 @@ test('record summaries show batch outcomes and historical combat results without
  const combat={action_type:'BATTLE_COMMAND',detail:{before:{hp:70},resolved:{status:'FLED',fledActor:'MONSTER',hp:65}}};
  const saved=JSON.stringify(combat);expect(actionSummary(combat)).toContain('마물 도주');expect(actionSummary(combat)).toContain('HP 70 → 65');expect(JSON.stringify(combat)).toBe(saved);
  expect(actionSummary({action_type:'BATTLE_MIDNIGHT_INTERRUPTED',detail:{monsterName:'마물',before:{hp:70,ap:1},after:{hp:70,ap:10}}})).toContain('상대: 마물');
+});
+
+test('reference layout preserves admin role menu and item active toggle payload',async()=>{
+ expect(adminMenuGroups.some(group=>group.menus.includes('users'))).toBe(true);
+ const saved=jest.fn();api.mockResolvedValue({record:{id:'1'}});
+ await act(async()=>root.render(<Editor kind="items" record={{id:'1',name:'재료',category:'MATERIAL',is_active:true}} onSaved={saved} onDenied={jest.fn()}/>));
+ const toggle=div.querySelector('.admin-editor-heading input[type="checkbox"]');expect(toggle.checked).toBe(true);
+ await act(async()=>Simulate.change(toggle,{target:{checked:false}}));
+ await act(async()=>Simulate.submit(div.querySelector('form')));
+ expect(api.mock.calls.find(([url])=>url==='/admin/items/1')[1].body.is_active).toBe(false);
+});
+test('image preview keeps an empty state and handles broken image without removing its value',async()=>{
+ const changed=jest.fn();await act(async()=>root.render(<ImageUploadField label="음식 이미지" kind="foods" value={null} onChange={changed}/>));
+ expect(div.querySelector('.admin-image-preview').textContent).toContain('등록된 이미지 없음');
+ await act(async()=>root.render(<ImageUploadField label="음식 이미지" kind="foods" value="https://example.invalid/image.png" onChange={changed}/>));
+ await act(async()=>Simulate.error(div.querySelector('img')));
+ expect(div.textContent).toContain('이미지를 불러올 수 없습니다');expect(changed).not.toHaveBeenCalled();
+});
+
+test('food grades are managed inside common balance with existing APIs and admin menu retained',async()=>{
+ api.mockImplementation(async path=>path==='/admin/balance'?{settings:{}}:{records:[],nextAfter:null});
+ await act(async()=>root.render(<BalancePanel onDenied={jest.fn()}/>));
+ await act(async()=>button('음식 등급별 효과').click());
+ expect(api).toHaveBeenCalledWith('/admin/food-grades');
+ expect(div.querySelector('[aria-label="음식 등급별 공통 효과"]')).not.toBeNull();
+ expect(adminMenuGroups.some(g=>g.menus.includes('food-grades'))).toBe(false);
+ expect(adminMenuGroups.some(g=>g.menus.includes('users'))).toBe(true);
+ await act(async()=>button('행동 밸런스').click());
+ expect(div.querySelectorAll('input[type=number]')).toHaveLength(11);
+});
+
+test('food balance shows all grades inline and saves only changed values through existing API',async()=>{
+ const grades=[{id:'1',name:'일반',blood_recovery:10,stat_growth_rate:'15',is_active:true},{id:'2',name:'희귀',blood_recovery:20,stat_growth_rate:'20',is_active:true}];
+ api.mockImplementation(async (path,options)=>options?{record:{...grades[0],...options.body}}:{records:grades,nextAfter:null});
+ await act(async()=>root.render(<FoodGradeSettings onDenied={jest.fn()}/>));
+ expect(div.querySelectorAll('tbody tr')).toHaveLength(2);expect(div.querySelector('.admin-record-workspace')).toBeNull();
+ await act(async()=>Simulate.change(div.querySelector('[aria-label="일반 혈량 회복량"]'),{target:{value:'12'}}));
+ await act(async()=>Simulate.submit(div.querySelector('form')));
+ expect(api).toHaveBeenCalledWith('/admin/food-grades/1',expect.objectContaining({method:'PATCH',body:expect.objectContaining({blood_recovery:12,stat_growth_rate:15,is_active:true})}));
+ expect(api.mock.calls.filter(([,o])=>o?.method==='PATCH')).toHaveLength(1);
+ expect(div.textContent).toContain('1건 저장 완료');
+});
+test('food grade partial save reports completed rows and preserves remaining edits on denial',async()=>{
+ const grades=[{id:'1',name:'일반',blood_recovery:10,stat_growth_rate:15,is_active:true},{id:'2',name:'희귀',blood_recovery:20,stat_growth_rate:20,is_active:true}];const denied=jest.fn();
+ api.mockImplementation(async (path,options)=>{if(!options)return {records:grades,nextAfter:null};if(path.endsWith('/2'))throw Object.assign(Error('권한 없음'),{status:403});return {record:{...grades[0],...options.body}};});
+ await act(async()=>root.render(<FoodGradeSettings onDenied={denied}/>));
+ for(const name of ['일반','희귀'])await act(async()=>Simulate.change(div.querySelector('[aria-label="'+name+' 혈량 회복량"]'),{target:{value:'25'}}));
+ await act(async()=>Simulate.submit(div.querySelector('form')));
+ expect(div.textContent).toContain('1건 저장 완료 · 나머지 저장 실패');expect(denied).toHaveBeenCalled();expect(div.querySelector('[aria-label="희귀 혈량 회복량"]').value).toBe('25');
 });

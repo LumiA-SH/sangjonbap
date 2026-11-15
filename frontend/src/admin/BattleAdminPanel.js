@@ -377,7 +377,7 @@ export default function BattleAdminPanel({onDenied, recordId, onOpen}) {
           </div><div className="admin-detail-pane">
           {(!onOpen || recordId === 'new' || id) && (
               <form className="admin-form admin-structured-editor" onSubmit={saveMonster}>
-                <header className="admin-editor-heading"><small>{id?'EDIT / '+id:'CREATE / NEW'}</small><h3>{draft.name||'신규 마물'}</h3></header><section className="admin-editor-section"><h4>마물 기본 정보 · 능력치</h4><div className="admin-editor-grid">
+                <header className="admin-editor-heading admin-editor-heading-actions"><div><small>{id?'EDIT / '+id:'CREATE / NEW'}</small><h3>{draft.name||'신규 마물'}</h3></div><label className="admin-editor-toggle"><input type="checkbox" checked={draft.is_active} disabled={busy} onChange={e=>change('is_active',e.target.checked)}/>활성</label></header><section className="admin-editor-section"><h4>마물 기본 정보 · 능력치</h4><div className="admin-editor-grid">
 
                 {['name', 'description'].map(k => (
                     <label key={k}>
@@ -404,12 +404,7 @@ export default function BattleAdminPanel({onDenied, recordId, onOpen}) {
                     </div>
                 ))}
 
-                <label>
-                  활성
-                  <input type="checkbox" checked={draft.is_active}
-                         disabled={busy}
-                         onChange={e => change('is_active', e.target.checked)}/>
-                </label>
+
 
                 </div></section><section className="admin-editor-section"><h4>출현 지역</h4>
 

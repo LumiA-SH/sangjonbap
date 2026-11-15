@@ -9,6 +9,7 @@ export default function ImageUploadField({
 }) {
   const [uploading,setUploading]=useState(false);
   const [message,setMessage]=useState('');
+  const [failedPreview,setFailedPreview]=useState(null);
 
   async function upload(event) {
     const file=event.target.files?.[0];
@@ -59,8 +60,10 @@ export default function ImageUploadField({
           {label}
           <input type="file" accept=".png,.jpg,.jpeg,.webp,.gif" disabled={disabled||uploading} onChange={upload}/>
         </label>
+        <div className="admin-image-preview">
+          {value&&failedPreview!==value?<img src={value} alt={`${label} 미리보기`} width="152" height="152" onError={()=>setFailedPreview(value)}/>:<span role="img" aria-label={`${label} 미리보기 없음`}>{value?'이미지를 불러올 수 없습니다':'등록된 이미지 없음'}</span>}
+        </div>
         {value&&<div>
-          <img src={value} alt={`${label} 미리보기`} width="160"/>
           <button type="button" disabled={disabled||uploading} onClick={()=>onChange(null)}>이미지 제거</button>
         </div>}
         <p role="status">{uploading?'이미지 업로드 중…':message}</p>

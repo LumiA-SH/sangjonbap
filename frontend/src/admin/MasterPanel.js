@@ -555,13 +555,13 @@ export function MasterEditor({kind, record, onSaved, onDenied, onBusy}) {
 
   return (
       <form onSubmit={save} className="admin-form admin-structured-editor">
-        <header className="admin-editor-heading"><small>{record ? `EDIT / ${record.id}` : 'CREATE / NEW'}</small><h3>
+        <header className="admin-editor-heading admin-editor-heading-actions"><div><small>{record ? `EDIT / ${record.id}` : 'CREATE / NEW'}</small><h3>
           {record ? (
               kind === 'foods'
                   ? <><AdminReferenceName itemId={record.item_id} eager onDenied={onDenied}/> 상세/수정</>
                   : `${record.name || '등록 정보'} 상세/수정`
           ) : '새로 등록'}
-        </h3></header>
+        </h3></div>{Object.hasOwn(defaults[kind], 'is_active')&&<label className="admin-editor-toggle"><input type="checkbox" checked={!!draft.is_active} disabled={busy} onChange={e=>change('is_active',e.target.checked)}/>활성</label>}</header>
 
         {kind === 'areas' && (
             <>
@@ -595,19 +595,20 @@ export function MasterEditor({kind, record, onSaved, onDenied, onBusy}) {
         {kind === 'foods' ? <>
           {section('음식 기본 정보', ['name', 'image_url'], '음식 이름 변경은 연결된 아이템의 이름에도 반영됩니다. 인벤토리·상점의 연결은 유지됩니다.')}
 
-          {section('음식 등급 설정', ['grade_id'],
-              selectedGrade
-                  ? `선택 등급: ${selectedGrade.name} · 혈량 +${selectedGrade.blood_recovery} · 성장 확률 ${selectedGrade.stat_growth_rate}%`
-                  : grades.length
-                      ? '음식 등급을 선택하세요. 등급별 혈량 회복량과 성장 확률이 적용됩니다.'
-                      : '등록된 음식 등급이 없습니다. 음식 등급 관리에서 먼저 등급을 등록해 주세요.')}
-
           {section('음식 구분', ['is_failure'])}
 
           {failureFood ? (
               section('실패요리 RP 효과', ['rp_effect_texts', 'rp_effect_text'], '섭취 시 문구 후보 중 하나를 사용합니다. 실제 자원·능력치 효과는 적용되지 않습니다.')
           ) : <>
-            {section('음식 효과', ['blood_recovery', 'stat_growth_enabled', 'stat_growth_target'],
+          {section('음식 등급 설정', ['grade_id'],
+              selectedGrade
+                  ? `선택 등급: ${selectedGrade.name} · 혈량 +${selectedGrade.blood_recovery} · 성장 확률 ${selectedGrade.stat_growth_rate}%`
+                  : grades.length
+                      ? '음식 등급을 선택하세요. 등급별 혈량 회복량과 성장 확률이 적용됩니다.'
+                      : '등록된 음식 등급이 없습니다. 공통 밸런스의 음식 등급별 효과에서 먼저 등록해 주세요.')}
+
+
+            {section('음식 효과', selectedGrade ? ['stat_growth_enabled', 'stat_growth_target'] : ['blood_recovery', 'stat_growth_enabled', 'stat_growth_target'],
                 selectedGrade ? `등급 기본 혈량 회복 +${selectedGrade.blood_recovery} · 성장 확률 ${selectedGrade.stat_growth_rate}%` : '음식 등급을 선택하면 해당 등급의 효과를 사용합니다.')}
             <details className="admin-editor-reference">
               <summary>기존 RP 문구 확인 · 수정</summary>
@@ -620,13 +621,12 @@ export function MasterEditor({kind, record, onSaved, onDenied, onBusy}) {
             {renderFields(['item_id'])}
           </details>
         </> : kind === 'recipes' ? <>
-          {section('레시피 기본 정보', ['name', 'discovery_grade', 'description', 'image_url', 'is_active'])}
-          {section('조리 설정', ['success_rate', 'result_quantity'])}
-          {section('완성 음식 · 실패 음식', ['result_item_id', 'failure_item_id'])}
+          {section('레시피 기본 정보', ['name', 'discovery_grade', 'description', 'image_url'])}
+          {section('조리 설정', ['success_rate'])}
         </> : kind === 'areas' ? <>
           {section('구역 기본 정보', ['name', 'description', 'image_url', 'sort_order'])}
           {section('공개 · 조우 설정', ['is_open', 'auto_unlock', 'unlock_at', 'encounter_rate'])}
-        </> : section('기본 정보', Object.keys(defaults[kind]))}
+        </> : section('기본 정보', Object.keys(defaults[kind]).filter(key=>key!=='is_active'))}
 
         {child && (
             <fieldset className="admin-wide" disabled={busy}>
@@ -688,6 +688,8 @@ export function MasterEditor({kind, record, onSaved, onDenied, onBusy}) {
               </button>
             </fieldset>
         )}
+
+        {kind === 'recipes' && section('완성 음식 · 실패 음식', ['result_item_id', 'result_quantity', 'failure_item_id'])}
 
         {kind === 'recipes' && (
             <fieldset className="admin-wide" disabled={busy}>
