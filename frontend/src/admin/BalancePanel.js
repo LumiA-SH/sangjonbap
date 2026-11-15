@@ -70,7 +70,7 @@ export default function BalancePanel({onDenied,initialTab='foods'}) {
 
   return (
       <section className="admin-operations-page">
-        <h2>공통 밸런스</h2>
+        
         <p>음식 등급별 혈량 회복량과 성장 확률을 이곳에서 관리합니다. 음식별 등급과 성장 대상은 음식 메뉴에서 선택합니다.</p>
         <div className="admin-guide-tabs" aria-label="공통 밸런스 분류"><button type="button" aria-pressed={tab==='foods'} onClick={()=>setTab('foods')}>음식 등급별 효과</button><button type="button" aria-pressed={tab==='actions'} onClick={()=>setTab('actions')}>행동 밸런스</button><button type="button" aria-pressed={tab==='policies'} onClick={()=>setTab('policies')}>운영 정책</button></div>
         {tab==='foods'?<FoodGradeSettings onDenied={onDenied}/>:tab==='policies'?<OperatingPolicyPanel onDenied={onDenied}/>:<>

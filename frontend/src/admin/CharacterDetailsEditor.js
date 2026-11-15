@@ -19,7 +19,7 @@ const countLabels = {
  revive_count: '누적 부활 횟수'
 };
 
-export default function CharacterDetailsEditor({id, onDenied, onSaved}) {
+export default function CharacterDetailsEditor({id, onDenied, onSaved, activeSection='all'}) {
  const [loaded, setLoaded] = useState(null);
  const [draft, setDraft] = useState(null);
  const [recipe, setRecipe] = useState('');
@@ -92,12 +92,12 @@ export default function CharacterDetailsEditor({id, onDenied, onSaved}) {
 
  return (
      <section>
-      <h3>등급·학습·일일 상태·누적 횟수</h3>
+
       <button type="button" disabled={busy} onClick={() => work(load)}>상세 설정 다시 조회</button>
       <p>상태·HP·혈량과 최초 발견 기록은 변경하지 않습니다. 횟수 정정은 과거 이력을 재작성하지 않으며, 자정 복구의 생사 이력 확인이 보수적으로 보류될 수 있습니다.</p>
 
       {draft && (
-          <form className="admin-form admin-structured-editor" onSubmit={save}><section className="admin-editor-section"><h4>헌터 · 이능 등급</h4><div className="admin-editor-grid">
+          <form className="admin-form admin-structured-editor" onSubmit={save}><section hidden={!['all','base'].includes(activeSection)} className="admin-editor-section"><h4>헌터 · 이능 등급</h4><div className="admin-editor-grid">
            <label>
             헌터 등급
             <select value={draft.hunter_grade} disabled={busy} onChange={e => setDraft({...draft, hunter_grade: e.target.value})}>
@@ -118,7 +118,7 @@ export default function CharacterDetailsEditor({id, onDenied, onSaved}) {
             </select>
            </label>
 
-           </div></section><section className="admin-editor-section"><h4>일일 상태 · 누적 횟수</h4><div className="admin-editor-grid">
+           </div></section><section hidden={!['all','daily'].includes(activeSection)} className="admin-editor-section"><h4>일일 상태 · 누적 횟수</h4><div className="admin-editor-grid">
            {['daily_meal_count', 'death_count', 'revive_count'].map(k => (
                <label key={k}>
                 {countLabels[k]}
@@ -131,7 +131,7 @@ export default function CharacterDetailsEditor({id, onDenied, onSaved}) {
             <input type="checkbox" disabled={busy} checked={draft.daily_training_done} onChange={e => setDraft({...draft, daily_training_done: e.target.checked})}/>
            </label>
 
-           </div></section><section className="admin-editor-section">
+           </div></section><section hidden={!['all','recipes'].includes(activeSection)} className="admin-editor-section">
             <h4>학습 레시피</h4>
             <ul>
              {draft.recipe_ids.map(r => (

@@ -106,7 +106,7 @@ export default function RolePanel({onDenied}) {
 
   return (
       <section aria-label="관리자 권한 관리">
-        <h2>계정 역할 관리</h2>
+        
         <p>관리자는 게임 테스트에 참여할 수 있습니다. 일반 러너는 테스트 참여 허용이 필요하며 관리자 권한과는 별개입니다.</p>
         <p>본인 권한 회수 및 마지막 활성 관리자 회수는 서버에서 거부합니다.</p>
 

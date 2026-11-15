@@ -107,3 +107,13 @@ test('all phase 2 routes authenticate and require ADMIN; roles revoked immediate
   assert.throws(()=>validateMasterInput(kind,{image_url:'javascript:alert(1)',requestKey:randomUUID()},false));
  }
 });
+
+
+test('recipe ingredients accept materials only and at most five kinds',async()=>{
+    const {validateRecipeIngredients}=await import('../src/modules/admin/recipe-support.js');
+    const rows=Array.from({length:5},(_,i)=>({item_id:String(i+1),quantity:1}));
+    const client={query:async(sql,args)=>{assert.match(sql,/category<>'MATERIAL'/);assert.match(sql,/food_config/);assert.equal(args[0].length,5);return {rowCount:0};}};
+    await validateRecipeIngredients(client,rows);
+    await assert.rejects(()=>validateRecipeIngredients(client,[...rows,{item_id:'6',quantity:1}]),/1~5/);
+    await assert.rejects(()=>validateRecipeIngredients({query:async()=>({rowCount:1})},rows),/재료 아이템/);
+});

@@ -182,7 +182,7 @@ export default function RecordsPanel({admin = false, onDenied, active = true}) {
   if (admin) {
     return (
         <section className="admin-operations-page" aria-label="운영진 전체 행동 로그">
-          <h2>운영진 전체 행동 로그</h2>
+          
           <p>관리자 변경을 포함한 전체 행동 기록 · 한 번에 30건</p>
           <nav className="admin-log-tabs" role="tablist" aria-label="행동 로그 분류">
             {[{category:'',count:total},...categories].map(row=><button type="button" role="tab" key={row.category} aria-selected={category===row.category} disabled={busy} onClick={()=>setCategory(row.category)}>{row.category?displayLabel(row.category):'전체'} <span>{row.count}</span></button>)}

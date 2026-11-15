@@ -2,7 +2,7 @@ import {writeActionLog} from '../../shared/game.js';
 import {validateMasterInput,validateMasterState} from './master-service.js';
 import {adminTransaction,requireAdminRow,checkDuplicate,fail} from './transaction.js';
 import {saveGachaStock} from './gacha-stock.js';
-import {lockRecipeAreas,saveRecipeAreas,validateRecipeFoodLinks} from './recipe-support.js';
+import {lockRecipeAreas,saveRecipeAreas,validateRecipeIngredients,validateRecipeFoodLinks} from './recipe-support.js';
 
 const definitions={
     'food-grades':{table:'food_grade',pk:'id',target:'FOOD_GRADE'},
@@ -184,7 +184,10 @@ export function createAdminMasterRepository(pool) {
                     fail('FOOD_GRADE_NOT_FOUND','활성 음식 등급을 선택하세요.',400);
                 }
 
-                if (kind==='recipes')await validateRecipeFoodLinks(c,id,merged,before);
+                if (kind==='recipes') {
+                    await validateRecipeIngredients(c,merged.ingredients);
+                    await validateRecipeFoodLinks(c,id,merged,before);
+                }
 
                 const values=Object.fromEntries(
                     Object.entries(patch).filter(([k])=>k!==d.rows&&k!=='area_recipes'&&!(kind==='foods'&&['name','image_url'].includes(k)))

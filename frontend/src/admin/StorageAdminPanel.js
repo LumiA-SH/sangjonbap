@@ -48,6 +48,7 @@ export default function StorageAdminPanel({onDenied}) {
 
  async function save(e) {
   e.preventDefault();
+  if(!selected)return;
 
   await work(async () => {
    if (!window.confirm(`${selected.name}: ${selected.quantity} → ${quantity}개로 변경합니까?`)) return;
@@ -68,50 +69,20 @@ export default function StorageAdminPanel({onDenied}) {
   });
  }
 
- return (
-     <section className="admin-record-workspace admin-storage-workspace"><div className="admin-list-pane">
-      <h2>공용창고 재고 조정</h2>
-
-      <form onSubmit={e => {e.preventDefault(); work(() => load());}}>
-       <label>
-        아이템 검색
-        <input value={q} disabled={busy} onChange={e => setQ(e.target.value)}/>
-       </label>
-       <button disabled={busy}>검색</button>
-      </form>
-
-      <ul className="admin-storage-list">
-       {rows.map(r => (
-           <li key={r.item_id}><button type="button" disabled={busy} onClick={() => selectItem(r)}><strong>{r.name}</strong><span>현재 {r.quantity}개</span></button>
-           </li>
-       ))}
-      </ul>
-
-      {next && <button disabled={busy} onClick={() => work(() => load(next))}>다음 100건</button>}
-
-      </div><div className="admin-detail-pane">
-      {!selected && <p className="admin-empty-detail">목록에서 재고를 수정할 아이템을 선택하세요.</p>}
-      {selected && (
-          <form className="admin-form admin-structured-editor" onSubmit={save}><header className="admin-editor-heading"><small>수정 / 공용창고</small><h3>{selected.name}</h3></header><section className="admin-editor-section"><h4>재고 조정</h4>
-           <p>{selected.name}: 변경 전 {selected.quantity} → 변경 후 {quantity}</p>
-
-           <label>
-            최종 재고
-            <input required type="number" min="0" max="2147483647" step="1" value={quantity} disabled={busy} onChange={e => setQuantity(e.target.value === '' ? '' : Number(e.target.value))}/>
-           </label>
-
-           <label>
-            수정 사유
-            <input required maxLength={500} value={reason} disabled={busy} onChange={e => setReason(e.target.value)}/>
-           </label>
-
-           </section><footer className="admin-editor-footer"><button disabled={busy || !Number.isInteger(quantity) || quantity < 0 || quantity > 2147483647 || !reason.trim()}>재고 저장</button>
-           <button type="button" disabled={busy} onClick={() => setSelected(null)}>취소</button>
-          </footer></form>
-      )}
-
-      <p>조회 이후 입출고가 발생하면 저장을 거부합니다. 다시 검색해 현재 수량을 확인하세요.</p>
-      <p role="status">{busy ? '처리 중…' : message}</p>
-     </div></section>
- );
+ return <section className="admin-operations-page admin-storage-inline">
+  <form className="admin-log-search" onSubmit={e=>{e.preventDefault();work(()=>load());}}>
+   <label>아이템 검색<input value={q} disabled={busy} onChange={e=>setQ(e.target.value)}/></label><button disabled={busy}>검색</button>
+  </form>
+  <form className="admin-storage-form" onSubmit={save}>
+   <div className="admin-balance-table-wrap"><table className="admin-balance-table"><thead><tr><th>아이템</th><th>현재 수량</th><th>변경 수량</th></tr></thead><tbody>
+    {rows.map(row=><tr key={row.item_id}><td><strong>{row.name}</strong><small> ID {row.item_id}</small></td><td>{row.quantity}</td><td><input aria-label={row.name+' 변경 수량'} type="number" min="0" max="2147483647" step="1" disabled={busy} value={selected?.item_id===row.item_id?quantity:row.quantity} onChange={e=>{if(selected?.item_id!==row.item_id)selectItem(row);setQuantity(e.target.value===''?'':Number(e.target.value));}}/></td></tr>)}
+    {!rows.length&&<tr><td colSpan="3">등록된 재고가 없습니다.</td></tr>}
+   </tbody></table></div>
+   {selected&&<section className="admin-editor-section"><p>{selected.name}: 변경 전 {selected.quantity} → 변경 후 {quantity}개</p><label>수정 사유<input required maxLength={500} value={reason} disabled={busy} onChange={e=>setReason(e.target.value)}/></label>
+    <footer className="admin-editor-footer"><button disabled={busy||!Number.isInteger(quantity)||quantity<0||quantity>2147483647||!reason.trim()}>재고 저장</button><button type="button" disabled={busy} onClick={()=>setSelected(null)}>취소</button></footer>
+   </section>}
+  </form>
+  {next&&<button disabled={busy} onClick={()=>work(()=>load(next))}>다음 100건</button>}
+  <p>수량 변경은 한 항목씩 저장합니다. 조회 이후 입출고가 발생하면 다시 조회해 주세요.</p><p role="status">{busy?'처리 중…':message}</p>
+ </section>;
 }

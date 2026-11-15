@@ -562,8 +562,8 @@ export function MasterEditor({kind, record, onSaved, onDenied, onBusy}) {
         <header className="admin-editor-heading admin-editor-heading-actions"><div><small>{record ? `수정 / ${record.id}` : '신규 등록'}</small><h3>
           {record ? (
               kind === 'foods'
-                  ? <><AdminReferenceName itemId={record.item_id} eager onDenied={onDenied}/> 상세/수정</>
-                  : `${record.name || '등록 정보'} 상세/수정`
+                  ? (record.name || <AdminReferenceName itemId={record.item_id} eager onDenied={onDenied}/>)
+                  : (record.name || '등록 정보')
           ) : '새로 등록'}
         </h3></div>{Object.hasOwn(defaults[kind], 'is_active')&&<label className="admin-editor-toggle"><input type="checkbox" checked={!!draft.is_active} disabled={busy} onChange={e=>change('is_active',e.target.checked)}/>활성</label>}</header>
 
@@ -637,6 +637,7 @@ export function MasterEditor({kind, record, onSaved, onDenied, onBusy}) {
                   <div className="admin-child-row" key={index}>
                     <ItemPicker
                         label={kind === 'recipes' ? '필요 재료' : '보상'}
+                        type={kind === 'recipes' ? 'material' : 'all'}
                         value={row.item_id}
                         disabled={busy}
                         onDenied={onDenied}
@@ -677,7 +678,7 @@ export function MasterEditor({kind, record, onSaved, onDenied, onBusy}) {
                   </div>
               ))}
 
-              <button type="button" onClick={() => change(child, [
+              <button type="button" disabled={busy || (kind === 'recipes' && rows.length >= 5)} onClick={() => change(child, [
                 ...rows,
                 {
                   item_id: '',
@@ -911,7 +912,7 @@ export default function MasterPanel({kind, onDenied, recordId, onOpen, after, on
           {visibleRecords.map(row => (
               <li key={row.id}>
                 <div className="admin-record-summary">
-                  <strong>
+                  <button type="button" className="admin-entry-title" disabled={busy || saving} aria-current={String(selected?.id)===String(row.id)?"true":undefined} onClick={()=>select(row)}>
                     {kind === 'foods'
                         ? <AdminReferenceName
                             itemId={row.item_id}
@@ -920,7 +921,7 @@ export default function MasterPanel({kind, onDenied, recordId, onOpen, after, on
                             onDenied={onDenied}
                         />
                         : row.name || '이름 미등록'}
-                  </strong>
+                  </button>
 
                   <small>
                     {kind === 'foods'
@@ -934,14 +935,10 @@ export default function MasterPanel({kind, onDenied, recordId, onOpen, after, on
                                     : '음식 등급'}
                   </small>
 
-                  <details>
-                    <summary>관리 번호</summary>
-                    <span>등록 ID {row.id}</span>
-                  </details>
+                  <small>등록 ID {row.id}</small>
                 </div>
 
                 <div className="admin-record-actions">
-                  <button disabled={busy || saving} onClick={() => select(row)}>상세/수정</button>
                   <AdminDeleteControl menu={kind} recordId={String(row.id)} disabled={busy || saving} onDenied={onDenied}
                     onDeleted={async()=>{
                       invalidateAdminNames();

@@ -100,6 +100,17 @@ const c = await raw.connect(); return {
         await save('foods', null, {item_id: failure.id, is_failure:true});
         let recipe = await save('recipes', null, {name: 'DEV recipe', success_rate: 100, result_item_id: food.id, failure_item_id: failure.id, ingredients: [{item_id: material.id, quantity: 2}]}),
             gacha = await save('gachas', null, {name: 'DEV gacha', price: 1, rewards: [stock(rp.id, 100), stock(rp2.id, 300)]});
+        await t.test('recipe materials filter and invalid ingredient save preserve recipe', async()=>{
+            const matches=await repo.searchAdminItems('',false,'material');
+            assert.ok(matches.some(r=>r.id===material.id));
+            assert.ok(!matches.some(r=>r.id===food.id||r.id===failure.id));
+            const before=await repo.getAdminMaster('recipes',recipe.id);
+            for(const category of ['FOOD','CONSUMABLE','ETC']) {
+                const bad=await item('invalid ingredient '+category,category);
+                await rejects(save('recipes',recipe.id,{ingredients:[{item_id:bad.id,quantity:1}]}),'RECIPE_INGREDIENT_NOT_MATERIAL');
+            }
+            assert.deepEqual((await repo.getAdminMaster('recipes',recipe.id)).ingredients,before.ingredients);
+        });
         await t.test('food disabled/enabled constraints, partial updates, percentage and audit', async () => {
             await rejects(save('foods', null, {item_id: food.id}, u.id), 'ADMIN_REQUIRED');
             let row = await repo.getAdminMaster('foods',food.id);
@@ -194,7 +205,7 @@ const c = await raw.connect(); return {
             await save('gachas', gacha.id, {rewards: [{...stock(rp2.id, 300), remaining_stock: 299}]});
             await rejects(save('gachas', gacha.id, {rewards: [{item_id: food.id, quantity: 1, weight: 0}]}), 'INVALID_ADMIN_INPUT');
             await repo.saveAdminRecord(a.id, 'items', rp2.id, {is_active: false}, key());
-            await rejects(createGachaRepository(pool).drawGacha(u.id, gacha.id, key()), 'GACHA_RP_ITEM_REQUIRED');
+            await rejects(createGachaRepository(pool).drawGacha(u.id, gacha.id, key()), 'GACHA_ITEM_UNAVAILABLE');
             await repo.saveAdminRecord(a.id, 'items', rp2.id, {is_active: true}, key());
         });
         await t.test('training: concurrent daily requests, great growth clamp, full cap reward, state and config rollback', async () => {

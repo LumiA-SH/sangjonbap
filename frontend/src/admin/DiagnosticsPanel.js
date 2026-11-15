@@ -22,7 +22,7 @@ export default function DiagnosticsPanel({onDenied}) {
 
  return (
      <section className="admin-operations-page admin-diagnostics-page">
-      <h2>기존 데이터 진단</h2>
+      
       <p>분류별 최대 100건 조회입니다. 이력 전환·복구·삭제는 실행하지 않습니다. 복구 시 대상과 변경 전후·관련 보상을 검토하고 별도 승인해야 합니다. 성공·실패 결과로 공유된 아이템은 실패 음식 효과(0)가 우선합니다.</p>
 
       <button disabled={busy} onClick={load}>{busy ? '조회 중…' : '진단 조회'}</button>

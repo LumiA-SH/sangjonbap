@@ -26,6 +26,7 @@ export default function ItemPicker({
 
   const typeNames = {
     all: '아이템',
+    material: '재료',
     food: '완성 음식',
     'failure-food': '실패 요리'
   };

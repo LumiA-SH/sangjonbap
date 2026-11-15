@@ -54,7 +54,7 @@ test('food configured recovery, growth chance/amount and RP text reach actual me
 });
 
 // Transaction emulator for repository control flow only; not a substitute for PostgreSQL locking tests.
-function fixture({status = 'ALIVE', ap = 10, active = false, failLog = false, foodCount = 0, atk = 39, random = () => 0, food = {}} = {}) {
+function fixture({status = 'ALIVE', ap = 10, active = false, invalidIngredient = false, failLog = false, foodCount = 0, atk = 39, random = () => 0, food = {}} = {}) {
     let state = {character: {id: '7', hp: 100, max_hp: 100, blood: status === 'NEAR_DEATH' ? 0 : 50, max_blood: 100, ap, max_ap: 10, currency: 10, status, death_count: 0, atk, def: 10, agi: 10, daily_meal_count: foodCount}, inventory: {1: 12, 2: 4, 3: 2}, logs: []};
     let snapshot;
     const calls = [];
@@ -63,6 +63,7 @@ function fixture({status = 'ALIVE', ap = 10, active = false, failLog = false, fo
 release() {}, async query(raw, p = []) {            
 const dailyGateResult = dailyGateFixture(raw); if (dailyGateResult) return dailyGateResult;
             const sql = raw.replace(/\s+/g, ' ').trim(); calls.push(sql);
+            if (sql.startsWith('select i.id from public.item i where i.id=any')) return rows(invalidIngredient?[{id:'1'}]:[]);
             if (sql === 'begin') {snapshot = structuredClone(state); return rows([]);}
             if (sql === 'rollback') {state = snapshot; return rows([]);}
             if (sql === 'commit') return rows([]);
@@ -128,3 +129,9 @@ test('NEAR_DEATH meal recovers; fixed +1 at 20%, cap 40 and fifth meal limit', a
     assert.equal((await fixture({atk: 40}).repo.eatFood('u', '3', key)).growth, null);
     for (const options of [{status: 'DEAD'}, {active: true}]) await assert.rejects(fixture(options).repo.eatFood('u', '3', key));
 });
+
+ test('invalid ingredient fails before AP inventory or logs change',async()=>{
+ const f=fixture({invalidIngredient:true}),before=structuredClone(f.state());
+ await assert.rejects(f.repo.cookRecipe('u','2',key,1),e=>e.code==='RECIPE_CONFIG_INVALID');
+ assert.deepEqual(f.state(),before);
+ });

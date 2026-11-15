@@ -154,7 +154,7 @@ export default function ClueAdminPanel({onDenied, recordId, onOpen}) {
 
  return (
      <section className="admin-record-workspace"><div className="admin-list-pane">
-      <h2>단서 등록·수정</h2>
+      
       <p>구역 없이 단서를 등록할 수 있습니다. 운영진 직접 공개는 발견자·발견 시각·조사율을 변경하지 않습니다.</p>
 
       <form onSubmit={e => {
@@ -178,7 +178,7 @@ export default function ClueAdminPanel({onDenied, recordId, onOpen}) {
        {rows.map(r => (
            <li key={r.id}>
             <div className="admin-list-detail">
-             <strong>{r.title}</strong>
+             <button type="button" className="admin-entry-title" disabled={busy} aria-current={String(loaded?.record?.id)===String(r.id)?"true":undefined} onClick={()=>choose(String(r.id))}>{r.title}</button>
              <small>
               {r.is_discovered ? '발견' : '미발견'}
               {' · '}
@@ -187,7 +187,6 @@ export default function ClueAdminPanel({onDenied, recordId, onOpen}) {
             </div>
 
              <div className="admin-record-actions">
-              <button disabled={busy} onClick={() => choose(String(r.id))}>단서 상세</button>
               <AdminDeleteControl menu="clues" recordId={String(r.id)} disabled={busy} onDenied={onDenied}
                 onDeleted={async()=>{
                   if(String(loaded?.record?.id)===String(r.id)||String(recordId)===String(r.id)){

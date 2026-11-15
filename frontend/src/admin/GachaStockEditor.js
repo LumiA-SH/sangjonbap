@@ -110,7 +110,11 @@ export default function GachaStockEditor({record, onSaved, onDenied, onBusy}) {
 
   return (
       <form className="admin-form admin-structured-editor" onSubmit={save}>
-        <header className="admin-editor-heading"><small>{record?'수정 / '+record.id:'신규 등록'}</small><h3>{draft.name||'가챠 등록'}</h3></header><section className="admin-editor-section"><h4>가챠 기본 정보 · 운영 기간</h4>
+        <header className="admin-editor-heading admin-editor-heading-actions"><div><small>{record?'수정 / '+record.id:'신규 등록'}</small><h3>{draft.name||'가챠 등록'}</h3></div>        <label className="admin-editor-toggle">
+          활성
+          <input type="checkbox" checked={draft.is_active} disabled={busy}
+                 onChange={e => setDraft({...draft, is_active: e.target.checked})}/>
+        </label></header><section className="admin-editor-section"><h4>가챠 기본 정보 · 운영 기간</h4>
         <p>1회 코인 1개 · 아이템 1개. 레시피를 제외한 아이템·음식을 보상으로 등록합니다.</p>
 
         <label>
@@ -119,11 +123,7 @@ export default function GachaStockEditor({record, onSaved, onDenied, onBusy}) {
                  onChange={e => setDraft({...draft, name: e.target.value})}/>
         </label>
 
-        <label>
-          활성
-          <input type="checkbox" checked={draft.is_active} disabled={busy}
-                 onChange={e => setDraft({...draft, is_active: e.target.checked})}/>
-        </label>
+
 
         {['start_at', 'end_at'].map(key => (
             <label key={key}>
@@ -164,7 +164,7 @@ export default function GachaStockEditor({record, onSaved, onDenied, onBusy}) {
                 ) : '새 보상')}
               </legend>
 
-              <ItemPicker
+              {!row.id && <ItemPicker
                   label="보상 아이템"
                   value={row.item_id}
                   disabled={busy || !!row.id}
@@ -173,7 +173,7 @@ export default function GachaStockEditor({record, onSaved, onDenied, onBusy}) {
                     item_id: id,
                     name: item?.name || ''
                   })}
-              />
+              />}
 
               <label>
                 활성

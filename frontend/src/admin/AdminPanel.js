@@ -832,7 +832,7 @@ export default function AdminPanel({
     }
 
     return (
-        <section className="admin-panel" onSubmitCapture={handleSubmitCapture}>
+        <section className={"admin-panel"+((recordId||route?.area)?" admin-detail-active":"")} onSubmitCapture={handleSubmitCapture}>
             <header className="admin-heading">
                 <div>
                     <small>생존밥 · 운영 관리</small>
@@ -872,8 +872,8 @@ export default function AdminPanel({
                     <div className="admin-content">
                         <div className="admin-page-heading"><small>{currentGroup?.title} / {recordId?(recordId==='new'?'등록':'상세 · 수정'):'목록 · 관리'}</small><h2>{menuLabel(kind.startsWith('guide-')?'guide-world':kind)}</h2></div>
 
-                        {recordId&&
-                            <button disabled={busy} onClick={()=>onNavigate({record:null})}>
+                        {(recordId||route?.area)&&
+                            <button className="admin-back-to-list" disabled={busy} onClick={()=>onNavigate({record:null,area:null})}>
                                 편집 취소 · 목록으로
                             </button>
                         }

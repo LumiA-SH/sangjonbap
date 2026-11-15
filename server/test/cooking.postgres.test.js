@@ -16,7 +16,7 @@ test('PostgreSQL cooking and meals with isolated fixtures', {skip: process.env.R
             characters.push(c.id);
             users.push((await setup.query("insert into public.auth_user(character_id,role) values ($1,'USER') returning id", [c.id])).rows[0].id);
         }
-        for (let n = 0; n < 4; n++) items.push((await setup.query("insert into public.item(name,category) values ($1,'ETC') returning id", [`DEV cooking item ${randomUUID()}`])).rows[0].id);
+        for (let n = 0; n < 4; n++) items.push((await setup.query("insert into public.item(name,category) values ($1,$2) returning id", [`DEV cooking item ${randomUUID()}`,n<2?'MATERIAL':'FOOD'])).rows[0].id);
         await setup.query("insert into public.food_config(item_id,blood_recovery,stat_growth_enabled,stat_growth_rate,stat_growth_target,stat_growth_value) values ($1,30,true,100,'ATK',3)", [items[2]]);
         await setup.query('insert into public.food_config(item_id,blood_recovery) values ($1,5)', [items[3]]);
         recipeId = (await setup.query(`insert into public.recipe(name,discovery_grade,learn_cost,success_rate,result_item_id,failure_item_id) values ($1,'COMMON',2,100,$2,$3) returning id`, [`DEV cooking recipe ${randomUUID()}`, items[2], items[3]])).rows[0].id;

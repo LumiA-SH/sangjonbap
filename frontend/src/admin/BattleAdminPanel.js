@@ -329,15 +329,14 @@ export default function BattleAdminPanel({onDenied, recordId, onOpen}) {
 
   return (
       <section>
-        <h2>일반 전투 운영 설정</h2>
+        
         <p role="alert">{message}</p>
 
         <button disabled={busy} onClick={() => work(reload)}>
           새로고침
         </button>
 
-        <details open>
-          <summary>마물 등록·수정</summary>
+        <section aria-label="마물 등록·수정">
 
           <div className="admin-record-workspace"><div className="admin-list-pane"><div className="admin-monster-actions">
             <button disabled={busy} onClick={newMonster}>새 마물</button>
@@ -348,7 +347,7 @@ export default function BattleAdminPanel({onDenied, recordId, onOpen}) {
             {rows.map(r => (
                 <li key={r.id}>
                   <div className="admin-list-detail">
-                    <strong>{r.name}</strong>
+                    <button type="button" className="admin-entry-title" disabled={busy} aria-current={String(id)===String(r.id)?"true":undefined} onClick={()=>openMonster(r)}>{r.name}</button>
                     <small>기본 식재료: {r.base_ingredient_name || '미설정'}</small>
                     <small>
                       추가 식재료: {(r.bonus_ingredients || [])
@@ -358,7 +357,6 @@ export default function BattleAdminPanel({onDenied, recordId, onOpen}) {
                   </div>
 
                   <div className="admin-record-actions">
-                    <button disabled={busy} onClick={() => openMonster(r)}>상세/수정</button>
                     <AdminDeleteControl menu="monsters" recordId={String(r.id)} disabled={busy} onDenied={onDenied}
                       onDeleted={async()=>{
                         if(String(id)===String(r.id)||String(recordId)===String(r.id)){
@@ -566,7 +564,7 @@ export default function BattleAdminPanel({onDenied, recordId, onOpen}) {
           )}
           {onOpen&&!id&&recordId!=='new'&&<p className="admin-empty-detail">목록에서 마물을 선택하세요.</p>}
           </div></div>
-        </details>
+        </section>
 
         <details>
           <summary>이능관리등급 배율·AP 비용</summary>

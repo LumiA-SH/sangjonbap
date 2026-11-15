@@ -158,6 +158,10 @@ export function createCookingRepository(pool, {random = randomUnit} = {}) {
                 if (!ingredients.length) fail('RECIPE_CONFIG_INVALID', '재료가 등록되지 않은 레시피입니다.', 500);
 
                 const items = await lockItems(client, [...ingredients.map(row=>row.item_id), recipe.result_item_id, recipe.failure_item_id]);
+                if (ingredients.length>5 || (await client.query(
+                    "select i.id from public.item i where i.id=any($1::bigint[]) and (i.category<>'MATERIAL' or exists(select 1 from public.food_config f where f.item_id=i.id)) limit 1",
+                    [ingredients.map(row=>row.item_id)]
+                )).rowCount) fail('RECIPE_CONFIG_INVALID','레시피 재료는 음식이 아닌 재료 아이템 1~5종이어야 합니다.',409);
                 const quantities = await inventoryQuantities(client, before.id, [...items.keys()]);
                 const plan = planBatch(recipe,ingredients,quantities,quantity,random);
 

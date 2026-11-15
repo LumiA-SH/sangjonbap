@@ -43,7 +43,7 @@ export function adminRoutes(config,repository,sessions) {
         if (typeof q!=='string'||q.length>100||(after!=='0'&&!validId(after))||
             Object.keys(req.query).some(k=>!['q','rp','type','after'].includes(k))||
             (req.query.rp!==undefined&&req.query.rp!=='true')||
-            !['all','food','failure-food'].includes(type)||
+            !['all','food','failure-food','material'].includes(type)||
             (req.query.rp==='true'&&type!=='all')) {
             throw new AppError(400,'INVALID_SEARCH','검색어 또는 음식 유형을 확인하세요.');
         }

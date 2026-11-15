@@ -43,6 +43,7 @@ const fields={
 
 export default function CharacterOperationsPanel({onDenied,recordId,onOpen}) {
   const [query,setQuery]=useState('');
+  const [detailTab,setDetailTab]=useState('base');
   const [rows,setRows]=useState([]);
   const [next,setNext]=useState(null);
   const [data,setData]=useState(null);
@@ -96,6 +97,7 @@ export default function CharacterOperationsPanel({onDenied,recordId,onOpen}) {
 
     let live=true;
     setData(null);
+    setDetailTab('base');
 
     if(recordId&&recordId!=='new') {
       setBusy(true);
@@ -174,7 +176,7 @@ export default function CharacterOperationsPanel({onDenied,recordId,onOpen}) {
 
   return (
       <section className="admin-record-workspace"><div className="admin-list-pane">
-        <h2>캐릭터 운영 관리</h2>
+        
 
         <p>
           HP·혈량 변경은 공용 상태 규칙에 따라 처리합니다.
@@ -274,16 +276,17 @@ export default function CharacterOperationsPanel({onDenied,recordId,onOpen}) {
         </div><div className="admin-detail-pane">
         {data&&(
             <>
-              <h3>
+              <div className="admin-character-detail-heading"><CharacterAvatar character={data.character}/><h3>
                 {data.character.name} ·
                 {characterStateText(data.character,anemiaPolicy)}
-              </h3>
-
+              </h3></div>
+              <nav className="admin-detail-tabs" aria-label="캐릭터 관리 항목">{[["base","기본 정보"],["inventory","인벤토리"],["recipes","레시피 학습"],["daily","일일 상태"]].map(([id,label])=><button type="button" key={id} aria-pressed={detailTab===id} disabled={busy} onClick={()=>setDetailTab(id)}>{label}</button>)}</nav>
               <p>
                 사망 {data.character.death_count}회 ·
                 부활 {data.character.revive_count}회
               </p>
 
+              <div hidden={detailTab==='inventory'}>
               {data.character.initial_setup_complete===false?(
                   <InitialCharacterSettings
                       key={data.character.id}
@@ -293,7 +296,7 @@ export default function CharacterOperationsPanel({onDenied,recordId,onOpen}) {
                   />
               ):(
                   <>
-                    <form className="admin-form" onSubmit={saveCharacter}>
+                    <form className="admin-form admin-character-resources" hidden={detailTab!=='base'} onSubmit={saveCharacter}>
                       <label>
                         상태
                         <select value={statusDraft} disabled={busy}
@@ -335,6 +338,7 @@ export default function CharacterOperationsPanel({onDenied,recordId,onOpen}) {
                     </form>
 
                     <CharacterDetailsEditor
+                        activeSection={detailTab}
                         key={data.character.id}
                         id={data.character.id}
                         onDenied={onDenied}
@@ -343,16 +347,16 @@ export default function CharacterOperationsPanel({onDenied,recordId,onOpen}) {
                   </>
               )}
 
+              </div><div hidden={detailTab!=='inventory'}>
               <h3>보유 아이템</h3>
 
               <ul>
                 {data.inventory.filter(r=>Number(r.quantity)>0).map(r=>(
                     <li key={r.item_id}>
-                      {r.name} · ID {r.item_id} · {r.quantity}개
-                      <button disabled={busy} onClick={()=>{
+                      <button type="button" className="admin-entry-title" disabled={busy} onClick={()=>{
                         setItemId(String(r.item_id));
                         setQuantity(r.quantity);
-                      }}>수량 선택</button>
+                      }}>{r.name} · {r.quantity}개</button>
                     </li>
                 ))}
               </ul>
@@ -371,7 +375,7 @@ export default function CharacterOperationsPanel({onDenied,recordId,onOpen}) {
                 </label>
 
                 <button disabled={busy||!itemId}>보유량 저장</button>
-              </form>
+              </form></div>
             </>
         )}
         {!data&&<p className="admin-empty-detail">목록에서 캐릭터를 선택하세요.</p>}

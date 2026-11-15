@@ -1093,7 +1093,7 @@ export default function AreaHubPanel({route, onNavigate, onDenied}) {
         <section className="area-hub admin-record-workspace"><div className="admin-list-pane">
             <header className="area-hub-heading">
                 <div>
-                    <h2>구역 관리</h2>
+                    
                     <p>한 구역의 조사 결과, 마물, 레시피, 단서를 이 페이지에서 관리합니다.</p>
                 </div>
 
@@ -1108,28 +1108,12 @@ export default function AreaHubPanel({route, onNavigate, onDenied}) {
                 </button>
             </header>
 
-            <div className="area-hub-selector">
-                <label>
-                    관리할 구역
-                    <select value={areaId} disabled={busy}
-                            onChange={e => selectArea(e.target.value)}>
-                        <option value="">구역 선택</option>
-                        {areas.map(item => (
-                            <option key={item.id} value={item.id}>{item.name}</option>
-                        ))}
-                    </select>
-                </label>
 
-                <button type="button" disabled={busy || !areaId}
-                        onClick={() => refreshArea()}>
-                    전체 새로고침
-                </button>
-            </div>
 
 
 
             <label>구역 이름 검색<input type="search" value={areaSearch} onChange={e=>setAreaSearch(e.target.value)}/></label>
-            <ul className="admin-area-menu">{areas.filter(item=>item.name.toLowerCase().includes(areaSearch.trim().toLowerCase())).map(item=><li key={item.id}><button type="button" disabled={busy} aria-current={String(item.id)===String(areaId)?'true':undefined} onClick={()=>selectArea(String(item.id))}>{item.name}</button></li>)}</ul>
+            <ul className="admin-area-menu">{areas.filter(item=>item.name.toLowerCase().includes(areaSearch.trim().toLowerCase())).map(item=><li key={item.id}><button type="button" disabled={busy} aria-current={String(item.id)===String(areaId)?'true':undefined} onClick={()=>selectArea(String(item.id))}><strong>{item.name}</strong><small>{item.is_accessible ? '공개 중' : item.auto_unlock ? '예약 공개' : '비공개'} · 조우 {Number(item.encounter_rate || 0)}%</small></button></li>)}</ul>
             </div><div className="admin-detail-pane">
             {!areaId && (
                 <p className="area-hub-empty">관리할 구역을 선택하세요.</p>
@@ -1143,7 +1127,7 @@ export default function AreaHubPanel({route, onNavigate, onDenied}) {
                 <>
                     <div className="area-hub-overview">
                         <div>
-                            <strong>{area.name}</strong>
+                            <small>구역 상세 · {area.id}</small><h2>{area.name}</h2>
                             <span>{area.is_accessible ? '공개 중' : area.auto_unlock ? '예약 공개 대기' : area.is_open ? '공개 허용' : '비공개'}</span>
                         </div>
                         <AdminDeleteControl menu="areas" recordId={String(areaId)} disabled={busy} onDenied={onDenied}
@@ -1157,15 +1141,9 @@ export default function AreaHubPanel({route, onNavigate, onDenied}) {
                                 setMessage('지역 삭제 완료');
                             }}/>
 
-                        <div className="area-hub-summary-grid">
-                            <div><small>조사 결과</small><strong>{data.results.length}개</strong></div>
-                            <div><small>등장 마물</small><strong>{monsterData.assignments.length}종</strong></div>
-                            <div><small>레시피</small><strong>{data.areaRecipes.length}종</strong></div>
-                            <div><small>단서</small><strong>{data.clues.length}개</strong></div>
-                        </div>
                     </div>
 
-                    <nav className="area-hub-buttons" aria-label="구역 관리 항목">{[["base","기본 정보"],["results","조사 결과"],["monsters","마물 배치"],["recipes","레시피 발견"],["clues","단서 공개"]].map(([id,label])=><button type="button" key={id} disabled={busy} aria-pressed={section===id} onClick={()=>{setSection(id);setError('');setMessage('');}}>{label}</button>)}</nav>
+                    <nav className="area-hub-tabs" aria-label="구역 관리 항목">{[["base","기본 정보"],["results","조사 결과"],["monsters","출현 마물"],["recipes","레시피 후보"],["clues","단서 공개"]].map(([id,label])=><button type="button" key={id} disabled={busy} aria-pressed={section===id} onClick={()=>{setSection(id);setError('');setMessage('');}}>{label}</button>)}</nav>
                     <div className="area-hub-sections">
                         {section==='base' && (<AreaBasicEditor
                             key={`${areaId}:${revision.base}`}
@@ -1222,11 +1200,11 @@ export function AreaDiscoveryPanel({onDenied,onManage}) {
   finally{if(live)setBusy(false);}
  })();return()=>{live=false;};},[onDenied]);
  const count=items=>items.filter(x=>x.found).length+' / '+items.length;
- return <section className="area-discovery-page"><h2>조사 현황</h2><p>구역별 발견 현황과 미발견 대상을 확인합니다.</p>
+ return <section className="area-discovery-page"><p>구역별 발견 현황과 미발견 대상을 확인합니다.</p>
  {busy&&<p role="status">조사 현황을 불러오는 중…</p>}{error&&<p role="alert">{error}</p>}
- <div className="area-discovery-scroll"><table className="admin-log-table"><thead><tr><th>구역</th><th>현재 조사율</th><th>고유 결과</th><th>마물</th><th>레시피</th><th>합계</th></tr></thead><tbody>
- {rows.map(({area,groups})=><Fragment key={area.id}><tr><td><button type="button" aria-expanded={expanded===area.id} aria-label={area.name+' 발견 대상 펼치기'} onClick={()=>setExpanded(expanded===area.id?null:area.id)}>{expanded===area.id?'−':'+'}</button> {area.name}<small> ID {area.id}</small></td><td>{Number(area.calculated_investigation_rate||0)}%</td>{groups.map(g=><td key={g.title}>{count(g.items)}</td>)}<td>{count(groups.flatMap(g=>g.items))}</td></tr>
- {expanded===area.id&&<tr><td colSpan="6"><div className="area-discovery-details">{groups.map(g=><section key={g.title}><h3>{g.title}</h3><table><tbody>{g.items.map(item=><tr key={item.id}><td>{item.name}</td><td>{item.found===undefined?'확인 필요':item.found?'발견':'미발견'}</td></tr>)}{!g.items.length&&<tr><td>등록된 항목 없음</td></tr>}<tr><th>합계</th><td>{count(g.items)}</td></tr></tbody></table></section>)}</div><button type="button" onClick={()=>onManage(area.id)}>이 구역 관리</button></td></tr>}</Fragment>)}
+ <header className="area-discovery-heading"><h3>구역별 발견 현황</h3><span>발견 {count(rows.flatMap(r=>r.groups.flatMap(g=>g.items)))}</span></header><div className="area-discovery-scroll"><table className="admin-log-table"><thead><tr><th>구역</th><th>현재 조사율</th><th>고유 결과</th><th>마물</th><th>레시피</th><th>합계</th></tr></thead><tbody>
+ {rows.map(({area,groups})=><Fragment key={area.id}><tr><td><div className="area-discovery-zone"><button type="button" aria-expanded={expanded===area.id} aria-label={area.name+' 발견 대상 펼치기'} onClick={()=>setExpanded(expanded===area.id?null:area.id)}>{expanded===area.id?'−':'+'}</button><div><strong>{area.name}</strong><small>ID {area.id}</small></div></div></td><td>{Number(area.investigation_rate ?? area.calculated_investigation_rate ?? 0)}%</td>{groups.map(g=><td key={g.title}>{count(g.items)}</td>)}<td>{count(groups.flatMap(g=>g.items))}</td></tr>
+ {expanded===area.id&&<tr><td colSpan="6"><div className="area-discovery-details">{groups.map(g=><section key={g.title}><h3>{g.title}</h3><table><tbody>{g.items.map(item=><tr key={item.id}><td>{item.name}</td><td><span className={item.found?'area-found':'area-missing'}>{item.found===undefined?'확인 필요':item.found?'● 발견':'○ 미발견'}</span></td></tr>)}{!g.items.length&&<tr><td>등록된 항목 없음</td></tr>}<tr><th>합계</th><td>{count(g.items)}</td></tr></tbody></table></section>)}</div><button type="button" onClick={()=>onManage(area.id)}>이 구역 관리</button></td></tr>}</Fragment>)}
  {!busy&&!error&&!rows.length&&<tr><td colSpan="6">등록된 구역이 없습니다.</td></tr>}
  {!!rows.length&&<tr><th>구역별 합계</th><td>—</td>{[0,1,2].map(i=><td key={i}>{count(rows.flatMap(r=>r.groups[i].items))}</td>)}<td>{count(rows.flatMap(r=>r.groups.flatMap(g=>g.items)))}</td></tr>}
  </tbody></table></div></section>;

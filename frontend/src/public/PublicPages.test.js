@@ -59,12 +59,12 @@ test('area hub switches management sections and shows save rejection below edito
  expect(api).toHaveBeenCalledWith('/admin/areas/1',expect.objectContaining({method:'PATCH',body:expect.objectContaining({name:'수정 구역'})}));
 });
 
-test('storage list opens adjacent editor and preserves quantity conflict guard',async()=>{
+test('storage edits quantity inline and preserves quantity conflict guard',async()=>{
  api.mockResolvedValue({records:[{item_id:'7',name:'재료',quantity:4}],nextAfter:null});
  await act(async()=>root.render(<StorageAdminPanel onDenied={jest.fn()}/>));
- const row=div.querySelector('.admin-storage-list button');await act(async()=>row.click());
- const form=div.querySelector('.admin-detail-pane form');expect(form.textContent).toContain('변경 전 4');
+ const form=div.querySelector('.admin-storage-form');expect(div.querySelector('.admin-detail-pane')).toBeNull();
  await act(async()=>Simulate.change(form.querySelector('input[type=number]'),{target:{value:'6'}}));
+ expect(form.textContent).toContain('변경 전 4');
  await act(async()=>Simulate.change(form.querySelector('input[maxlength]'),{target:{value:'검수'}}));
  await act(async()=>Simulate.submit(form));
  expect(api).toHaveBeenCalledWith('/admin/storage/7',expect.objectContaining({method:'PATCH',body:expect.objectContaining({quantity:6,expectedQuantity:4,reason:'검수'})}));
@@ -277,9 +277,10 @@ test('admin logs separate server categories and keep filters while paging',async
 
 test('area discovery is a read-only expandable status table and links to area management',async()=>{
  const manage=jest.fn();
- api.mockImplementation(async path=>path==='/admin/areas'?{records:[{id:'1',name:'수몰구역',calculated_investigation_rate:50}]}:path.endsWith('/results')?{results:[{id:'2',result_text:'고유 단서',is_unique:true,is_active:true,discovery:null}],areaRecipes:[{recipe_id:'3',recipe_name:'수프',discovered:true}],clues:[]}:{assignments:[{monster_id:'4',name:'박쥐',is_active:true,discovered:true}]});
+ api.mockImplementation(async path=>path==='/admin/areas'?{records:[{id:'1',name:'수몰구역',investigation_rate:50}]}:path.endsWith('/results')?{results:[{id:'2',result_text:'고유 단서',is_unique:true,is_active:true,discovery:null}],areaRecipes:[{recipe_id:'3',recipe_name:'수프',discovered:true}],clues:[]}:{assignments:[{monster_id:'4',name:'박쥐',is_active:true,discovered:true}]});
  await act(async()=>root.render(<AreaDiscoveryPanel onDenied={jest.fn()} onManage={manage}/>));
  expect(div.textContent).toContain('50%');
+ expect(div.querySelector('.area-discovery-zone')).not.toBeNull();
  await act(async()=>div.querySelector('[aria-expanded]').click());
  expect(div.textContent).toContain('고유 단서');expect(div.textContent).toContain('미발견');expect(div.textContent).toContain('박쥐');
  await act(async()=>button('이 구역 관리').click());expect(manage).toHaveBeenCalledWith('1');
@@ -299,4 +300,41 @@ test('gacha reward picker searches all item types instead of RP-only items',asyn
  await act(async()=>button('보상 추가').click());await act(async()=>button('전체 목록 조회').click());
  expect(api).toHaveBeenCalledWith('/admin/items/search?q=');expect(api.mock.calls.some(([url])=>url.includes('rp=true'))).toBe(false);
  for(const name of ['회복 음식','회복약','재료','기념품'])expect(div.textContent).toContain(name);
+});
+
+test('embedded management pages do not duplicate the shell title and clue names open details',async()=>{
+ const opened=jest.fn();api.mockResolvedValue({records:[{id:'8',title:'발견 단서',name:'구역',is_discovered:false,is_public:true}]});
+ await act(async()=>root.render(<ClueAdminPanel onOpen={opened} onDenied={jest.fn()}/>));
+ expect(div.querySelector('h2')).toBeNull();expect(button('단서 상세')).toBeUndefined();
+ await act(async()=>button('발견 단서').click());expect(opened).toHaveBeenCalledWith('8');
+ api.mockResolvedValue({settings:{},records:[]});
+ await act(async()=>root.render(<BalancePanel onDenied={jest.fn()}/>));expect(div.querySelector('h2')).toBeNull();
+});
+
+
+test('recipe ingredient picker is material-only and cannot add a sixth field',async()=>{
+ api.mockResolvedValue({records:[]});
+ await act(async()=>root.render(<MasterEditor kind="recipes" record={null} onSaved={jest.fn()} onDenied={jest.fn()} onBusy={jest.fn()}/>));
+ const add=()=>[...div.querySelectorAll('button')].find(b=>b.textContent.trim()==='행 추가');
+ for(let i=0;i<5;i++) await act(async()=>Simulate.click(add()));
+ expect(add().disabled).toBe(true);
+ expect(div.querySelectorAll('.admin-child-row')).toHaveLength(5);
+ const search=[...div.querySelector('.admin-child-row').querySelectorAll('button')].find(b=>b.textContent.includes('전체 목록'));
+ await act(async()=>Simulate.click(search));
+ expect(api.mock.calls.some(([url])=>url.includes('type=material'))).toBe(true);
+});
+
+
+test('character detail tabs retain draft values and show the profile',async()=>{
+ const CharacterOperationsPanel=(await import('../admin/CharacterOperationsPanel')).default;
+ const character={id:'1',name:'확인 캐릭터',hp:100,blood:80,ap:10,currency:1,atk:12,def:12,agi:12,status:'ALIVE',initial_setup_complete:true};
+ api.mockImplementation(async path=>path.endsWith('/details')?{record:{hunter_grade:'B',has_ability:false,ability_grade:null,recipe_ids:[],daily_meal_count:0,daily_training_done:false,death_count:0,revive_count:0},version:'1'}:path==='/admin/recipes'?{records:[]}:{character,inventory:[]});
+ await act(async()=>root.render(<CharacterOperationsPanel recordId="1" onOpen={jest.fn()} onDenied={jest.fn()}/>));
+ expect(div.querySelector('.admin-character-detail-heading img')).not.toBeNull();
+ const hp=div.querySelector('.admin-character-resources input');
+ await act(async()=>{hp.value='90';Simulate.change(hp);});
+ const tab=label=>[...div.querySelectorAll('.admin-detail-tabs button')].find(b=>b.textContent===label);
+ await act(async()=>tab('인벤토리').click());expect(div.querySelector('.admin-character-resources').closest('[hidden]')).not.toBeNull();
+ await act(async()=>tab('기본 정보').click());expect(hp.value).toBe('90');
+ expect(api.mock.calls.every(([,options])=>!options)).toBe(true);
 });

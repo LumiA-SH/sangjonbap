@@ -213,7 +213,7 @@ export default function InvestigationAdminPanel({onDenied,route,onNavigate}) {
   }
 
   return <section>
-    <h2>조사 결과·보상 관리</h2>
+    
     <p>조사 결과는 가중치에 따라 선택됩니다. 성공·대성공·실패 등급을 구분하지 않고 결과 내용과 보상을 처리합니다. 고유 조사결과와 마물·레시피 최초 발견 기록을 기준으로 조사율이 자동 계산됩니다. 아이템 보상 확률은 각각 독립 판정합니다.</p>
     <p role="alert">{message}</p>
 

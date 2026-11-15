@@ -141,7 +141,7 @@ export default function ContentAdminPanel({kind, onDenied}) {
 
  return (
      <section className="admin-operations-page admin-content-editor">
-      <h2>{{world: '세계관 관리', system: '시스템 안내 관리', schedule: '러닝 일정 관리'}[kind]}</h2>
+
       <button disabled={busy} onClick={() => work(load)}>저장된 내용 다시 조회</button>
 
       <p>본문은 일반 텍스트로 표시합니다. 미등록 내용은 작성하지 않았으며, 비공개 항목은 방문자에게 전달하지 않습니다. 전체 내용은 UTF-8 12KB, 항목은 최대 20개입니다.</p>

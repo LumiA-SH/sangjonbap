@@ -59,6 +59,7 @@ export function createAdminRepository(pool) {
                           left join public.food_config f on f.item_id=i.id
                  where ($1='' or strpos(lower(i.name),lower($1))>0) and i.id>$3
                    and ($2='all'
+                     or ($2='material' and i.category='MATERIAL' and f.item_id is null)
                      or ($2='food' and f.item_id is not null and not f.is_failure
                          and not exists(select 1 from public.recipe r where r.failure_item_id=i.id))
                      or ($2='failure-food' and f.item_id is not null and f.is_failure))

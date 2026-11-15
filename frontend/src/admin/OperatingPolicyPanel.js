@@ -201,7 +201,7 @@ export default function OperatingPolicyPanel({onDenied}) {
 
  return (
      <section>
-      <h2>운영 정책</h2>
+      
 
       <nav aria-label="운영 정책 종류">
        {Object.entries(names).map(([k, n]) => (

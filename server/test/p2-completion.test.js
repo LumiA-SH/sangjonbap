@@ -29,7 +29,7 @@ await c.query('begin'); await c.query('create schema ' + s); await c.query('crea
             } finally {await c.query('rollback'); c.release();}
         });
         await raw.query('create schema ' + schema); for (const {tablename} of (await raw.query("select tablename from pg_tables where schemaname='public'")).rows) await raw.query('create table ' + schema + '.' + tablename + '(like public.' + tablename + ' including all)');
-        await pool.query(fs.readFileSync(new URL('../../supabase/migrations/20261115145255_clue_manual_publication.sql',import.meta.url),'utf8'));
+        await pool.query(fs.readFileSync(new URL('../../supabase/migrations/20261115150829_clue_manual_publication.sql',import.meta.url),'utf8'));
         await pool.query('insert into public.daily_reset_state(singleton) values(true)'); await raw.query('insert into ' + schema + '.system_config select * from public.system_config');
         const account = async role => {const c = (await pool.query("insert into public.game_character(name,hunter_grade,atk,def,agi,hp,blood,ap,currency) values('test','B',20,20,20,80,80,7,10) returning *")).rows[0]; const u = (await pool.query("insert into public.auth_user(role,mastodon_instance,mastodon_account_id,character_id) values($1,'mock',$2,$3) returning *", [role, key(), c.id])).rows[0]; return {c, u};}; const owner = await account('ADMIN'), runner = await account('USER');
         const item = (await pool.query("insert into public.item(name,category,transferable) values('food','FOOD',true) returning id")).rows[0].id;

@@ -189,3 +189,48 @@
 .admin-panel .admin-balance-table input:not([type=checkbox]) {width:100%;min-width:70px;box-sizing:border-box;}
 .admin-panel .admin-balance-table input[type=checkbox] {width:18px;height:18px;}
 @media(max-width:580px){.admin-panel .admin-balance-table th,.admin-panel .admin-balance-table td {padding:10px 5px;font-size:12px;}.admin-panel .admin-balance-table input {font-size:12px;}}
+
+/* List titles open details without a redundant action button. */
+.admin-content .admin-entry-title,
+.admin-record-workspace .admin-entry-title {display:block;width:100%;padding:4px 0;border:0;border-radius:0;background:transparent;color:inherit;text-align:left;font:inherit;font-weight:700;white-space:normal;overflow-wrap:anywhere;box-shadow:none;}
+.admin-record-workspace .admin-entry-title:hover {text-decoration:underline;}
+.admin-record-workspace .admin-entry-title:focus-visible {outline:2px solid currentColor;outline-offset:3px;}
+.admin-record-workspace .admin-entry-title[aria-current="true"] {text-decoration:underline;text-underline-offset:4px;}
+.admin-list-detail {min-width:0;}
+.admin-list-detail small {display:block;overflow-wrap:anywhere;}
+.admin-detail-pane .admin-editor-heading {margin-top:0;}
+.admin-detail-pane .admin-editor-section {min-width:0;}
+
+/* Detail navigation keeps existing editors and their drafts mounted. */
+.admin-panel [hidden] {display:none!important;}
+.admin-panel .admin-detail-tabs {display:flex;gap:18px;overflow-x:auto;border-bottom:1px solid var(--admin-border);margin:12px 0 18px;}
+.admin-panel .admin-detail-tabs button {background:transparent;color:inherit;border:0;border-bottom:3px solid transparent;border-radius:0;padding:12px 2px;white-space:nowrap;}
+.admin-panel .admin-detail-tabs button[aria-pressed="true"] {border-bottom-color:var(--admin-red);color:var(--admin-red);font-weight:700;}
+.admin-character-detail-heading {display:flex;align-items:center;gap:14px;}
+.admin-character-detail-heading .public-character-avatar {width:54px;height:64px;flex:0 0 54px;}
+.admin-character-detail-heading .public-character-avatar img {width:100%;height:100%;object-fit:cover;}
+.admin-panel .admin-character-resources {grid-template-columns:repeat(2,minmax(0,1fr));}
+.admin-character-resources>button {grid-column:1/-1;}
+.admin-panel .admin-back-to-list {margin-bottom:12px;}
+@media(max-width:900px){
+ .admin-panel.admin-detail-active .admin-list-pane {display:none;}
+ .admin-panel.admin-detail-active .admin-record-workspace {grid-template-columns:minmax(0,1fr);}
+ .admin-panel.admin-detail-active .admin-nav {max-height:180px;}
+}
+@media(max-width:480px){.admin-panel .admin-character-resources {grid-template-columns:minmax(0,1fr);}.admin-panel .admin-detail-tabs {gap:14px;}}
+
+.admin-panel .admin-guide-tabs {display:flex;gap:18px;overflow-x:auto;border-bottom:1px solid var(--admin-border);padding:0;margin:12px 0 18px;}
+.admin-panel .admin-guide-tabs button {background:transparent;color:inherit;border:0;border-bottom:3px solid transparent;border-radius:0;padding:12px 2px;white-space:nowrap;}
+.admin-panel .admin-guide-tabs button[aria-pressed="true"] {border-bottom-color:var(--admin-red);color:var(--admin-red);font-weight:700;}
+.admin-panel .admin-content .admin-balance-table,.admin-panel .admin-content .admin-log-table {width:100%;}
+.admin-panel .admin-content-editor>button:first-of-type {float:right;margin:0 0 12px 12px;font-size:12px;}
+.admin-panel .admin-content-editor>form {clear:both;}
+@media(max-width:900px){.admin-panel.admin-detail-active .admin-navigation {max-height:180px;}}
+
+.admin-panel .admin-list-pane .public-character-list,
+.admin-panel .admin-list-pane .admin-character-row,
+.admin-panel .admin-character-open {box-sizing:border-box;max-width:100%;}
+.admin-panel .admin-list-pane .public-character-list {padding:0;margin-left:0;margin-right:0;}
+.admin-panel .admin-character-open .public-character-info {overflow-wrap:anywhere;}
+
+.admin-panel .admin-character-open {margin:0;}

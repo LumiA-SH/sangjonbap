@@ -69,3 +69,11 @@ export async function saveRecipeAreas(client,recipeId,areaRecipes,original) {
         );
     }
 }
+export async function validateRecipeIngredients(client,ingredients) {
+    if (!ingredients?.length || ingredients.length>5) fail('INVALID_ADMIN_INPUT','레시피 재료는 1~5종만 등록할 수 있습니다.',400);
+    const invalid=(await client.query(
+        "select i.id from public.item i where i.id=any($1::bigint[]) and (i.category<>'MATERIAL' or exists(select 1 from public.food_config f where f.item_id=i.id)) limit 1",
+        [ingredients.map(row=>row.item_id)]
+    )).rowCount;
+    if(invalid) fail('RECIPE_INGREDIENT_NOT_MATERIAL','레시피에는 음식이 아닌 재료 아이템만 사용할 수 있습니다.',400);
+}
