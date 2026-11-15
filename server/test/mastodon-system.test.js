@@ -41,7 +41,7 @@ test('lost response stops automatic retry', async () => {
     const f = fixture(); let n = 0; await sendSystemPost(f.outbox, env, {fetcher: async () => {if (++n === 1) return identity(); throw Error('secret upstream details');}});
     assert.equal(f.finishes[0][1].error, 'DELIVERY_UNCERTAIN'); assert.ok(!f.finishes[0][1].retry);
 });
-import {enqueueProgressEvents,createSystemPostJob} from '../src/modules/mastodon-system/jobs.js';
+import {enqueueProgressEvents,createSystemPostJob,runSystemPostBatch} from '../src/modules/mastodon-system/jobs.js';
 import {createOperatingPolicyRepository,policyDefaults} from '../src/modules/admin/operating-policy.js';
 
 test('templates neutralize HTML and mentions; variables are event-specific',()=>{
@@ -69,4 +69,20 @@ test('policy saves reject unconnected story/raid and unsupported retry/dedupe be
 test('rate-limit reset timestamp sets a bounded retry instead of immediate send',async()=>{
  const f=fixture();let n=0;await sendSystemPost(f.outbox,env,{fetcher:async()=>++n===1?identity():new Response('',{status:429,headers:{'X-RateLimit-Reset':new Date(Date.now()+600000).toISOString()}})});
  assert.equal(f.finishes[0][1].retry,true);assert.ok(f.finishes[0][1].delay>=599&&f.finishes[0][1].delay<=600);
+});
+
+test('batch sends at most five, spaces calls and stops on empty queue',async()=>{
+ let time=0,calls=0;const starts=[];const deps={now:()=>time,sleep:async ms=>{time+=ms;}};
+ const result=await runSystemPostBatch(async()=>{starts.push(time);calls++;return {state:'SENT'};},deps);
+ assert.equal(result.sent,5);assert.equal(calls,5);assert.ok(starts.slice(1).every((t,i)=>t-starts[i]>=5000));
+ calls=0;const empty=await runSystemPostBatch(async()=>{calls++;return {state:'IDLE'};},deps);assert.equal(calls,1);assert.equal(empty.state,'IDLE');
+});
+test('batch stops on 429, uncertain delivery or HOLD; keeps prior successes',async()=>{
+ for(const state of [{state:'FAILED',reason:'RATE_LIMITED'},{state:'FAILED',reason:'DELIVERY_UNCERTAIN'},{state:'HOLD'}]){
+ let calls=0;const result=await runSystemPostBatch(async()=>++calls===1?{state:'SENT'}:state,{sleep:async()=>{},now:()=>0});
+ assert.equal(calls,2);assert.equal(result.state,state.state);assert.equal(result.sent,1);
+ }
+});
+test('slow delivery cannot start another request after batch time budget',async()=>{
+ let time=0,calls=0;const result=await runSystemPostBatch(async()=>{calls++;time+=30000;return {state:'SENT'};},{sleep:async ms=>{time+=ms;},now:()=>time});assert.equal(calls,1);assert.equal(result.sent,1);
 });

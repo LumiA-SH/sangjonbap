@@ -29,7 +29,21 @@ export async function enqueueOpenAreas(pool){
  }catch(error){await c.query('rollback');throw error;}finally{c.release();}
 }
 
-// One bounded delivery per tick; the outbox enforces a global five-second spacing.
+// A bounded sequential batch; DB claims still enforce spacing across all workers.
+export async function runSystemPostBatch(send,{sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms)),now=()=>performance.now()}={}){
+ const started=now();let sent=0,attempted=0;
+ for(let i=0;i<5;i++){
+  // Reserve up to 20 seconds for account verification and a POST before stopping.
+  if(i>0){if(now()-started+5100>=35000)break;await sleep(5100);if(now()-started>=35000)break;}
+  const result=await send();
+  if(result.state==='SENT'){sent++;attempted++;continue;}
+  if(result.state==='FAILED')return {...result,sent,attempted:attempted+1,failed:1};
+  if(result.state==='HOLD')return {...result,sent,attempted};
+  return {state:sent?'SENT':'IDLE',sent,attempted};
+ }
+ return {state:sent?'SENT':'IDLE',sent,attempted};
+}
+
 // Neither API requests nor app startup call this function.
 export function createSystemPostJob(pool,env,{fetcher=fetch}={}){
  const outbox=createSystemOutbox(pool);
@@ -37,6 +51,6 @@ export function createSystemPostJob(pool,env,{fetcher=fetch}={}){
   if(env.MASTODON_SYSTEM_POSTING_ENABLED!=='true')return {state:'HOLD'};
   if(!env.MASTODON_SYSTEM_ACCESS_TOKEN?.trim()||!/^\d+$/.test(env.MASTODON_SYSTEM_ACCOUNT_ID||''))throw Error('SYSTEM_POST_SETTINGS_REQUIRED');
   await enqueueOpenAreas(pool);
-  return sendSystemPost(outbox,env,{fetcher});
+  return runSystemPostBatch(()=>sendSystemPost(outbox,env,{fetcher}));
  };
 }

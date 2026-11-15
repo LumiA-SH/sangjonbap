@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import worker,{runScheduled,MIDNIGHT,RETRY,kstDate} from './worker.mjs';
+import worker,{runScheduled,MIDNIGHT,RETRY,POSTS,kstDate} from './worker.mjs';
 const secret='fake-maintenance-secret-for-tests-only',env={MAINTENANCE_SECRET:secret};
 const event={cron:RETRY,scheduledTime:Date.parse('2026-11-08T15:00:00Z')};
 const response=(status,body)=>new Response(JSON.stringify(body),{status});
@@ -25,5 +25,12 @@ test('approved half-hour expression executes both paths; retired five-minute tri
 test('posting is opt-in and independent; HOLD is never success',async()=>{
  const urls=[];const deps={log:()=>{},fetcher:async url=>{urls.push(url);return url.endsWith('/system-posts')?response(503,{ok:false,error:{code:'SYSTEM_POST_HOLD'}}):good(url);}};
  await runScheduled(event,env,deps);assert.equal(urls.length,2);urls.length=0;
- const result=await runScheduled(event,{...env,SYSTEM_POSTING_SCHEDULE_ENABLED:'true'},deps);assert.equal(urls.length,3);assert.equal(result.find(r=>r.operation==='system-posts').status,'HOLD');
+ const result=await runScheduled({...event,cron:POSTS},{...env,SYSTEM_POSTING_SCHEDULE_ENABLED:'true'},deps);assert.equal(urls.length,1);assert.equal(result.find(r=>r.operation==='system-posts').status,'HOLD');
+});
+
+test('posting minute never invokes gameplay; half-hour stays gameplay-only',async()=>{
+ const calls=[];const enabled={...env,SYSTEM_POSTING_SCHEDULE_ENABLED:'true'};
+ await runScheduled({...event,cron:POSTS},enabled,{log:()=>{},fetcher:async u=>{calls.push(u);return response(200,{ok:true,data:{state:'SENT',sent:5,attempted:5}});}});
+ assert.deepEqual(calls,['https://grkohfxvafbquhmgnvwj.supabase.co/functions/v1/maintenance/system-posts']);
+ calls.length=0;await runScheduled(event,enabled,{log:()=>{},fetcher:async u=>{calls.push(u);return good(u);}});assert.equal(calls.length,2);assert.ok(calls.every(u=>!u.endsWith('/system-posts')));
 });

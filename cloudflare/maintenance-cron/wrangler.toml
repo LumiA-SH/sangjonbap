@@ -4,8 +4,12 @@ compatibility_date = "2026-11-08"
 workers_dev = false
 preview_urls = false
 [triggers]
-crons = ["0 15 * * *", "*/30 * * * *"]
+crons = ["0 15 * * *", "*/30 * * * *", "* * * * *"]
 # Approved scheduled verification; Edge execution HOLD remains enabled.
 [observability]
 enabled = true
 # Register MAINTENANCE_SECRET separately. Never put it in vars.
+
+[vars]
+# System posts only; gameplay Maintenance HOLD remains unchanged.
+SYSTEM_POSTING_SCHEDULE_ENABLED = "true"

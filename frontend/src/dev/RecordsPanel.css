@@ -1,0 +1,643 @@
+/* ========================================
+   01. RECORDS LAYOUT
+======================================== */
+
+.survival-page > section.survival-records {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.survival-records {
+    --records-dark: #303034;
+    --records-red: #650c13;
+    --records-paper: #fffefa;
+    color: #242428;
+}
+
+.survival-records * {
+    box-sizing: border-box;
+}
+
+/* ========================================
+   02. HEADER
+======================================== */
+
+.records-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 15px;
+    padding: 20px 23px;
+    border: 1px solid #c9c9c9;
+    border-radius: 10px;
+    background: #fffefa;
+    box-shadow: 0 2px 5px #00000012;
+}
+
+.records-header h2 {
+    margin: 0 0 6px;
+    padding-left: 12px;
+    border-left: 4px solid #650c13;
+    font-size: 24px;
+    font-weight: 850;
+}
+
+.records-header p {
+    margin: 0;
+    color: #777777;
+    font-size: 12px;
+}
+
+.records-header button {
+    min-height: 39px;
+    padding: 9px 13px;
+    border: 1px solid #cccccc;
+    background: #ffffff;
+    color: #242428;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.records-header button:hover:not(:disabled) {
+    border-color: #650c13;
+    background: #f5f5f5;
+}
+
+/* ========================================
+   03. CATEGORY TABS
+======================================== */
+
+.records-tabs {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 9px;
+}
+
+.survival-records .records-tabs button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-width: 0;
+    min-height: 58px;
+    padding: 12px;
+    border: 1px solid #c9c9c9;
+    border-radius: 8px;
+    background: #fffefa;
+    color: #555555;
+    text-align: center;
+}
+
+.survival-records .records-tabs button:hover:not(:disabled) {
+    border-color: #650c13;
+    background: #f5f5f5;
+}
+
+.survival-records .records-tabs button.is-active {
+    border-color: #650c13;
+    background: #650c13;
+    color: #ffffff;
+    opacity: 1;
+}
+
+.records-tabs button > span {
+    font-size: 11px;
+    font-weight: 700;
+    opacity: 0.65;
+}
+
+.records-tabs button > strong {
+    font-size: 13px;
+    font-weight: 800;
+}
+
+/* ========================================
+   04. SUMMARY
+======================================== */
+
+.records-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 20px 23px;
+    border: 1px solid #303034;
+    border-radius: 9px;
+    background: #303034;
+    color: #ffffff;
+}
+
+.records-summary > div:first-child > span {
+    color: #bbbbbb;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+}
+
+.records-summary h3 {
+    margin: 7px 0;
+    color: #ffffff;
+    font-size: 20px;
+    font-weight: 850;
+}
+
+.records-summary p {
+    margin: 0;
+    color: #cccccc;
+    font-size: 12px;
+}
+
+.records-summary-count {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 5px;
+    flex: 0 0 auto;
+}
+
+.records-summary-count small {
+    color: #bbbbbb;
+    font-size: 11px;
+}
+
+.records-summary-count strong {
+    color: #ffffff;
+    font-size: 26px;
+    font-weight: 850;
+    font-variant-numeric: tabular-nums;
+}
+
+.records-summary-count strong span {
+    margin-left: 4px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.records-notice {
+    margin: 0;
+    padding: 12px 15px;
+    border: 1px solid #d7c7c7;
+    border-left: 4px solid #650c13;
+    border-radius: 7px;
+    background: #fffefa;
+    color: #650c13;
+    font-size: 12px;
+}
+
+/* ========================================
+   05. WORKSPACE
+======================================== */
+
+.records-workspace {
+    display: grid;
+    grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+    align-items: start;
+    gap: 15px;
+    min-width: 0;
+}
+
+/* ========================================
+   06. RECORD BROWSER
+======================================== */
+
+.records-browser {
+    min-width: 0;
+    padding: 18px;
+    border: 1px solid #303034;
+    border-radius: 10px;
+    background: #303034;
+    color: #ffffff;
+    box-shadow: 0 2px 5px #00000018;
+}
+
+.records-browser-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 15px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid #555559;
+}
+
+.records-browser-heading h3 {
+    margin: 0;
+    color: #ffffff;
+    font-size: 18px;
+    font-weight: 850;
+}
+
+.records-browser-heading > span {
+    color: #aaaaaa;
+    font-size: 11px;
+}
+
+.records-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 650px;
+    overflow-y: auto;
+    padding: 2px;
+}
+
+.survival-records .records-list-item {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    width: 100%;
+    min-width: 0;
+    padding: 15px;
+    border: 1px solid #505054;
+    border-radius: 7px;
+    background: #3b3b3f;
+    color: #ffffff;
+    text-align: left;
+}
+
+.survival-records .records-list-item:hover:not(:disabled) {
+    border-color: #888888;
+    background: #48484c;
+}
+
+.survival-records .records-list-item.is-selected {
+    border-color: #650c13;
+    background: #650c13;
+    box-shadow: inset 3px 0 #ffffff;
+}
+
+.records-list-item-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.records-list-item-heading strong {
+    min-width: 0;
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 850;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+
+.records-list-item-heading span {
+    flex: 0 0 auto;
+    color: #bbbbbb;
+    font-size: 10px;
+}
+
+.records-list-item > p {
+    display: -webkit-box;
+    margin: 0;
+    color: #cccccc;
+    font-size: 12px;
+    line-height: 1.6;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+.records-list-item.is-selected > p {
+    color: #eeeeee;
+}
+
+.records-list-item-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-top: 9px;
+    border-top: 1px solid #ffffff20;
+}
+
+.records-list-item-meta span {
+    color: #bbbbbb;
+    font-size: 10px;
+}
+
+.records-list-item.is-selected .records-list-item-meta span {
+    color: #eeeeee;
+}
+
+.records-list-empty {
+    padding: 65px 15px;
+    color: #cccccc;
+    font-size: 13px;
+    line-height: 1.7;
+    text-align: center;
+}
+
+.survival-records .records-more {
+    width: 100%;
+    min-height: 42px;
+    margin-top: 14px;
+    border: 1px solid #666666;
+    border-radius: 6px;
+    background: #424246;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.survival-records .records-more:hover:not(:disabled) {
+    border-color: #aaaaaa;
+    background: #505054;
+}
+
+/* ========================================
+   07. RECORD DETAIL
+======================================== */
+
+.records-detail {
+    position: sticky;
+    top: 16px;
+    min-width: 0;
+    padding: 21px;
+    border: 1px solid #c9c9c9;
+    border-radius: 10px;
+    background: #fffefa;
+    box-shadow: 0 2px 5px #00000012;
+}
+
+.records-detail-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #dddddd;
+}
+
+.records-detail-top h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 850;
+}
+
+.records-detail-top > span {
+    color: #888888;
+    font-size: 10px;
+    font-weight: 750;
+    letter-spacing: 1px;
+}
+
+.records-detail-heading {
+    padding: 23px 0 18px;
+    border-bottom: 1px solid #dddddd;
+}
+
+.records-detail-type {
+    display: inline-flex;
+    padding: 5px 9px;
+    border-radius: 4px;
+    background: #650c13;
+    color: #ffffff;
+    font-size: 10px;
+    font-weight: 800;
+}
+
+.records-detail-heading h3 {
+    margin: 13px 0 8px;
+    color: #242428;
+    font-size: 23px;
+    font-weight: 850;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+
+.records-detail-heading p {
+    margin: 0;
+    color: #999999;
+    font-size: 11px;
+    letter-spacing: 0.4px;
+}
+
+.records-detail-information {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    padding: 16px 0;
+}
+
+.records-detail-information > div {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 15px;
+    padding: 11px 0;
+    border-bottom: 1px solid #eeeeee;
+}
+
+.records-detail-information > div:last-child {
+    border-bottom: 0;
+}
+
+.records-detail-information span {
+    flex: 0 0 90px;
+    color: #777777;
+    font-size: 12px;
+}
+
+.records-detail-information strong {
+    min-width: 0;
+    color: #242428;
+    font-size: 12px;
+    font-weight: 800;
+    text-align: right;
+    overflow-wrap: anywhere;
+}
+
+.records-detail-content {
+    margin-top: 8px;
+}
+
+.records-detail-content h4 {
+    margin: 0 0 12px;
+    padding-left: 10px;
+    border-left: 3px solid #650c13;
+    font-size: 15px;
+    font-weight: 850;
+}
+
+.records-content-paper {
+    min-height: 120px;
+    padding: 18px;
+    border: 1px solid #dddddd;
+    border-radius: 7px;
+    background: #f5f5f5;
+    color: #444444;
+    font-size: 13px;
+    line-height: 1.8;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.records-detail-json {
+    margin-top: 19px;
+    padding: 13px;
+    border: 1px solid #dddddd;
+    border-radius: 7px;
+    background: #f5f5f5;
+}
+
+.records-detail-json summary {
+    color: #555555;
+    font-size: 12px;
+    font-weight: 750;
+    cursor: pointer;
+}
+
+.records-detail-json pre {
+    max-height: 320px;
+    margin: 12px 0 0;
+    padding: 12px;
+    border-radius: 5px;
+    background: #303034;
+    color: #eeeeee;
+    font-size: 11px;
+    overflow: auto;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.records-detail-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 22px;
+    padding-top: 13px;
+    border-top: 1px solid #dddddd;
+    color: #999999;
+    font-size: 10px;
+    font-weight: 750;
+    letter-spacing: 0.5px;
+}
+
+.records-detail-empty {
+    padding: 95px 15px;
+    text-align: center;
+}
+
+.records-detail-empty strong {
+    display: block;
+    margin-bottom: 10px;
+    font-size: 15px;
+}
+
+.records-detail-empty p {
+    margin: 0;
+    color: #777777;
+    font-size: 12px;
+    line-height: 1.7;
+}
+
+/* ========================================
+   08. FOOTER
+======================================== */
+
+.records-footer-note {
+    margin: 0;
+    padding: 0 3px 12px;
+    color: #777777;
+    font-size: 11px;
+    line-height: 1.8;
+}
+
+/* ========================================
+   09. RESPONSIVE
+======================================== */
+
+@media (max-width: 1100px) {
+    .records-workspace {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .records-detail {
+        position: static;
+    }
+}
+
+@media (max-width: 850px) {
+    .records-tabs {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 650px) {
+    .records-header,
+    .records-browser,
+    .records-detail {
+        padding: 16px;
+    }
+
+    .records-header h2 {
+        font-size: 21px;
+    }
+
+    .records-header button {
+        width: 100%;
+    }
+
+    .records-tabs button {
+        min-height: 52px;
+        padding: 9px;
+    }
+
+    .records-summary {
+        padding: 16px;
+    }
+
+    .records-summary h3 {
+        font-size: 17px;
+    }
+
+    .records-summary-count strong {
+        font-size: 22px;
+    }
+
+    .records-list {
+        max-height: 480px;
+    }
+
+    .records-detail-heading h3 {
+        font-size: 20px;
+    }
+}
+
+@media (max-width: 430px) {
+    .records-tabs button > span {
+        display: none;
+    }
+
+    .records-tabs button > strong {
+        font-size: 12px;
+    }
+
+    .records-detail-information > div {
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .records-detail-information span {
+        flex: none;
+    }
+
+    .records-detail-information strong {
+        text-align: left;
+    }
+}

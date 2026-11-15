@@ -1,16 +1,14 @@
 import GuidePage from './public/GuidePage';
+import PublicHome from './public/PublicHome';
 import CharacterDirectory from './public/CharacterDirectory';
 import AnemiaNotice, {AnemiaPolicyContext,characterStateText} from './public/AnemiaNotice';
-import MobileLoginHelp from './MobileLoginHelp';
 import {publicAsset} from './publicAsset';
-import OAuthErrorNotice from './OAuthErrorNotice';
 import {useEffect, useRef, useState} from 'react';
 import CharacterCreationPanel from './dev/CharacterCreationPanel';
 import CharacterWorkspace from './dev/CharacterWorkspace';
-import {api, apiUrl, setToken} from './api/client';
+import {api, setToken} from './api/client';
 import AdminPanel from './admin/AdminPanel';
 import {useNavigation} from './admin/navigation';
-import ActionLogPanel from './dev/ActionLogPanel';
 import ShopPanel from './dev/ShopPanel';
 import CookingPanel from './dev/CookingPanel';
 import GachaPanel from './dev/GachaPanel';
@@ -22,6 +20,7 @@ import {HomeHeaderDecor} from './HomeDecor';
 import DicePanel from './dev/DicePanel';
 
 const FALLBACK_IMAGE = publicAsset('test.png');
+const publicTabs = ['home', 'world', 'system', 'schedule', 'roster'];
 
 function NavIcon({name, className = ''}) {
   return <img src={publicAsset(`assets/decor/icon-${name}.svg`)} alt="" aria-hidden="true" className={className}/>;
@@ -203,7 +202,7 @@ export default function App() {
   const [storage, setStorage] = useState([]);
   const [areas, setAreas] = useState([]);
   const [globalInvestigationRate, setGlobalInvestigationRate] = useState(null);
-  const [logs, setLogs] = useState([]);
+  const [, setLogs] = useState([]);
   const [products, setProducts] = useState([]);
   const [cooking, setCooking] = useState(null);
   const [gachas, setGachas] = useState([]);
@@ -493,12 +492,14 @@ export default function App() {
 
             <nav aria-label="주 메뉴">
               {canAdmin && <button type="button" onClick={() => setAdminOpen(true)}>운영 관리</button>}
-              {navigation.map(([id, label, symbol]) => (
-                  <button key={id} type="button" className={view === id ? 'is-active' : ''} onClick={() => navigate(id)}>
-                    <NavIcon name={symbol} className="survival-nav-icon"/>
-                    {label}
-                  </button>
-              ))}
+              {navigation
+                  .filter(([id]) => loggedIn || publicTabs.includes(id))
+                  .map(([id, label, symbol]) => (
+                      <button key={id} type="button" className={view === id ? 'is-active' : ''} onClick={() => navigate(id)}>
+                        <NavIcon name={symbol} className="survival-nav-icon"/>
+                        {label}
+                      </button>
+                  ))}
             </nav>
 
             <div className="survival-sidebar-foot">
@@ -531,12 +532,27 @@ export default function App() {
             </div>
 
             <main className="survival-content">
-              <div className="survival-heading">
-                {view === 'home' && <HomeHeaderDecor/>}
-                <small>SURVIVOR TERMINAL</small>
-                <h1>{view === 'home' ? `${character?.name ? `${character.name}, ` : ''}오늘도 생존을 이어가세요.` : navigation.find(([id]) => id === view)?.[1]}</h1>
-                <p>{pageDescriptions[view]}</p>
-              </div>
+              {(loggedIn || view !== 'home') && (
+                  <div className="survival-heading">
+                    {view === 'home' && <HomeHeaderDecor/>}
+                    <small>SURVIVOR TERMINAL</small>
+                    <h1>{view === 'home' ? `${character?.name ? `${character.name}, ` : ''}오늘도 생존을 이어가세요.` : navigation.find(([id]) => id === view)?.[1]}</h1>
+                    <p>{pageDescriptions[view]}</p>
+                  </div>
+              )}
+
+              {!loggedIn && view === 'home' && (
+                  <PublicHome
+                      provider={provider}
+                      authError={authError}
+                      devKey={key}
+                      onDevKeyChange={setKey}
+                      onDevLogin={login}
+                      onRetry={() => setAuthAttempt(value => value + 1)}
+                      onNavigate={navigate}
+                      busy={busy}
+                  />
+              )}
 
               {loggedIn && character?.initial_setup_complete === false && <section role="status">
                 <h2>캐릭터 연결 완료</h2>
@@ -627,44 +643,27 @@ export default function App() {
                   </div>
               )}
 
-              <div className="survival-auth" style={{display: loggedIn || view !== 'home' ? 'none' : 'block'}}>
-                <section aria-labelledby="login-title">
-                  <OAuthErrorNotice/>
-                  <h2 id="login-title">{provider === 'mastodon' ? 'Mastodon 로그인' : provider === 'dev' ? '개발 로그인' : '로그인 연결'}</h2>
-
-                  {provider === 'dev' && (
-                      <p>서버의 DEV_LOGIN_KEY를 입력하세요. 토큰은 메모리에만 보관되며 새로고침하면 다시 로그인해야 합니다.</p>
-                  )}
-
-                  {!loggedIn ? (
-                      provider === 'mastodon' ? (
-                          <>
-                            <a href={apiUrl('/auth/mastodon/login')}>Mastodon으로 로그인</a>
-                            <MobileLoginHelp/>
-                          </>
-                      ) : provider === 'dev' ? (
-                          <form onSubmit={login}>
-                            <label htmlFor="key">개발 로그인 키</label>
-                            <input id="key" type="password" value={key} onChange={event => setKey(event.target.value)} required autoComplete="off" disabled={busy}/>
-                            <button disabled={busy}>로그인</button>
-                          </form>
-                      ) : (
-                          authError ? <div role="alert">
-                            <p>{authError.code?.startsWith('VERIFICATION_') ? 'API는 연결되었지만 현재 검증 제한 중입니다. 로그인은 아직 공개되지 않았습니다.' : authError.message}</p>
-                            <p>{authError.code}{authError.status ? ` (HTTP ${authError.status})` : ''}</p>
-                            <button onClick={() => setAuthAttempt(value => value + 1)}>연결 다시 시도</button>
-                          </div> : <p>인증 방식 확인 중…</p>
-                      )
-                  ) : (
+              {loggedIn && (
+                  <div className="survival-auth" style={{display: view === 'home' ? 'block' : 'none'}}>
+                    <section aria-label="로그인 계정 관리">
+                      <h2>계정</h2>
                       <div className="actions">
                         <span>로그인됨</span>
-                        {canAdmin && <button disabled={busy} onClick={() => setAdminOpen(true)}>관리자 영역</button>}
-                        <button disabled={busy} onClick={() => run(refreshAll)}>전체 상태 새로고침</button>
-                        <button disabled={busy} onClick={() => run(logout)}>로그아웃</button>
+                        {canAdmin && <button type="button" disabled={busy} onClick={() => setAdminOpen(true)}>관리자 영역</button>}
+                        <button type="button" disabled={busy} onClick={() => run(refreshAll)}>전체 상태 새로고침</button>
+                        <button type="button" disabled={busy} onClick={() => run(logout)}>로그아웃</button>
                       </div>
-                  )}
-                </section>
-              </div>
+                    </section>
+                  </div>
+              )}
+
+              {!loggedIn && !publicTabs.includes(view) && (
+                  <section className="survival-card" role="status">
+                    <h2>로그인이 필요한 메뉴입니다.</h2>
+                    <p>게임 기능은 생존자 인증 후 이용할 수 있습니다.</p>
+                    <button type="button" onClick={() => navigate('home')}>홈으로 이동</button>
+                  </section>
+              )}
 
               {(busy || message) && <p className="dev-message" role="status" aria-live="polite">{busy ? '처리 중…' : message}</p>}
               {['world', 'system', 'schedule'].includes(view) && <GuidePage key={view} kind={view}/>}
@@ -703,12 +702,6 @@ export default function App() {
                       <InvestigationPanel activeBattle={character?.in_active_battle} battleError={errors.character} investigationApCost={investigationApCost} areas={areas} globalInvestigationRate={globalInvestigationRate} character={character} error={errors.areas} characterError={errors.character} busy={busy} run={run} refresh={refreshAll} notify={setMessage}/>
                     </div>
 
-                    {provider === 'dev' && (
-                        <div className="survival-page" style={display('records')}>
-                          <ActionLogPanel logs={logs} error={errors.logs} busy={busy} run={run} refresh={refreshAll}/>
-                        </div>
-                    )}
-
                     <div className="survival-page" style={display('shop')}>
                       <ShopPanel products={products} character={character} error={errors.products} busy={busy} run={run} refresh={refreshAll} notify={setMessage}/>
                     </div>
@@ -725,12 +718,16 @@ export default function App() {
             </main>
 
             <nav className="survival-bottom-nav" aria-label="모바일 메뉴">
-              {navigation.filter(([id]) => ['home', 'character', 'investigation', 'battle'].includes(id)).map(([id, label, symbol]) => (
-                  <button key={id} type="button" className={view === id ? 'is-active' : ''} onClick={() => navigate(id)}>
-                    <NavIcon name={symbol} className="survival-nav-icon"/>
-                    {label}
-                  </button>
-              ))}
+              {navigation
+                  .filter(([id]) => loggedIn
+                      ? ['home', 'character', 'investigation', 'battle'].includes(id)
+                      : ['home', 'world', 'system', 'roster'].includes(id))
+                  .map(([id, label, symbol]) => (
+                      <button key={id} type="button" className={view === id ? 'is-active' : ''} onClick={() => navigate(id)}>
+                        <NavIcon name={symbol} className="survival-nav-icon"/>
+                        {label}
+                      </button>
+                  ))}
 
               <button type="button" onClick={() => setMenuOpen(!menuOpen)}>
                 <span>☰</span>

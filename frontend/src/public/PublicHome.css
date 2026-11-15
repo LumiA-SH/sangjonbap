@@ -1,0 +1,406 @@
+/* ========================================
+   01. PUBLIC HOME
+======================================== */
+
+.public-entry {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    width: 100%;
+    min-width: 0;
+}
+
+.public-entry * {
+    box-sizing: border-box;
+}
+
+.survival-app:has(.public-entry) .survival-warning {
+    display: none;
+}
+
+/* ========================================
+   02. MAIN IMAGE
+======================================== */
+
+.public-entry-visual {
+    position: relative;
+    width: 100%;
+    min-width: 0;
+    overflow: hidden;
+    background: #f4f4f4;
+}
+
+.public-entry-main-image {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+/* ========================================
+   03. LOGIN OVER BARCODE
+======================================== */
+
+.public-entry-auth {
+    position: absolute;
+    z-index: 2;
+    top: 64.5%;
+    left: 50%;
+    width: 24%;
+    transform: translate(-50%, -50%);
+}
+
+.public-entry-login {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    width: 100%;
+    min-height: 76px;
+    padding: 10px;
+    border: 1px solid #650c13;
+    background: rgba(48, 48, 52, 0.96);
+    color: #ffffff;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 0.18s ease, transform 0.18s ease;
+}
+
+.public-entry-login span {
+    color: #c6a3a6;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+}
+
+.public-entry-login strong {
+    color: #ffffff;
+    font-size: 17px;
+    font-weight: 850;
+}
+
+.public-entry-login:hover {
+    background: #650c13;
+    color: #ffffff;
+    transform: translateY(-2px);
+}
+
+/* ========================================
+   04. DEVELOPMENT LOGIN
+======================================== */
+
+.public-entry-dev-login {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    width: 100%;
+    padding: 8px;
+    background: rgba(48, 48, 52, 0.97);
+}
+
+.public-entry-dev-login label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.public-entry-dev-login input {
+    width: 100%;
+    min-height: 34px;
+    padding: 7px 10px;
+    border: 1px solid #c9c9c9;
+    border-radius: 3px;
+    background: #ffffff;
+    color: #303034;
+    font-size: 12px;
+}
+
+.public-entry-dev-login button {
+    width: 100%;
+    min-height: 35px;
+    padding: 7px 10px;
+    border: 1px solid #650c13;
+    border-radius: 3px;
+    background: #650c13;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.public-entry-dev-login button:hover:not(:disabled) {
+    background: #80141e;
+}
+
+.public-entry-dev-login button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.public-entry-auth-error,
+.public-entry-connecting {
+    padding: 12px;
+    background: rgba(48, 48, 52, 0.96);
+    color: #ffffff;
+    font-size: 12px;
+    text-align: center;
+}
+
+.public-entry-auth-error p {
+    margin: 0 0 7px;
+}
+
+.public-entry-auth-error button {
+    padding: 6px 12px;
+    border: 1px solid #9b5961;
+    background: #650c13;
+    color: #ffffff;
+    cursor: pointer;
+}
+
+/* ========================================
+   05. AUTH SUPPORT
+======================================== */
+
+.public-entry-support:empty {
+    display: none;
+}
+
+.public-entry-support {
+    color: #777777;
+    font-size: 12px;
+}
+
+.public-entry-support > p {
+    margin: 0;
+}
+
+/* ========================================
+   06. PUBLIC NAVIGATION
+======================================== */
+
+.public-entry-navigation {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.public-entry-navigation button {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    min-width: 0;
+    min-height: 84px;
+    padding: 12px 8px;
+    border: 1px solid #c9c9c9;
+    border-radius: 7px;
+    background: #fffefa;
+    color: #303034;
+    cursor: pointer;
+    transition: background 0.18s ease, border-color 0.18s ease;
+}
+
+.public-entry-navigation button:hover {
+    border-color: #650c13;
+    background: #f7eeee;
+}
+
+.public-entry-navigation button span {
+    color: #888888;
+    font-size: 10px;
+    font-weight: 650;
+    letter-spacing: 1px;
+}
+
+.public-entry-navigation button strong {
+    font-size: 14px;
+    font-weight: 800;
+    word-break: keep-all;
+}
+
+/* ========================================
+   07. NOTICE
+======================================== */
+
+.public-entry-notice {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 15px;
+    min-width: 0;
+    padding: 19px 23px;
+    border: 1px solid #c9c9c9;
+    border-radius: 8px;
+    background: #fffefa;
+}
+
+.public-entry-notice span {
+    color: #888888;
+    font-size: 10px;
+    letter-spacing: 1px;
+}
+
+.public-entry-notice h3 {
+    margin: 5px 0 0;
+    color: #303034;
+    font-size: 17px;
+    font-weight: 850;
+}
+
+.public-entry-notice p {
+    margin: 0;
+    color: #777777;
+    font-size: 12px;
+}
+
+/* ========================================
+   08. RESPONSIVE
+======================================== */
+
+@media (max-width: 1050px) {
+    .public-entry-auth {
+        width: 26%;
+    }
+
+    .public-entry-login {
+        min-height: 58px;
+    }
+
+    .public-entry-login span {
+        font-size: 8px;
+    }
+
+    .public-entry-login strong {
+        font-size: 14px;
+    }
+
+    .public-entry-dev-login {
+        padding: 5px;
+    }
+
+    .public-entry-dev-login input,
+    .public-entry-dev-login button {
+        min-height: 30px;
+    }
+}
+
+@media (max-width: 850px) {
+    .public-entry-auth {
+        position: static;
+        width: 100%;
+        padding: 12px;
+        transform: none;
+        background: #fffefa;
+    }
+
+    .public-entry-login {
+        min-height: 48px;
+    }
+
+    .public-entry-login span {
+        font-size: 10px;
+    }
+
+    .public-entry-login strong {
+        font-size: 15px;
+    }
+
+    .public-entry-dev-login {
+        max-width: 360px;
+        margin: 0 auto;
+        padding: 0;
+        background: transparent;
+    }
+
+    .public-entry-dev-login input,
+    .public-entry-dev-login button {
+        min-height: 40px;
+    }
+
+    .public-entry-navigation {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 600px) {
+    .public-entry {
+        gap: 12px;
+    }
+
+    .public-entry-navigation {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .public-entry-navigation button {
+        min-height: 72px;
+    }
+
+    .public-entry-notice {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 17px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .public-entry-login,
+    .public-entry-navigation button {
+        transition: none;
+    }
+}
+
+/* ========================================
+   LOGIN SIZE ADJUSTMENT
+======================================== */
+
+@media (min-width: 851px) {
+    .public-entry-auth {
+        top: 66%;
+        width: min(28%, 350px);
+    }
+
+    .public-entry-login {
+        min-height: 110px;
+        gap: 9px;
+        padding: 16px;
+    }
+
+    .public-entry-login span {
+        font-size: 11px;
+    }
+
+    .public-entry-login strong {
+        font-size: 20px;
+    }
+
+    .public-entry-dev-login {
+        gap: 9px;
+        padding: 13px;
+        border: 1px solid #650c13;
+        border-radius: 4px;
+        background: rgba(38, 36, 39, 0.97);
+        box-shadow: 0 5px 16px #00000045;
+    }
+
+    .public-entry-dev-login input {
+        min-height: 44px;
+        padding: 10px 13px;
+        font-size: 14px;
+    }
+
+    .public-entry-dev-login button {
+        min-height: 46px;
+        padding: 10px 13px;
+        font-size: 14px;
+    }
+}

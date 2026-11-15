@@ -1,10 +1,10 @@
-export const MIDNIGHT='0 15 * * *', RETRY='*/30 * * * *';
+export const MIDNIGHT='0 15 * * *', RETRY='*/30 * * * *', POSTS='* * * * *';
 const BASE='https://grkohfxvafbquhmgnvwj.supabase.co/functions/v1/maintenance';
 const codes=new Set(['MAINTENANCE_CONCURRENCY_HOLD','DAILY_RESET_START_HOLD','DAILY_RESET_ACTIVITY_HOLD','MAINTENANCE_PARTIAL_FAILURE','MAINTENANCE_UNAUTHORIZED','MAINTENANCE_BROWSER_DENIED','SYSTEM_POST_HOLD','SYSTEM_POST_FAILED']);
 export const kstDate=t=>new Date(t+9*3600000).toISOString().slice(0,10);
 export async function runScheduled(event,env,{fetcher=fetch,log=e=>console.log(JSON.stringify(e)),timeoutMs=120000}={}) {
  const operations=event.cron===MIDNIGHT?['daily-reset']:event.cron===RETRY?['daily-reset','battle-expiry']:[];
- if(event.cron===RETRY&&env.SYSTEM_POSTING_SCHEDULE_ENABLED==='true')operations.push('system-posts');
+ if(event.cron===POSTS&&env.SYSTEM_POSTING_SCHEDULE_ENABLED==='true')operations.push('system-posts');
  // Edge's DB lock decides date completion; no local cache or immediate retry after uncertain commits.
  return Promise.all(operations.map(async operation=>{
   const started=Date.now(),entry={operation,scheduledAt:new Date(event.scheduledTime).toISOString(),kstDate:kstDate(event.scheduledTime)};
@@ -20,7 +20,7 @@ export async function runScheduled(event,env,{fetcher=fetch,log=e=>console.log(J
     entry.httpStatus=response.status;
     if(codes.has(body?.error?.code))entry.code=body.error.code;
     const value=body?.data?.result||body?.data;
-    for(const k of ['attempted','expired','skipped','failed','deferred'])if(Number.isSafeInteger(value?.[k])&&value[k]>=0)entry[k]=value[k];
+    for(const k of ['sent','attempted','expired','skipped','failed','deferred'])if(Number.isSafeInteger(value?.[k])&&value[k]>=0)entry[k]=value[k];
     if(body?.data?.reset?.hold||entry.code?.endsWith('_HOLD'))return finish('HOLD');
     if(entry.code==='MAINTENANCE_PARTIAL_FAILURE'||entry.failed>0||entry.deferred>0)return finish('PARTIAL_FAILURE');
     if(!response.ok||body?.ok!==true)return finish('FAILED');
