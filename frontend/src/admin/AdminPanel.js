@@ -385,9 +385,11 @@ export default function AdminPanel({
     const [search,setSearch]=useState('');
     const [filter,setFilter]=useState('all');
     const [resolvedNames,setResolvedNames]=useState({});
+    const [resetting,setResetting]=useState(false);
 
     const selectionRequest=useRef(0);
     const listRequest=useRef(0);
+    const resetPending=useRef(false);
     const accessLost=useRef(onAccessLost);
     accessLost.current=onAccessLost;
 
@@ -420,6 +422,44 @@ export default function AdminPanel({
         setMessage(message);
         accessLost.current?.();
     },[]);
+
+    async function runTestDailyReset() {
+        if (resetPending.current||!allowed) return;
+
+        if (!window.confirm(
+            '자정 초기화를 수동으로 실행하시겠습니까?\n\n' +
+            '전체 캐릭터의 AP·일일훈련·식사 횟수를 초기화하고 혈량을 감소시킵니다.\n' +
+            '무료 혈액팩 구매 횟수도 초기화되며 진행 중인 일반 전투는 중단됩니다.\n\n' +
+            '이 작업은 자동으로 되돌릴 수 없습니다.'
+        )) return;
+
+        resetPending.current=true;
+        setResetting(true);
+        setMessage('');
+
+        try {
+            const result=await api('/admin/test-daily-reset',{
+                method:'POST',
+                body:{requestKey:crypto.randomUUID()}
+            });
+
+            setMessage(
+                `자정 초기화 완료 (${result.day}) · ` +
+                `캐릭터 ${result.charactersReset}명 · ` +
+                `전투 중단 ${result.battlesInterrupted}건 · ` +
+                `무료 혈액팩 구매 횟수 초기화 ${result.freePackCountersCleared}건`
+            );
+        } catch(e) {
+            setMessage(`${e.code||'RESET_FAILED'}: ${e.message}`);
+
+            if ([401,403].includes(e.status)&&e.code!=='TEST_DAILY_RESET_DISABLED') {
+                denied(e.message);
+            }
+        } finally {
+            resetPending.current=false;
+            setResetting(false);
+        }
+    }
 
     const handleNameResolved=useCallback((key,name)=>{
         setResolvedNames(previous=>{
@@ -826,6 +866,9 @@ export default function AdminPanel({
 
                 <div className="actions">
                     <button onClick={onBack}>뒤로가기</button>
+                    <button type="button" disabled={!allowed||resetting} onClick={runTestDailyReset}>
+                        {resetting?'자정 초기화 중…':'자정 초기화'}
+                    </button>
                     <button onClick={onExit}>게임으로 돌아가기</button>
                     {onLogout&&<button onClick={onLogout}>로그아웃</button>}
                 </div>

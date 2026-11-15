@@ -270,14 +270,22 @@ export function createAdminInvestigationOperations(pool) {
                     }
                 }
 
+                // 보상 아이템은 실제 조사 지급 조건과 동일하게 활성 상태까지 검증한다.
                 for (const itemId of sortIds(body.rewards.map(r => r.item_id))) {
-                    const item = await c.query(
-                        'select id from public.item where id=$1 for share',
+                    const item = (await c.query(
+                        'select id,is_active from public.item where id=$1 for share',
                         [itemId]
-                    );
+                    )).rows[0];
 
-                    if (!item.rowCount) {
+                    if (!item) {
                         fail('ITEM_NOT_FOUND', '아이템이 없습니다.', 404);
+                    }
+
+                    if (!item.is_active) {
+                        fail(
+                            'REWARD_ITEM_INACTIVE',
+                            '비활성 아이템은 조사 보상으로 설정할 수 없습니다. 활성 아이템으로 교체하거나 보상을 제거하세요.'
+                        );
                     }
                 }
 
@@ -409,9 +417,9 @@ export function createAdminInvestigationOperations(pool) {
                         )
                          values($1,$2,$3,$4)
                              on conflict(area_id,recipe_id)
-                        do update set
+                         do update set
                             weight=excluded.weight,
-                                                            drop_rate=excluded.drop_rate`,
+                                                             drop_rate=excluded.drop_rate`,
                         [
                             areaId,
                             row.recipe_id,
