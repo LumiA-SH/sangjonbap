@@ -122,6 +122,14 @@ export function createAdminMasterRepository(pool) {
                 await requireAdminRow(c,userId);
                 await checkDuplicate(c,requestKey);
 
+                // Keep the inventory identity and food inside the same audited transaction.
+                if (kind==='foods' && !id && !patch.item_id) {
+                    patch.item_id=(await c.query(
+                        "insert into public.item(name,category,image_url,transferable,is_active) values($1,'FOOD',$2,true,true) returning id",
+                        [patch.name,patch.image_url??null]
+                    )).rows[0].id;
+                }
+
                 // Player EAT locks item before food; COOK/DRAW lock parent before items.
                 if (kind==='foods')await lockItems(c,[id||patch.item_id]);
 

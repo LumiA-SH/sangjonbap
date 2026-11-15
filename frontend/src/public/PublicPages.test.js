@@ -95,10 +95,10 @@ test('food detail name is first and save preserves linked item and RP',async()=>
  await act(async()=>root.render(<MasterEditor kind="foods" record={record} onSaved={jest.fn()} onDenied={jest.fn()} onBusy={jest.fn()}/>));
  const first=div.querySelector('.admin-editor-section input');expect(first.value).toBe('기존 음식');
  expect(div.querySelector('.admin-editor-section h4').textContent).toBe('음식 기본 정보');
- expect(div.textContent).toContain('실패요리 RP 효과');expect(div.querySelector('.admin-editor-reference').open).toBe(false);
+ expect(div.textContent).toContain('실패요리 RP 효과');expect(div.querySelector('.admin-editor-reference')).toBeNull();
  await act(async()=>Simulate.change(first,{target:{value:'수정 음식'}}));await act(async()=>Simulate.submit(div.querySelector('form')));
  const saved=api.mock.calls.find(c=>c[1]?.method==='PATCH');expect(saved[0]).toBe('/admin/foods/7');
- expect(saved[1].body).toEqual(expect.objectContaining({name:'수정 음식',rp_effect_text:'기존 문구',rp_effect_texts:['첫 문구']}));expect(saved[1].body).not.toHaveProperty('item_id');
+ expect(saved[1].body).toEqual(expect.objectContaining({name:'수정 음식',rp_effect_text:null,rp_effect_texts:['첫 문구']}));expect(saved[1].body).not.toHaveProperty('item_id');
 });
 
 test('item detail sections preserve editing and keep deletion in the heading',async()=>{
@@ -232,4 +232,15 @@ test('role display and confirmation are translated while authorization payload s
  await act(async()=>button('관리자 지정').click());
  expect(window.confirm).toHaveBeenCalledWith(expect.stringContaining('일반 사용자 → 관리자'));
  expect(api).toHaveBeenCalledWith('/admin/users/12/role',expect.objectContaining({body:expect.objectContaining({role:'ADMIN'})}));
+});
+
+test('food creation needs only food fields and legacy RP has one editable field',async()=>{
+ api.mockImplementation(async(path,options)=>options?{record:{item_id:'91'}}:{records:[],nextAfter:null});
+ await act(async()=>root.render(<MasterEditor kind="foods" record={{name:'실패 음식',is_failure:true,rp_effect_text:'기존 문구'}} onSaved={jest.fn()} onDenied={jest.fn()} onBusy={jest.fn()}/>));
+ expect(div.textContent).not.toContain('연결 아이템 선택');
+ expect(div.querySelectorAll('textarea')).toHaveLength(1);
+ expect(div.querySelector('textarea').value).toBe('기존 문구');
+ await act(async()=>Simulate.submit(div.querySelector('form')));
+ const body=api.mock.calls.find(([,o])=>o?.method)[1].body;
+ expect(body.item_id).toBeUndefined();expect(body.rp_effect_texts).toEqual(['기존 문구']);expect(body.rp_effect_text).toBeNull();
 });

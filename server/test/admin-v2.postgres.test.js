@@ -74,6 +74,19 @@ const c = await raw.connect(); return {
             assert.ok(audit.every(r => r.detail.actor.id && r.detail.targetUserId && r.detail.before && r.detail.after));
             const search = await repo.searchAdminUsers(u.id); assert.equal(search.length, 1); assert.equal(search[0].mastodon_account_id, undefined);
         });
+        await t.test('food registration creates its item atomically without a selector', async () => {
+            const input={name:'automatic food',is_failure:true,rp_effect_texts:['RP']};
+            const k=key();
+            const row=await repo.saveAdminMaster(a.id,'foods',null,input,k);
+            assert.equal(row.name,input.name);
+            assert.equal((await pool.query('select category from public.item where id=$1',[row.item_id])).rows[0].category,'FOOD');
+            await rejects(repo.saveAdminMaster(a.id,'foods',null,input,k),'DUPLICATE_REQUEST');
+            await rejects(save('foods',null,{name:'unauthorized food'},u.id),'ADMIN_REQUIRED');
+            const fault=createAdminRepository(scoped(q=>{if(q.includes('insert into public.action_log'))throw Error('injected audit failure');}));
+            await assert.rejects(fault.saveAdminMaster(a.id,'foods',null,{name:'rollback food'},key()),/injected/);
+            assert.equal((await pool.query("select count(*) from public.item where name in ('rollback food','unauthorized food')")).rows[0].count,'0');
+            assert.equal((await pool.query("select count(*) from public.item where name='automatic food'")).rows[0].count,'1');
+        });
         const item = async (name, category) => repo.saveAdminRecord(a.id, 'items', null, {name, category}, key());
         const material = await item('DEV isolated material', 'MATERIAL'), food = await item('DEV isolated food', 'FOOD'), failure = await item('DEV isolated failure', 'FOOD');
         await t.test('admin literal name search returns IDs/category and escapes wildcard semantics', async () => {

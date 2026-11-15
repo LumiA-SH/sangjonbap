@@ -43,7 +43,7 @@ export function validateMasterInput(kind,body,create) {
     const required={
         'food-grades':['name','blood_recovery'],
         areas:['name','is_open','encounter_rate'],
-        foods:['item_id'],
+        foods:Object.hasOwn(patch,'item_id')?['item_id']:['name'],
         recipes:['name','success_rate','result_item_id','ingredients'],
         gachas:['name','price','rewards']
     }[kind];

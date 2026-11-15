@@ -30,7 +30,6 @@ const defaults = {
     image_url: null,
     grade_id: null,
     is_failure: false,
-    item_id: '',
     name: '',
     blood_recovery: 0,
     stat_growth_enabled: false,
@@ -269,7 +268,10 @@ export function validateDraft(kind, draft) {
 export function MasterEditor({kind, record, onSaved, onDenied, onBusy}) {
   const [draft, setDraft] = useState(() =>
       Object.fromEntries(
-          Object.entries(defaults[kind]).map(([k, v]) => [k, record?.[k] ?? v])
+          Object.entries(defaults[kind]).map(([k, v]) => [k,
+            kind === 'foods' && k === 'rp_effect_texts'
+                ? (record?.rp_effect_texts?.length ? record.rp_effect_texts : record?.rp_effect_text ? [record.rp_effect_text] : [])
+                : record?.[k] ?? v])
       )
   );
 
@@ -391,6 +393,7 @@ export function MasterEditor({kind, record, onSaved, onDenied, onBusy}) {
     setMessage('');
 
     const body = {...draft};
+    if (kind === 'foods') body.rp_effect_text = null;
 
     if (record && kind === 'areas') {
       for (const key of Object.keys(body)) {
@@ -599,7 +602,7 @@ export function MasterEditor({kind, record, onSaved, onDenied, onBusy}) {
           {section('음식 구분', ['is_failure'])}
 
           {failureFood ? (
-              section('실패요리 RP 효과', ['rp_effect_texts', 'rp_effect_text'], '섭취 시 문구 후보 중 하나를 사용합니다. 실제 자원·능력치 효과는 적용되지 않습니다.')
+              section('실패요리 RP 효과', ['rp_effect_texts'], '섭취 시 문구 후보 중 하나를 사용합니다. 실제 자원·능력치 효과는 적용되지 않습니다.')
           ) : <>
           {section('음식 등급 설정', ['grade_id'],
               selectedGrade
@@ -613,14 +616,11 @@ export function MasterEditor({kind, record, onSaved, onDenied, onBusy}) {
                 selectedGrade ? `등급 기본 혈량 회복 +${selectedGrade.blood_recovery} · 성장 확률 ${selectedGrade.stat_growth_rate}%` : '음식 등급을 선택하면 해당 등급의 효과를 사용합니다.')}
             <details className="admin-editor-reference">
               <summary>기존 RP 문구 확인 · 수정</summary>
-              {section('RP 문구', ['rp_effect_text', 'rp_effect_texts'])}
+              {section('RP 문구', ['rp_effect_texts'])}
             </details>
           </>}
 
-          <details className="admin-editor-reference" open={!record}>
-            <summary>연결 아이템 {record ? '확인' : '선택'}</summary>
-            {renderFields(['item_id'])}
-          </details>
+
         </> : kind === 'recipes' ? <>
           {section('레시피 기본 정보', ['name', 'discovery_grade', 'description', 'image_url'])}
           {section('조리 설정', ['success_rate'])}
