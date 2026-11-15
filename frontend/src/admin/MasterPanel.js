@@ -27,6 +27,7 @@ const defaults = {
     grade_id: null,
     is_failure: false,
     item_id: '',
+    name: '',
     blood_recovery: 0,
     stat_growth_enabled: false,
     stat_growth_target: null,
@@ -446,6 +447,10 @@ function MasterEditor({kind, record, onSaved, onDenied, onBusy}) {
 
         {kind === 'foods' && (
             <>
+              <p>
+                음식 이름은 연결된 아이템의 이름입니다.
+                이름을 변경하면 인벤토리·상점 등에서도 같은 이름으로 표시됩니다.
+              </p>
               <p>음식 등급을 선택하면 혈량 회복량과 능력치 성장 확률이 해당 등급의 설정을 따릅니다. 실패요리에는 수치 효과가 적용되지 않습니다. 현재 실패 판정: {record?.effective_failure ? '예' : '아니오'}</p>
               <p>
                 능력치 성장: {draft.stat_growth_enabled
@@ -515,11 +520,25 @@ function MasterEditor({kind, record, onSaved, onDenied, onBusy}) {
                                     : 'all'
                             : 'all'}
                         onDenied={onDenied}
-                        onChange={id => change(k, id)}
+                        onChange={(id,item)=>{
+                          if(kind==='foods'&&k==='item_id'){
+                            setDraft(current=>({
+                              ...current,
+                              item_id:id||'',
+                              name:item?.name||''
+                            }));
+                          }else{
+                            change(k,id);
+                          }
+                        }}
                     />
                 ) : (
                     <label key={k}>
-                      {kind === 'recipes' ? (recipeLabels[k] || labels[k]) : labels[k]}
+                      {kind==='foods'&&k==='name'
+                          ? '음식 이름'
+                          : kind==='recipes'
+                              ? (recipeLabels[k]||labels[k])
+                              : labels[k]}
 
                       {['period_enabled', 'start_inclusive', 'end_inclusive'].includes(k) ? (
                           <select value={draft[k] === null ? '' : String(draft[k])}

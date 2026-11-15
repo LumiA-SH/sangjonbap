@@ -13,6 +13,21 @@ test('admin master validation matches food constraints and percentage units', ()
     for (const rate of [0, 50.5, 100]) assert.equal(validateMasterInput('foods', {item_id: '1', stat_growth_rate: rate, requestKey: key}, true).patch.stat_growth_rate, rate);
     for (const patch of [{stat_growth_rate: 101}, {stat_growth_rate: 50.555}, {stat_growth_rate: '50'}, {blood_recovery: -1}, {stat_growth_target: 'RANDOM'}, {stat_growth_value: 1.5}, {hack: 1}]) assert.throws(() => validateMasterInput('foods', {...patch, requestKey: key}, false));
     assert.throws(() => validateMasterInput('foods', {item_id: '2', requestKey: key}, false));
+
+    assert.equal(
+        validateMasterInput('foods',{
+            name:'새 음식',
+            requestKey:key
+        },false).patch.name,
+        '새 음식'
+    );
+
+    assert.throws(()=>
+        validateMasterInput('foods',{
+            name:'   ',
+            requestKey:key
+        },false)
+    );
     assert.throws(() => validateMasterState('foods', {stat_growth_enabled: false, stat_growth_target: 'ATK', stat_growth_value: 1}));
     assert.doesNotThrow(() => validateMasterState('foods', {stat_growth_enabled: false, stat_growth_target: null, stat_growth_value: 0}));
 });

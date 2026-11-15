@@ -88,6 +88,21 @@ const c = await raw.connect(); return {
         await t.test('food disabled/enabled constraints, partial updates, percentage and audit', async () => {
             await rejects(save('foods', null, {item_id: food.id}, u.id), 'ADMIN_REQUIRED');
             let row = await save('foods', null, {item_id: food.id, blood_recovery: 7});
+
+            assert.equal(row.name,'DEV isolated food');
+
+            row=await save('foods',food.id,{
+                name:'DEV renamed food'
+            });
+
+            assert.equal(row.name,'DEV renamed food');
+
+            const itemName=(await pool.query(
+                'select name from public.item where id=$1',
+                [food.id]
+            )).rows[0].name;
+
+            assert.equal(itemName,'DEV renamed food');
             assert.equal(row.stat_growth_target, null);
             await rejects(save('foods', food.id, {stat_growth_enabled: true}), 'INVALID_ADMIN_INPUT');
             row = await save('foods', food.id, {stat_growth_enabled: true, stat_growth_target: 'ATK', stat_growth_value: 2, stat_growth_rate: 50.5});
