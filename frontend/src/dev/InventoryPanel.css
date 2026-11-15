@@ -1,0 +1,859 @@
+/* ========================================
+   01. INVENTORY LAYOUT
+======================================== */
+
+.survival-page > section.survival-inventory {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.survival-inventory {
+    --inventory-dark: #303034;
+    --inventory-red: #650c13;
+    --inventory-paper: #fffefa;
+    color: #242428;
+}
+
+.survival-inventory * {
+    box-sizing: border-box;
+}
+
+.survival-inventory button {
+    font: inherit;
+}
+
+/* ========================================
+   02. HEADER / SUMMARY
+======================================== */
+
+.inventory-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 15px;
+    padding: 20px 23px;
+    border: 1px solid #c9c9c9;
+    border-radius: 10px;
+    background: #fffefa;
+    box-shadow: 0 2px 5px #00000012;
+}
+
+.inventory-header h2 {
+    margin: 0 0 6px;
+    padding-left: 12px;
+    border-left: 4px solid #650c13;
+    font-size: 24px;
+    font-weight: 850;
+}
+
+.inventory-header p {
+    margin: 0;
+    color: #777777;
+    font-size: 12px;
+}
+
+.inventory-header > button {
+    min-height: 38px;
+    padding: 8px 13px;
+    border: 1px solid #cccccc;
+    background: #ffffff;
+    color: #242428;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.inventory-header > button:hover:not(:disabled) {
+    border-color: #650c13;
+    background: #f5f5f5;
+}
+
+.inventory-summary {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.inventory-summary > div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    min-width: 0;
+    padding: 14px 16px;
+    border: 1px solid #c9c9c9;
+    border-radius: 8px;
+    background: #fffefa;
+}
+
+.inventory-summary small {
+    color: #777777;
+    font-size: 11px;
+}
+
+.inventory-summary strong {
+    color: #650c13;
+    font-size: 20px;
+    font-weight: 850;
+    font-variant-numeric: tabular-nums;
+}
+
+.inventory-notice {
+    margin: 0;
+    padding: 12px 15px;
+    border: 1px solid #d7c7c7;
+    border-left: 4px solid #650c13;
+    border-radius: 7px;
+    background: #fffefa;
+    color: #650c13;
+    font-size: 12px;
+    line-height: 1.7;
+}
+
+/* ========================================
+   03. ITEM BROWSER
+======================================== */
+
+.inventory-workspace {
+    display: grid;
+    grid-template-columns: minmax(0, 1.12fr) minmax(340px, 0.88fr);
+    align-items: start;
+    gap: 15px;
+    min-width: 0;
+}
+
+.inventory-browser {
+    min-width: 0;
+    border: 1px solid #303034;
+    border-radius: 10px;
+    background: #303034;
+    overflow: hidden;
+    box-shadow: 0 2px 5px #00000018;
+}
+
+.inventory-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    border-bottom: 1px solid #505054;
+}
+
+.survival-inventory .inventory-tabs button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    min-height: 50px;
+    padding: 12px;
+    border: 0;
+    border-radius: 0;
+    background: #303034;
+    color: #cccccc;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.survival-inventory .inventory-tabs button:hover:not(:disabled) {
+    background: #3e3e42;
+}
+
+.survival-inventory .inventory-tabs button.is-active {
+    background: #650c13;
+    color: #ffffff;
+}
+
+.inventory-tabs span {
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.inventory-browser-content {
+    min-width: 0;
+    padding: 17px;
+}
+
+.inventory-browser-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.inventory-browser-heading h3 {
+    margin: 0;
+    color: #ffffff;
+    font-size: 17px;
+    font-weight: 850;
+}
+
+.inventory-browser-heading span {
+    color: #cccccc;
+    font-size: 11px;
+}
+
+.inventory-filters {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 140px;
+    gap: 9px;
+    margin-bottom: 14px;
+}
+
+.inventory-filters input,
+.inventory-filters select {
+    width: 100%;
+    min-width: 0;
+    min-height: 42px;
+    margin: 0;
+    padding: 9px 12px;
+    border: 1px solid #aaaaaa;
+    border-radius: 6px;
+    background: #ffffff;
+    color: #242428;
+    font: inherit;
+    font-size: 12px;
+}
+
+.inventory-item-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-content: start;
+    gap: 9px;
+    max-height: 555px;
+    overflow-y: auto;
+}
+
+.survival-inventory .inventory-item-card {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    min-width: 0;
+    min-height: 78px;
+    padding: 10px;
+    border: 1px solid #505054;
+    border-radius: 7px;
+    background: #3b3b3f;
+    color: #ffffff;
+    text-align: left;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.survival-inventory .inventory-item-card:hover:not(:disabled) {
+    border-color: #888888;
+    background: #48484c;
+}
+
+.survival-inventory .inventory-item-card.is-selected {
+    border-color: #650c13;
+    background: #650c13;
+    box-shadow: inset 3px 0 #ffffff;
+}
+
+.inventory-item-image {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 52px;
+    width: 52px;
+    height: 52px;
+    border: 1px solid #777777;
+    border-radius: 5px;
+    background: #4b4b4f;
+    overflow: hidden;
+}
+
+.inventory-item-image img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.inventory-item-image span {
+    padding: 5px;
+    color: #cccccc;
+    font-size: 10px;
+    line-height: 1.3;
+    text-align: center;
+}
+
+.inventory-item-info {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+.inventory-item-info strong {
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+
+.inventory-item-info small {
+    color: #cccccc;
+    font-size: 10px;
+}
+
+.inventory-item-count {
+    align-self: flex-end;
+    flex: 0 0 auto;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.inventory-empty {
+    padding: 35px 12px;
+    color: #cccccc;
+    font-size: 12px;
+    text-align: center;
+}
+
+/* ========================================
+   04. SELECTED ITEM
+======================================== */
+
+.inventory-detail {
+    min-width: 0;
+    padding: 19px 21px;
+    border: 1px solid #c9c9c9;
+    border-radius: 10px;
+    background: #fffefa;
+    box-shadow: 0 2px 5px #00000012;
+}
+
+.inventory-detail-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 18px;
+    padding-bottom: 13px;
+    border-bottom: 1px solid #dddddd;
+}
+
+.inventory-detail-heading h3 {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 850;
+}
+
+.inventory-detail-heading span {
+    color: #888888;
+    font-size: 11px;
+}
+
+.inventory-detail-main {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    min-width: 0;
+}
+
+.inventory-item-image.is-large {
+    flex-basis: 112px;
+    width: 112px;
+    height: 112px;
+    border-color: #505054;
+    border-radius: 8px;
+    background: #303034;
+}
+
+.inventory-item-image.is-large span {
+    font-size: 12px;
+}
+
+.inventory-detail-main > div:last-child {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.inventory-detail-category {
+    color: #777777;
+    font-size: 11px;
+}
+
+.inventory-detail-main h4 {
+    margin: 6px 0 12px;
+    color: #242428;
+    font-size: 21px;
+    font-weight: 850;
+    overflow-wrap: anywhere;
+}
+
+.inventory-detail-main p {
+    margin: 0;
+    color: #777777;
+    font-size: 12px;
+}
+
+.inventory-detail-main p strong {
+    color: #650c13;
+    font-size: 15px;
+}
+
+.inventory-description {
+    margin: 17px 0;
+    padding: 14px;
+    border: 1px solid #dddddd;
+    border-radius: 7px;
+    background: #f5f5f5;
+    color: #444444;
+    font-size: 13px;
+    line-height: 1.75;
+    white-space: pre-wrap;
+}
+
+.inventory-properties {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-bottom: 19px;
+}
+
+.inventory-properties span {
+    padding: 7px 10px;
+    border: 1px solid #dddddd;
+    border-radius: 5px;
+    background: #f5f5f5;
+    color: #555555;
+    font-size: 11px;
+}
+
+.inventory-storage-form {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding-top: 17px;
+    border-top: 1px solid #dddddd;
+}
+
+.inventory-storage-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.inventory-storage-heading h4 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 850;
+}
+
+.inventory-storage-heading span {
+    color: #777777;
+    font-size: 11px;
+}
+
+.inventory-storage-form > label {
+    color: #555555;
+    font-size: 12px;
+}
+
+.inventory-storage-controls {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 9px;
+}
+
+.inventory-storage-controls input {
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    margin: 0;
+    padding: 10px 12px;
+    font: inherit;
+    font-size: 13px;
+}
+
+.inventory-storage-controls button {
+    min-height: 44px;
+    padding: 10px 16px;
+    background: #650c13;
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.inventory-storage-controls button:hover:not(:disabled) {
+    background: #80141e;
+}
+
+.inventory-storage-form > p {
+    margin: 0;
+    color: #777777;
+    font-size: 11px;
+}
+
+.inventory-detail-empty {
+    padding: 70px 15px;
+    text-align: center;
+}
+
+.inventory-detail-empty h3 {
+    margin: 0 0 10px;
+    font-size: 17px;
+}
+
+.inventory-detail-empty p {
+    color: #777777;
+    font-size: 12px;
+    line-height: 1.7;
+}
+
+/* ========================================
+   05. CHARACTER TRANSFER
+======================================== */
+
+.inventory-sharing {
+    min-width: 0;
+    padding: 20px 23px;
+    border: 1px solid #c9c9c9;
+    border-radius: 10px;
+    background: #fffefa;
+    box-shadow: 0 2px 5px #00000012;
+}
+
+.inventory-sharing-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 19px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #dddddd;
+}
+
+.inventory-sharing-heading h3 {
+    margin: 0 0 6px;
+    font-size: 18px;
+    font-weight: 850;
+}
+
+.inventory-sharing-heading p {
+    margin: 0;
+    color: #777777;
+    font-size: 12px;
+}
+
+.inventory-sharing-heading > span {
+    color: #777777;
+    font-size: 12px;
+}
+
+.inventory-sharing-content {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+    gap: 22px;
+}
+
+.inventory-transfer-target {
+    min-width: 0;
+}
+
+.inventory-transfer-target .survival-character-search form {
+    display: flex;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 9px;
+    margin: 0;
+}
+
+.inventory-transfer-target .survival-character-search form > label {
+    flex: 0 0 100%;
+    margin: 0;
+    font-size: 12px;
+    font-weight: 750;
+}
+
+.inventory-transfer-target .survival-character-search form > input {
+    flex: 1 1 160px;
+    width: auto;
+    min-width: 0;
+    min-height: 44px;
+    margin: 0;
+    padding: 10px 12px;
+    font-size: 13px;
+}
+
+.inventory-transfer-target .survival-character-search form > button {
+    flex: 0 0 auto;
+    min-height: 44px;
+    padding: 10px 14px;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.inventory-transfer-target .survival-character-search > p {
+    margin: 9px 0;
+    color: #777777;
+    font-size: 11px;
+    line-height: 1.7;
+}
+
+.inventory-transfer-target .survival-character-search ul {
+    margin: 12px 0;
+    padding: 0;
+    border: 1px solid #dddddd;
+    border-radius: 7px;
+    list-style: none;
+    overflow: hidden;
+}
+
+.inventory-transfer-target .survival-character-search li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 9px;
+    padding: 10px 12px;
+    border-bottom: 1px solid #dddddd;
+    font-size: 12px;
+}
+
+.inventory-transfer-target .survival-character-search li:last-child {
+    border-bottom: 0;
+}
+
+.inventory-transfer-target .survival-character-search li button {
+    min-height: 34px;
+    padding: 7px 11px;
+    font-size: 11px;
+}
+
+.inventory-selected-target {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 14px;
+    padding: 12px;
+    border: 1px solid #dddddd;
+    border-radius: 7px;
+    background: #f5f5f5;
+    font-size: 12px;
+}
+
+.inventory-selected-target strong {
+    color: #650c13;
+}
+
+.inventory-selected-target small {
+    margin-left: 6px;
+    color: #777777;
+}
+
+.inventory-selected-target button {
+    min-height: 32px;
+    padding: 6px 10px;
+    font-size: 11px;
+}
+
+.inventory-transfer-fields {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 120px;
+    align-items: end;
+    gap: 12px;
+}
+
+.inventory-transfer-fields > div {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    min-width: 0;
+}
+
+.inventory-transfer-fields label {
+    font-size: 12px;
+    font-weight: 750;
+}
+
+.inventory-transfer-fields select,
+.inventory-transfer-fields input {
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    padding: 10px 12px;
+    border: 1px solid #cccccc;
+    border-radius: 7px;
+    background: #ffffff;
+    color: #242428;
+    font: inherit;
+    font-size: 13px;
+}
+
+.inventory-transfer-preview {
+    grid-column: 1 / -1;
+    min-height: 44px;
+    background: #650c13;
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.inventory-transfer-preview:hover:not(:disabled) {
+    background: #80141e;
+}
+
+.inventory-transfer-confirm {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-top: 19px;
+    padding: 16px;
+    border: 1px solid #cccccc;
+    border-left: 4px solid #650c13;
+    border-radius: 7px;
+    background: #f5f5f5;
+}
+
+.inventory-transfer-confirm h4 {
+    margin: 0 0 7px;
+    font-size: 14px;
+}
+
+.inventory-transfer-confirm p {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.7;
+}
+
+.inventory-transfer-confirm > div:last-child {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 9px;
+}
+
+.inventory-transfer-confirm button {
+    min-height: 40px;
+    padding: 9px 14px;
+    font-size: 12px;
+}
+
+.inventory-transfer-confirm button:last-child {
+    border: 1px solid #cccccc;
+    background: #ffffff;
+    color: #242428;
+}
+
+.inventory-sharing-note {
+    margin: 17px 0 0;
+    padding-top: 13px;
+    border-top: 1px solid #dddddd;
+    color: #777777;
+    font-size: 11px;
+    line-height: 1.7;
+}
+
+/* ========================================
+   06. RESPONSIVE
+======================================== */
+
+@media (max-width: 1100px) {
+    .inventory-summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .inventory-workspace {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 850px) {
+    .inventory-sharing-content {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 650px) {
+    .inventory-header,
+    .inventory-detail,
+    .inventory-sharing {
+        padding: 16px;
+    }
+
+    .inventory-header h2 {
+        font-size: 21px;
+    }
+
+    .inventory-header > button {
+        width: 100%;
+    }
+
+    .inventory-summary {
+        gap: 8px;
+    }
+
+    .inventory-summary > div {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 12px;
+    }
+
+    .inventory-browser-content {
+        padding: 12px;
+    }
+
+    .inventory-item-list {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .inventory-filters {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .inventory-detail-main {
+        align-items: flex-start;
+    }
+
+    .inventory-item-image.is-large {
+        flex-basis: 85px;
+        width: 85px;
+        height: 85px;
+    }
+
+    .inventory-detail-main h4 {
+        font-size: 18px;
+    }
+
+    .inventory-transfer-fields {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .inventory-transfer-preview {
+        grid-column: auto;
+    }
+
+    .inventory-transfer-target .survival-character-search form > input,
+    .inventory-transfer-target .survival-character-search form > button {
+        flex: 0 0 100%;
+        width: 100%;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .survival-inventory button {
+        transition: none;
+    }
+}

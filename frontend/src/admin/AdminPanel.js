@@ -19,6 +19,7 @@ import InvestigationAdminPanel from './InvestigationAdminPanel';
 import AreaHubPanel from './AreaHubPanel';
 import ImageUploadField from './ImageUploadField';
 import AdminReferenceName, {invalidateAdminNames} from './AdminReferenceName';
+import AdminDeleteControl from './AdminDeleteControl';
 
 const emptyItem={
     name:'',
@@ -386,6 +387,7 @@ export default function AdminPanel({
     const [filter,setFilter]=useState('all');
     const [resolvedNames,setResolvedNames]=useState({});
     const [resetting,setResetting]=useState(false);
+    const [deleteRevision,setDeleteRevision]=useState(0);
 
     const selectionRequest=useRef(0);
     const listRequest=useRef(0);
@@ -690,14 +692,14 @@ export default function AdminPanel({
         }
 
         if (kind==='area-hub') {
-            return <AreaHubPanel route={route} onNavigate={onNavigate} onDenied={denied}/>;
+            return <AreaHubPanel key={deleteRevision} route={route} onNavigate={onNavigate} onDenied={denied}/>;
         }
 
         if (kind==='storage') return <StorageAdminPanel onDenied={denied}/>;
-        if (kind==='clues') return <ClueAdminPanel onDenied={denied} recordId={recordId} onOpen={onNavigate?openRecord:undefined}/>;
+        if (kind==='clues') return <ClueAdminPanel key={deleteRevision} onDenied={denied} recordId={recordId} onOpen={onNavigate?openRecord:undefined}/>;
         if (kind==='policies') return <OperatingPolicyPanel onDenied={denied}/>;
         if (kind==='diagnostics') return <DiagnosticsPanel onDenied={denied}/>;
-        if (kind==='investigation') return <InvestigationAdminPanel onDenied={denied} route={route} onNavigate={onNavigate}/>;
+        if (kind==='investigation') return <InvestigationAdminPanel key={deleteRevision} onDenied={denied} route={route} onNavigate={onNavigate}/>;
         if (kind==='characters') return <CharacterOperationsPanel onDenied={denied} recordId={recordId} onOpen={onNavigate?openRecord:undefined}/>;
         if (kind==='balance') return <BalancePanel onDenied={denied}/>;
         if (kind==='logs') return <RecordsPanel admin onDenied={denied}/>;
@@ -707,7 +709,7 @@ export default function AdminPanel({
         if (['foods','food-grades','recipes','gachas','areas'].includes(kind)) {
             return (
                 <MasterPanel
-                    key={kind}
+                    key={`${kind}-${deleteRevision}`}
                     kind={kind}
                     onDenied={denied}
                     recordId={recordId}
@@ -898,6 +900,36 @@ export default function AdminPanel({
                                 편집 취소 · 목록으로
                             </button>
                         }
+
+                        <AdminDeleteControl
+                            menu={kind}
+                            recordId={recordId}
+                            areaId={route?.area}
+                            disabled={busy}
+                            onDenied={denied}
+                            onDeleted={async ({kind:deletedKind})=>{
+                                invalidateAdminNames();
+                                setSelected(null);
+                                setEditorKey(value=>value+1);
+                                setDeleteRevision(value=>value+1);
+
+                                if (onNavigate) {
+                                    if (kind==='area-hub') {
+                                        if (deletedKind==='areas') {
+                                            onNavigate({area:null,record:null});
+                                        }
+                                    } else {
+                                        onNavigate({record:null});
+                                    }
+                                }
+
+                                if (kind==='products') {
+                                    await load(kind,route?.after);
+                                }
+
+                                setMessage('삭제 완료');
+                            }}
+                        />
 
                         {renderContent()}
                     </div>

@@ -1,6 +1,9 @@
 import {useEffect, useRef, useState} from 'react';
 import {api} from '../api/client';
+import {publicAsset} from '../publicAsset';
 import './BattlePanel.css';
+
+const FALLBACK_AVATAR = publicAsset('assets/decor/icon-user.svg');
 
 const labels = {
   ATTACK: '일반공격',
@@ -60,6 +63,23 @@ function ResourceGauge({label, value, maximum, dark = false}) {
         <div className="battle-resource-track" role="progressbar" aria-label={`${label} 비율`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(percent)}>
           <span style={{width: `${percent}%`}}/>
         </div>
+      </div>
+  );
+}
+
+function CharacterPortrait({character}) {
+  const [imageFailed, setImageFailed] = useState(false);
+  const imageUrl = character?.image_url || character?.profile_image_url || '';
+  const validImage = typeof imageUrl === 'string' && /^(https?:\/\/|\/(?!\/))/.test(imageUrl);
+  const isFallback = !validImage || imageFailed;
+
+  useEffect(() => {
+    setImageFailed(false);
+  }, [imageUrl]);
+
+  return (
+      <div className={`battle-character-portrait${isFallback ? ' is-fallback' : ''}`}>
+        <img src={isFallback ? FALLBACK_AVATAR : imageUrl} alt={`${character?.name || '내 캐릭터'} 프로필 이미지`} onError={() => setImageFailed(true)}/>
       </div>
   );
 }
@@ -259,6 +279,28 @@ export default function BattlePanel({inventory = [], busy, run, refresh, revisio
                   <span>{characterStatusLabels[character.status] || character.status || '-'}</span>
                 </div>
 
+                <div className="battle-character-profile">
+                  <CharacterPortrait character={character}/>
+
+                  <div className="battle-character-identity">
+                    <span>내 캐릭터</span>
+                    <h4>{character.name || `캐릭터 ${character.id}`}</h4>
+
+                    <div className="battle-character-stats">
+                      {[
+                        ['ATK', character.atk],
+                        ['DEF', character.def],
+                        ['AGI', character.agi]
+                      ].map(([label, value]) => (
+                          <div key={label}>
+                            <span>{label}</span>
+                            <strong>{value ?? '—'}</strong>
+                          </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
                 <div className="battle-character-resources">
                   <ResourceGauge label="HP" value={character.hp} maximum={character.max_hp}/>
                   <ResourceGauge label="혈량" value={character.blood} maximum={Math.min(100, character.max_blood)}/>
@@ -312,7 +354,7 @@ export default function BattlePanel({inventory = [], busy, run, refresh, revisio
                     )}
 
                     <p className="battle-timing">
-                      마지막 정상 행동: {battle.last_command_at || battle.started_at} · 00시에 전투가 종료됩니다. 새로고침은 시간을 연장하지 않습니다.
+                      마지막 정상 행동: {battle.last_command_at || battle.started_at} · 진행 중인 일반 PVE 전투는 매일 00:00(한국 시간)에 중단됩니다.
                     </p>
                   </section>
               )}

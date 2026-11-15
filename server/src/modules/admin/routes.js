@@ -76,5 +76,29 @@ export function adminRoutes(config,repository,sessions) {
     }
 
     mountExtendedAdminRoutes(router,repository);
+
+    // 미참조 운영 콘텐츠만 영구 삭제한다. 실제 참조·이력 검증은 저장소에서 수행한다.
+    for (const kind of ['products','foods','recipes','gachas','areas','clues']) {
+        router.delete(`/${kind}/:id`,async(req,res)=>{
+            if (!validId(req.params.id)) {
+                throw new AppError(400,'INVALID_ID','올바른 ID가 필요합니다.');
+            }
+
+            ok(res,await repository.deleteAdminRecord(
+                req.auth.user.id,kind,req.params.id,req.body
+            ));
+        });
+    }
+
+    router.delete('/areas/:areaId/results/:id',async(req,res)=>{
+        if (!validId(req.params.areaId)||!validId(req.params.id)) {
+            throw new AppError(400,'INVALID_ID','올바른 구역 및 조사 결과 ID가 필요합니다.');
+        }
+
+        ok(res,await repository.deleteAdminRecord(
+            req.auth.user.id,'investigation-results',req.params.id,req.body,
+            {areaId:req.params.areaId}
+        ));
+    });
     return router;
 }

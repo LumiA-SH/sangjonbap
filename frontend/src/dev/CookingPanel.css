@@ -1,0 +1,848 @@
+/* ========================================
+   01. COOKING LAYOUT
+======================================== */
+
+.survival-page > section.survival-cooking {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.survival-cooking {
+    --cooking-dark: #303034;
+    --cooking-red: #650c13;
+    --cooking-paper: #fffefa;
+    --cooking-border: #d0d0d0;
+    color: #242428;
+}
+
+.survival-cooking * {
+    box-sizing: border-box;
+}
+
+/* ========================================
+   02. HEADER / STATUS
+======================================== */
+
+.cooking-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding: 21px 24px;
+    border: 1px solid #c9c9c9;
+    border-radius: 10px;
+    background: #fffefa;
+    box-shadow: 0 2px 5px #00000012;
+}
+
+.cooking-heading h2 {
+    margin: 0 0 6px;
+    padding-left: 12px;
+    border-left: 4px solid #650c13;
+    font-size: 24px;
+    font-weight: 850;
+}
+
+.cooking-heading p {
+    margin: 0;
+    color: #777777;
+    font-size: 12px;
+}
+
+.cooking-header > button {
+    min-height: 38px;
+    padding: 8px 13px;
+    border: 1px solid #cccccc;
+    background: #ffffff;
+    color: #242428;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.cooking-header > button:hover:not(:disabled) {
+    border-color: #650c13;
+    background: #f5f5f5;
+}
+
+.cooking-overview {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.cooking-overview > div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-width: 0;
+    padding: 14px 17px;
+    border: 1px solid #c9c9c9;
+    border-radius: 8px;
+    background: #fffefa;
+}
+
+.cooking-overview small {
+    color: #777777;
+    font-size: 12px;
+}
+
+.cooking-overview strong {
+    color: #650c13;
+    font-size: 22px;
+    font-weight: 850;
+    font-variant-numeric: tabular-nums;
+}
+
+.cooking-overview strong span {
+    color: #888888;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.cooking-notice {
+    margin: 0;
+    padding: 13px 16px;
+    border: 1px solid #d7c7c7;
+    border-left: 4px solid #650c13;
+    border-radius: 7px;
+    background: #fffefa;
+    color: #650c13;
+    font-size: 13px;
+    line-height: 1.7;
+}
+
+/* ========================================
+   03. RECIPE WORKSPACE
+======================================== */
+
+.cooking-workspace {
+    display: grid;
+    grid-template-columns: 290px minmax(0, 1fr);
+    align-items: start;
+    gap: 15px;
+    min-width: 0;
+}
+
+.cooking-recipes {
+    min-width: 0;
+    padding: 16px;
+    border: 1px solid #303034;
+    border-radius: 10px;
+    background: #303034;
+    color: #ffffff;
+    box-shadow: 0 2px 5px #00000018;
+}
+
+.cooking-recipes-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 6px 4px 15px;
+    border-bottom: 1px solid #555559;
+}
+
+.cooking-recipes-heading h3 {
+    margin: 0;
+    color: #ffffff;
+    font-size: 17px;
+    font-weight: 850;
+}
+
+.cooking-recipes-heading span {
+    color: #cccccc;
+    font-size: 12px;
+}
+
+.cooking-recipe-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 610px;
+    padding-top: 13px;
+    overflow-y: auto;
+}
+
+.survival-cooking .cooking-recipe-item {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    padding: 14px;
+    border: 1px solid #555559;
+    border-radius: 7px;
+    background: #3b3b3f;
+    color: #ffffff;
+    text-align: left;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.survival-cooking .cooking-recipe-item:hover:not(:disabled) {
+    border-color: #888888;
+    background: #48484c;
+}
+
+.survival-cooking .cooking-recipe-item.is-selected {
+    border-color: #650c13;
+    background: #650c13;
+    box-shadow: inset 3px 0 #ffffff;
+}
+
+.cooking-recipe-name {
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 800;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+
+.cooking-recipe-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.cooking-recipe-meta small {
+    color: #cccccc;
+    font-size: 11px;
+}
+
+.cooking-recipe-empty {
+    padding: 20px 8px;
+    color: #cccccc;
+    font-size: 13px;
+    text-align: center;
+}
+
+/* ========================================
+   04. COOKING STATION
+======================================== */
+
+.cooking-station {
+    min-width: 0;
+    padding: 20px 23px;
+    border: 1px solid #c9c9c9;
+    border-radius: 10px;
+    background: #fffefa;
+    box-shadow: 0 2px 5px #00000012;
+}
+
+.cooking-station-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid #dddddd;
+}
+
+.cooking-station-heading h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 850;
+}
+
+.cooking-station-heading > span {
+    padding: 6px 9px;
+    border: 1px solid #dddddd;
+    border-radius: 5px;
+    background: #f5f5f5;
+    color: #777777;
+    font-size: 11px;
+}
+
+.cooking-station-heading > span.is-learned {
+    border-color: #650c13;
+    color: #650c13;
+}
+
+.cooking-recipe-detail {
+    padding: 21px 0;
+}
+
+.cooking-recipe-detail h4 {
+    margin: 0 0 9px;
+    color: #242428;
+    font-size: 23px;
+    font-weight: 850;
+    overflow-wrap: anywhere;
+}
+
+.cooking-recipe-detail p {
+    margin: 0;
+    color: #777777;
+    font-size: 13px;
+    line-height: 1.75;
+    white-space: pre-wrap;
+}
+
+.cooking-recipe-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 9px;
+}
+
+.cooking-recipe-stats > div {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    min-width: 0;
+    min-height: 73px;
+    padding: 11px;
+    border: 1px solid #dddddd;
+    border-radius: 7px;
+    background: #f5f5f5;
+}
+
+.cooking-recipe-stats small {
+    color: #777777;
+    font-size: 11px;
+}
+
+.cooking-recipe-stats strong {
+    color: #242428;
+    font-size: 17px;
+    font-weight: 850;
+    overflow-wrap: anywhere;
+    text-align: center;
+}
+
+/* ========================================
+   05. INGREDIENTS
+======================================== */
+
+.cooking-ingredients {
+    margin-top: 22px;
+}
+
+.cooking-section-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 13px;
+}
+
+.cooking-section-heading h3,
+.cooking-section-heading h4 {
+    margin: 0;
+    color: #242428;
+    font-size: 16px;
+    font-weight: 850;
+}
+
+.cooking-section-heading > span {
+    color: #777777;
+    font-size: 12px;
+}
+
+.cooking-ingredients ul {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    border: 1px solid #dddddd;
+    border-radius: 7px;
+    background: #f5f5f5;
+    list-style: none;
+    overflow: hidden;
+}
+
+.cooking-ingredients li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    min-width: 0;
+    padding: 12px 14px;
+    border-bottom: 1px solid #dddddd;
+    font-size: 13px;
+}
+
+.cooking-ingredients li:last-child {
+    border-bottom: 0;
+}
+
+.cooking-ingredients li > span:first-child {
+    flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.cooking-ingredient-quantity {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    color: #666666;
+    font-size: 12px;
+}
+
+.cooking-ingredient-quantity strong {
+    color: #242428;
+    font-size: 14px;
+}
+
+.cooking-ingredient-quantity small {
+    margin-left: 7px;
+    color: #777777;
+    font-size: 11px;
+}
+
+.cooking-ingredient-quantity small.is-insufficient {
+    color: #650c13;
+    font-weight: 800;
+}
+
+.cooking-ingredient-empty {
+    margin: 0;
+    padding: 17px;
+    border: 1px solid #dddddd;
+    border-radius: 7px;
+    background: #f5f5f5;
+    color: #777777;
+    font-size: 13px;
+}
+
+/* ========================================
+   06. QUANTITY / ACTIONS
+======================================== */
+
+.cooking-quantity {
+    margin-top: 21px;
+}
+
+.cooking-quantity > label {
+    display: block;
+    margin-bottom: 9px;
+    color: #242428;
+    font-size: 13px;
+    font-weight: 750;
+}
+
+.cooking-quantity-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 150px;
+    gap: 10px;
+}
+
+.cooking-quantity-row input {
+    width: 100%;
+    min-width: 0;
+    min-height: 45px;
+    margin: 0;
+    padding: 10px 13px;
+    border: 1px solid #cccccc;
+    border-radius: 7px;
+    background: #ffffff;
+    color: #242428;
+    font: inherit;
+}
+
+.cooking-quantity-row > div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 10px 13px;
+    border: 1px solid #dddddd;
+    border-radius: 7px;
+    background: #f5f5f5;
+}
+
+.cooking-quantity-row small {
+    color: #777777;
+    font-size: 11px;
+}
+
+.cooking-quantity-row strong {
+    color: #650c13;
+    font-size: 15px;
+    font-weight: 850;
+}
+
+.cooking-quantity > p {
+    margin: 9px 0 0;
+    color: #777777;
+    font-size: 11px;
+    line-height: 1.7;
+}
+
+.cooking-station-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 21px;
+}
+
+.survival-cooking .cooking-station-actions button {
+    min-height: 47px;
+    margin: 0;
+    padding: 11px 13px;
+    border: 1px solid #d0d0d0;
+    border-radius: 7px;
+    background: #f5f5f5;
+    color: #242428;
+    font-size: 14px;
+    font-weight: 800;
+}
+
+.survival-cooking .cooking-station-actions .cooking-craft-button {
+    border-color: #650c13;
+    background: #650c13;
+    color: #ffffff;
+}
+
+.survival-cooking .cooking-station-actions .cooking-learn-button:hover:not(:disabled) {
+    border-color: #650c13;
+    background: #eeeeee;
+}
+
+.survival-cooking .cooking-station-actions .cooking-craft-button:hover:not(:disabled) {
+    border-color: #80141e;
+    background: #80141e;
+}
+
+.survival-cooking .cooking-station-actions button:disabled {
+    opacity: 0.45;
+}
+
+.cooking-station-note {
+    margin: 13px 0 0;
+    color: #777777;
+    font-size: 11px;
+    line-height: 1.6;
+}
+
+.cooking-station-empty {
+    padding: 70px 20px;
+    color: #777777;
+    text-align: center;
+}
+
+.cooking-station-empty strong {
+    color: #242428;
+    font-size: 17px;
+}
+
+.cooking-station-empty p {
+    font-size: 12px;
+}
+
+/* ========================================
+   07. OWNED FOODS
+======================================== */
+
+.cooking-meals {
+    min-width: 0;
+    padding: 20px 23px;
+    border: 1px solid #c9c9c9;
+    border-radius: 10px;
+    background: #fffefa;
+    box-shadow: 0 2px 5px #00000012;
+}
+
+.cooking-meals .cooking-section-heading {
+    margin-bottom: 18px;
+}
+
+.cooking-meals .cooking-section-heading h3 {
+    font-size: 18px;
+}
+
+.cooking-meals .cooking-section-heading p {
+    margin: 5px 0 0;
+    color: #777777;
+    font-size: 12px;
+}
+
+.cooking-food-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.cooking-food-card {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    min-width: 0;
+    padding: 17px;
+    border: 1px solid #dddddd;
+    border-radius: 8px;
+    background: #f5f5f5;
+}
+
+.cooking-food-heading {
+    display: flex;
+    align-items: start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.cooking-food-heading h4 {
+    margin: 0;
+    color: #242428;
+    font-size: 16px;
+    font-weight: 850;
+    overflow-wrap: anywhere;
+}
+
+.cooking-food-heading > span {
+    flex: 0 0 auto;
+    color: #666666;
+    font-size: 12px;
+}
+
+.cooking-food-effects {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: auto;
+    color: #666666;
+    font-size: 12px;
+}
+
+.cooking-food-effects strong {
+    color: #650c13;
+    font-size: 14px;
+}
+
+.survival-cooking .cooking-food-card > button {
+    min-height: 43px;
+    padding: 10px 14px;
+    border: 1px solid #650c13;
+    border-radius: 7px;
+    background: #650c13;
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.survival-cooking .cooking-food-card > button:hover:not(:disabled) {
+    border-color: #80141e;
+    background: #80141e;
+}
+
+.survival-cooking .cooking-food-card > button:disabled {
+    opacity: 0.45;
+}
+
+.cooking-food-empty {
+    margin: 0;
+    padding: 28px;
+    border: 1px solid #dddddd;
+    border-radius: 7px;
+    background: #f5f5f5;
+    color: #777777;
+    font-size: 13px;
+    text-align: center;
+}
+
+/* ========================================
+   08. COOKING RESULT
+======================================== */
+
+.cooking-result {
+    min-width: 0;
+    padding: 20px 23px;
+    border: 1px solid #c9c9c9;
+    border-radius: 10px;
+    background: #fffefa;
+    box-shadow: 0 2px 5px #00000012;
+}
+
+.cooking-result-heading {
+    padding-bottom: 14px;
+    border-bottom: 1px solid #dddddd;
+}
+
+.cooking-result-heading span {
+    color: #777777;
+    font-size: 11px;
+}
+
+.cooking-result-heading h3 {
+    margin: 5px 0 0;
+    color: #242428;
+    font-size: 21px;
+    font-weight: 850;
+}
+
+.cooking-result-summary {
+    margin: 17px 0;
+    padding: 14px 17px;
+    border-left: 4px solid #650c13;
+    background: #f5f5f5;
+    color: #242428;
+    font-size: 13px;
+    line-height: 1.7;
+}
+
+.cooking-result-outputs {
+    margin-top: 18px;
+}
+
+.cooking-result-outputs h4 {
+    margin: 0 0 10px;
+    font-size: 15px;
+}
+
+.cooking-result-outputs ul {
+    margin: 0;
+    padding: 13px 15px 13px 35px;
+    border: 1px solid #dddddd;
+    border-radius: 7px;
+    background: #f5f5f5;
+}
+
+.cooking-result-outputs li {
+    padding: 5px 0;
+    font-size: 13px;
+}
+
+.cooking-result-story {
+    margin: 17px 0;
+    padding: 17px;
+    border: 1px solid #dddddd;
+    border-left: 4px solid #650c13;
+    border-radius: 7px;
+    background: #f5f5f5;
+    color: #242428;
+    font-size: 13px;
+    line-height: 1.8;
+    white-space: pre-wrap;
+}
+
+.cooking-result-technical {
+    margin-top: 18px;
+    padding: 12px 15px;
+    border: 1px solid #dddddd;
+    border-radius: 7px;
+    background: #f5f5f5;
+}
+
+.cooking-result-technical summary {
+    color: #777777;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.cooking-result-technical pre {
+    max-height: 320px;
+    overflow: auto;
+    font-size: 12px;
+}
+
+/* ========================================
+   09. RESPONSIVE
+======================================== */
+
+@media (max-width: 1050px) {
+    .cooking-workspace {
+        grid-template-columns: 240px minmax(0, 1fr);
+    }
+
+    .cooking-food-list {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 850px) {
+    .cooking-workspace {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .cooking-recipe-list {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        max-height: none;
+    }
+
+    .cooking-food-list {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 650px) {
+    .cooking-header,
+    .cooking-station,
+    .cooking-meals,
+    .cooking-result {
+        padding: 16px;
+    }
+
+    .cooking-heading h2 {
+        font-size: 21px;
+    }
+
+    .cooking-header > button {
+        width: 100%;
+    }
+
+    .cooking-overview {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 8px;
+    }
+
+    .cooking-overview > div {
+        padding: 12px 15px;
+    }
+
+    .cooking-recipes {
+        padding: 11px;
+    }
+
+    .cooking-recipe-list {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .cooking-recipe-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .cooking-recipe-stats > div:last-child {
+        grid-column: 1 / -1;
+    }
+
+    .cooking-quantity-row {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .cooking-food-list {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .cooking-food-heading {
+        flex-wrap: wrap;
+    }
+
+    .cooking-station-actions {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .survival-cooking button {
+        transition: none;
+    }
+}

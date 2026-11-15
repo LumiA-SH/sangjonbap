@@ -342,6 +342,98 @@
     font-size: 12px;
 }
 
+/* Character identity and combat stats */
+
+#battle-panel .battle-character-profile {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    min-width: 0;
+    margin-bottom: 16px;
+    padding: 14px 16px;
+    border: 1px solid #dddddd;
+    border-radius: 7px;
+    background: #f5f5f5;
+}
+
+#battle-panel .battle-character-portrait {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 92px;
+    width: 92px;
+    height: 110px;
+    border: 1px solid #d0d0d0;
+    border-radius: 7px;
+    background: #e5e5e7;
+    overflow: hidden;
+}
+
+#battle-panel .battle-character-portrait img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 20%;
+}
+
+#battle-panel .battle-character-portrait.is-fallback img {
+    width: 40%;
+    height: 40%;
+    object-fit: contain;
+    opacity: 0.5;
+}
+
+#battle-panel .battle-character-identity {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+#battle-panel .battle-character-identity > span {
+    color: #777777;
+    font-size: 11px;
+}
+
+#battle-panel .battle-character-identity h4 {
+    margin: 4px 0 13px;
+    color: #242428;
+    font-size: 21px;
+    font-weight: 850;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+
+#battle-panel .battle-character-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 9px;
+}
+
+#battle-panel .battle-character-stats > div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-width: 0;
+    padding: 9px 12px;
+    border: 1px solid #dddddd;
+    border-radius: 6px;
+    background: #fffefa;
+}
+
+#battle-panel .battle-character-stats span {
+    color: #666666;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+#battle-panel .battle-character-stats strong {
+    color: #650c13;
+    font-size: 17px;
+    font-weight: 850;
+    font-variant-numeric: tabular-nums;
+}
+
 #battle-panel .battle-character-resources {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -722,6 +814,36 @@
     #battle-panel .battle-result,
     #battle-panel .battle-log-panel {
         padding: 16px;
+    }
+
+    #battle-panel .battle-character-profile {
+        gap: 12px;
+        padding: 12px;
+    }
+
+    #battle-panel .battle-character-portrait {
+        flex-basis: 72px;
+        width: 72px;
+        height: 90px;
+    }
+
+    #battle-panel .battle-character-identity h4 {
+        font-size: 18px;
+    }
+
+    #battle-panel .battle-character-stats {
+        gap: 5px;
+    }
+
+    #battle-panel .battle-character-stats > div {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 3px;
+        padding: 7px;
+    }
+
+    #battle-panel .battle-character-stats strong {
+        font-size: 15px;
     }
 
     #battle-panel .battle-character-resources {
