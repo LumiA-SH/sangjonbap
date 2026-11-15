@@ -87,6 +87,7 @@ test('admin routes deny guests and USER, re-read role/revocation; DEV production
         ['PATCH', '/admin/policies/donation'],
         ['GET', '/admin/items/search?q=a'],
         ['GET', '/admin/access'],
+        ['GET', '/admin/dashboard'],
         ['GET', '/admin/items'],
         ['GET', '/admin/items/2'],
         ['POST', '/admin/items'],
@@ -120,9 +121,10 @@ test('admin routes deny guests and USER, re-read role/revocation; DEV production
     }
 
     role = 'ADMIN';
+    assert.equal((await fetch(base + '/admin/items/search?q=&after=invalid', {headers})).status, 400);
 
     assert.equal((await fetch(base + '/admin/items/search?q=a', {headers})).status, 200);
-    assert.equal((await fetch(base + '/admin/items/search?q=', {headers})).status, 400);
+    assert.equal((await fetch(base + '/admin/items/search?q=', {headers})).status, 200);
     assert.equal((await fetch(base + '/admin/items', {headers})).status, 200);
 
     assert.equal((await fetch(base + '/admin/items', {

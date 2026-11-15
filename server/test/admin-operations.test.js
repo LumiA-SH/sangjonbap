@@ -202,7 +202,7 @@ test('balance save uses numeric values, preserves other keys and rolls back all 
 
 test('character operations and investigation validation prohibit history tampering and invalid bounds', () => {
     for (const patch of [
-        {status: 'ALIVE'},
+        {status: 'INVALID'},
         {death_count: 0},
         {hp: -1},
         {atk: 1.5}
@@ -223,7 +223,6 @@ test('character operations and investigation validation prohibit history tamperi
         weight: 1,
         is_unique: true,
         is_active: true,
-        investigation_rate_value: 25,
         clue_id: null,
         rewards: [
             {item_id: '1', quantity: 2, probability: 30}

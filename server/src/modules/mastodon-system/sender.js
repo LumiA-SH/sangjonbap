@@ -22,7 +22,10 @@ export async function sendSystemPost(outbox,env,{fetcher=fetch}={}) {
   }
   if(response.status===429){
     const header=response.headers.get('retry-after');const seconds=Number(header);
-    const delay=header&&Number.isFinite(seconds)?Math.max(300,Math.min(86400,Math.ceil(seconds))):86400;
+    const reset=Date.parse(response.headers.get('x-ratelimit-reset')||'');
+    const when=Date.parse(header||'');
+    const requested=header&&Number.isFinite(seconds)?seconds:Number.isFinite(when)?(when-Date.now())/1000:Number.isFinite(reset)?(reset-Date.now())/1000:86400;
+    const delay=Math.max(300,Math.min(604800,Math.ceil(requested)));
     await outbox.finish(row,{error:'RATE_LIMITED',retry:true,delay});return {state:'FAILED',reason:'RATE_LIMITED'};
   }
   if(!response.ok){

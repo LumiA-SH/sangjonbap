@@ -33,7 +33,7 @@ export default function RecordsPanel({admin = false, onDenied}) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [path]);
 
-  return <section aria-label={admin ? '운영진 전체 행동 로그' : '기록·단서 아카이브'}>
+  return <section className={admin ? 'admin-operations-page' : undefined} aria-label={admin ? '운영진 전체 행동 로그' : '기록·단서 아카이브'}>
     <h2>{admin ? '운영진 전체 행동 로그' : '기록·단서 아카이브'}</h2>
     {!admin && <nav className="actions">{sections.map(([value, label]) =>
       <button key={value} disabled={busy || kind === value} onClick={() => setKind(value)}>{label}</button>)}</nav>}
@@ -42,7 +42,7 @@ export default function RecordsPanel({admin = false, onDenied}) {
     {busy && <p role="status">불러오는 중…</p>}
     {error && <p role="alert">{error}</p>}
     {!busy && !error && records.length === 0 && <p>공개되거나 기록된 항목이 없습니다.</p>}
-    <ul className="dev-list">{records.map(record => <li key={record.id} className="dev-row">
+    {admin ? <div className="admin-log-table-wrap"><table className="admin-log-table"><thead><tr><th>시각</th><th>캐릭터</th><th>구분</th><th>결과</th></tr></thead><tbody>{records.map(record=><tr key={record.id}><td>{record.created_at || '시각 미기록'}</td><td>{record.character_name || '이름 미기록'}<small>ID {record.character_id || '-'}</small></td><td>{record.action_type}<small>ID {record.id}</small></td><td>{record.description}{record.target_type&&<p>대상: {record.target_type} {record.target_id}</p>}{record.detail&&<details><summary>상세 JSON</summary><pre>{JSON.stringify(record.detail,null,2)}</pre></details>}</td></tr>)}</tbody></table></div> : <ul className="dev-list">{records.map(record => <li key={record.id} className="dev-row">
       <strong>{record.title || record.action_type || '최초 발견'}</strong> · ID {record.id}
       <p>{record.created_at || record.discovered_at || '시각 미기록'} · {record.character_name || '이름 미기록'} (ID {record.character_id || '-'})</p>
       {record.area_name && <p>지역: {record.area_name} · ID {record.area_id}</p>}
@@ -50,7 +50,7 @@ export default function RecordsPanel({admin = false, onDenied}) {
       <p>{record.description || record.result_text || record.content}</p>
       {record.related_target && <p>관련 대상: {record.related_target}</p>}
       {record.detail && <details><summary>상세 JSON</summary><pre>{JSON.stringify(record.detail, null, 2)}</pre></details>}
-    </li>)}</ul>
+    </li>)}</ul>}
     {next && <button disabled={busy} onClick={() => load(next)}>이전 기록 30건</button>}
   </section>;
 }

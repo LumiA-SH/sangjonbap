@@ -15,6 +15,7 @@ import {createBloodPackRepository} from './modules/inventory/blood-pack.js';
 import {createOAuthRepository} from './modules/auth/oauth-repository.js';
 import {createDailyRecovery} from './modules/daily/recovery.js';
 import {createRecordsRepository} from './modules/records/repository.js';
+import {createDiceRepository} from './modules/dice/repository.js';
 
 // Factory only: no connections, listeners or schedulers are started here.
 export function createGameRepository(pool) {
@@ -31,6 +32,7 @@ export function createGameRepository(pool) {
         ...characterRepository,
         ...createDevRepository(pool),
         ...createRecordsRepository(pool),
+        ...createDiceRepository(pool),
         ...createShopRepository(pool),
         ...createCookingRepository(pool),
         ...createGachaRepository(pool),

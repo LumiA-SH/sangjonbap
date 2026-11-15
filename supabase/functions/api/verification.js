@@ -14,7 +14,7 @@ export function createVerificationApi(env, options = {}) {
     const oauthEnabled = options.oauthEnabled === true;
     const adminEnabled = oauthEnabled && options.adminEnabled === true;
     const gameTestingEnabled=oauthEnabled&&options.gameTestingEnabled===true;
-    const isGamePath=path=>/^\/api\/(?:characters|inventory|investigation|shop|training|cooking|gacha|battles|records)(?:\/|$)/.test(path);
+    const isGamePath=path=>/^\/api\/(?:characters|inventory|investigation|shop|training|cooking|gacha|battles|records|dice)(?:\/|$)/.test(path);
     const isPublicPath=path=>/^\/api\/public(?:\/|$)/.test(path);
     const isAdminPath = path => /^\/api\/admin(?:\/|$)/.test(path);
     const runtime = createEdgeApi(oauthEnabled ? env : {...env, MASTODON_CLIENT_ID:'VERIFICATION_DISABLED',

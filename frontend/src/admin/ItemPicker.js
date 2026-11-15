@@ -17,6 +17,8 @@ export default function ItemPicker({
   const [selected, setSelected] = useState(null);
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
+  const [after,setAfter]=useState(null);
+  const [searchedQuery,setSearchedQuery]=useState('');
 
   const sequence = useRef(0);
   const selectionSequence = useRef(0);
@@ -62,27 +64,24 @@ export default function ItemPicker({
           }
         });
 
-    return () => {
-      selectionSequence.current++;
-    };
+    const cancelPending = () => { selectionSequence.current++; };
+    return cancelPending;
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
 
-  async function search() {
+  async function search(cursor = null) {
     const token = ++sequence.current;
 
-    if (!query.trim()) {
-      setRows([]);
-      setMessage('검색할 이름을 입력하세요.');
-      return;
-    }
+
 
     setBusy(true);
     setMessage('');
 
     try {
-      const params = new URLSearchParams({q: query.trim()});
+      const text=cursor?searchedQuery:query.trim();
+      const params = new URLSearchParams({q:text});
+      if(cursor)params.set('after',cursor);
 
       if (rpOnly) params.set('rp', 'true');
       if (type !== 'all') params.set('type', type);
@@ -92,7 +91,9 @@ export default function ItemPicker({
       if (token !== sequence.current) return;
 
       const records = data.records || [];
-      setRows(records);
+      setRows(previous=>cursor?[...previous,...records]:records);
+      setAfter(data.nextAfter||null);
+      setSearchedQuery(text);
 
       setMessage(
           records.length
@@ -117,6 +118,7 @@ export default function ItemPicker({
     sequence.current++;
     setQuery(next);
     setRows([]);
+    setAfter(null);
     setMessage('');
     setBusy(false);
   }
@@ -127,6 +129,7 @@ export default function ItemPicker({
     onChange(String(item.id), item);
     setQuery('');
     setRows([]);
+    setAfter(null);
     setMessage('');
   }
 
@@ -135,6 +138,7 @@ export default function ItemPicker({
     onChange(null, null);
     setQuery('');
     setRows([]);
+    setAfter(null);
     setMessage('');
   }
 
@@ -181,8 +185,8 @@ export default function ItemPicker({
           />
         </label>
 
-        <button type="button" disabled={disabled || busy} onClick={search}>
-          {busy ? '검색 중…' : '이름 검색'}
+        <button type="button" disabled={disabled || busy} onClick={()=>search()}>
+          {busy ? '검색 중…' : query.trim() ? '이름 검색' : '전체 목록 조회'}
         </button>
 
         {message && <p role="status">{message}</p>}
@@ -212,6 +216,7 @@ export default function ItemPicker({
             </ul>
         )}
 
+        {after && <button type="button" disabled={disabled||busy} onClick={()=>search(after)}>다음 항목 더 보기</button>}
         <div className="admin-selected-item">
           {selected && String(selected.id) === String(value) ? (
               <>

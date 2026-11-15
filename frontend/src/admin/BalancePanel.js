@@ -67,23 +67,24 @@ export default function BalancePanel({onDenied}) {
   }
 
   return (
-      <section>
+      <section className="admin-operations-page">
         <h2>공통 밸런스</h2>
         <p>혈액팩은 아이템, 이능 전투 비용은 PVE 설정, 음식·요리·가챠는 각 관리 메뉴에서 설정합니다.</p>
         <button disabled={busy} onClick={load}>새로고침</button>
-        <p role="status">{message}</p>
+        
 
         {settings && (
             <form className="admin-form" onSubmit={save}>
-              {Object.entries(labels).map(([key, label]) => (
+              {[['치료',['heal_blood_cost','heal_hp_recovery']],['조사 · 요리',['investigation_ap_cost','cooking_ap_cost']],['일일훈련',['training_ap_cost','training_currency_reward','training_growth','training_great_growth','training_great_rate_b','training_great_rate_a','training_great_rate_s']]].map(([title,keys])=><fieldset className="admin-setting-card" key={title}><legend>{title}</legend>{keys.map(key => (
                   <label key={key}>
-                    {label}
+                    {labels[key]}
                     <input required type="number" min="0" max={key.includes('_rate_') ? 100 : 2147483647} step={key.includes('_rate_') ? 'any' : 1} disabled={busy} value={settings[key] ?? ''} onChange={e => setSettings({...settings, [key]: e.target.value === '' ? '' : Number(e.target.value)})}/>
                   </label>
-              ))}
+              ))}</fieldset>)}
               <button disabled={busy}>설정 저장</button>
             </form>
         )}
+        <p role="status">{message}</p>
       </section>
   );
 }

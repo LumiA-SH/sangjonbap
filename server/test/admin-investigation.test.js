@@ -19,7 +19,7 @@ function fixture({failLog = false, discovered = false} = {}) {
             is_active: true
         },
         rewards: [
-            {item_id: '3', recipe_id: null, quantity: 1, probability: 20}
+            {item_id: '3', quantity: 1, probability: 20}
         ]
     };
 
@@ -47,6 +47,7 @@ function fixture({failLog = false, discovered = false} = {}) {
             }
 
             if (sql === 'commit') return rows([]);
+            if (sql.startsWith('select id,is_active from public.item')) return rows([{id: p[0], is_active: true}]);
             if (sql.startsWith('select id from public.action_log')) return rows([]);
             if (sql.startsWith('select id from public.')) return rows([{id: p[0]}]);
 
@@ -59,7 +60,7 @@ function fixture({failLog = false, discovered = false} = {}) {
             }
 
             if (sql.startsWith('update public.investigation_result')) {
-                ['is_failure', 'failure_selectable', 'result_grade', 'result_text', 'weight', 'is_unique', 'investigation_rate_value', 'clue_id', 'is_active'].forEach((k, i) => {
+                ['is_failure', 'failure_selectable', 'result_grade', 'result_text', 'weight', 'is_unique', 'clue_id', 'is_active'].forEach((k, i) => {
                     state.result[k] = p[i];
                 });
 
@@ -74,9 +75,9 @@ function fixture({failLog = false, discovered = false} = {}) {
             if (sql.startsWith('insert into public.investigation_reward')) {
                 state.rewards.push({
                     item_id: p[1],
-                    recipe_id: p[2],
-                    quantity: p[3],
-                    probability: p[4]
+                    recipe_id: null,
+                    quantity: p[2],
+                    probability: p[3]
                 });
 
                 return rows([]);
@@ -104,11 +105,10 @@ const body = () => ({
     result_text: '수정',
     weight: 9,
     is_unique: true,
-    investigation_rate_value: 25,
     clue_id: null,
     is_active: true,
     rewards: [
-        {item_id: '3', recipe_id: null, quantity: 2, probability: 80}
+        {item_id: '3', quantity: 2, probability: 80}
     ]
 });
 
@@ -119,7 +119,7 @@ test('saved result weights and independent reward probabilities feed existing ga
     assert.equal(chooseResult([{id: 'other', weight: 1}, f.state().result], () => .1).id, '2');
     assert.equal(winsReward(f.state().rewards[0].probability, () => .79), true);
     assert.equal(winsReward(f.state().rewards[0].probability, () => .8), false);
-    assert.equal(f.state().result.investigation_rate_value, 25);
+    assert.equal(f.state().result.investigation_rate_value, 10);
 
     assert(f.calls[1].includes('public.area'));
     assert(!f.calls.some(sql => /delete from public.unique_discovery/.test(sql)));

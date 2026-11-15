@@ -337,7 +337,7 @@ export default function BattleAdminPanel({onDenied, recordId, onOpen}) {
         <details open>
           <summary>마물 등록·수정</summary>
 
-          <div className="admin-monster-actions">
+          <div className="admin-record-workspace"><div className="admin-list-pane"><div className="admin-monster-actions">
             <button disabled={busy} onClick={newMonster}>새 마물</button>
 
           </div>
@@ -373,6 +373,7 @@ export default function BattleAdminPanel({onDenied, recordId, onOpen}) {
             ))}
           </ul>
 
+          </div><div className="admin-detail-pane">
           {(!onOpen || recordId === 'new' || id) && (
               <form className="admin-form" onSubmit={saveMonster}>
                 <h3>{id ? `마물 ${id} 수정` : '신규 마물'}</h3>
@@ -561,6 +562,8 @@ export default function BattleAdminPanel({onDenied, recordId, onOpen}) {
                 <button disabled={busy || imageUploading}>마물 저장</button>
               </form>
           )}
+          {onOpen&&!id&&recordId!=='new'&&<p className="admin-empty-detail">목록에서 마물을 선택하세요.</p>}
+          </div></div>
         </details>
 
         <details>

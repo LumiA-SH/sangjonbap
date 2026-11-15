@@ -10,13 +10,13 @@ const names = {
 
 const labels = {
  enabled: '활성화',
- template: '게시 문구 ({character}, {provider}, {reward}, {quantity}, {rp}, {area}, {monster}, {clue}, {progress}, {event})',
+ template: '게시 문구 ({character}, {provider}, {reward}, {quantity}, {rp}, {area}, {monster}, {clue}, {progress}, {result}, {event})',
  visibility: '공개 범위',
  deduplicate: '중복 게시 방지',
  retryEnabled: '실패 재시도',
  maxAttempts: '최대 시도 횟수',
  retryMinutes: '재시도 간격 (분)',
- thresholds: '조사율 기준 (쉼표로 구분)',
+ thresholds: '구역별 조사율 기준 (쉼표로 구분)',
  accountId: '시스템 계정 ID',
  noticeTag: '공지 분류 태그',
  eventTag: '이벤트 분류 태그',
@@ -35,7 +35,8 @@ const labels = {
  investigation_progress: '조사율 달성',
  story: '스토리 이벤트',
  raid: '최종 레이드',
- failure_food: '실패 음식 섭취 RP'
+ failure_food: '실패 음식 섭취 RP',
+ dice: '1D100 결과'
 };
 
 const numbers = ['maxAttempts', 'retryMinutes', 'limit'];
@@ -57,7 +58,7 @@ export default function OperatingPolicyPanel({onDenied}) {
   api('/admin/policies/' + kind)
       .then(r => {
        if (live) {
-        setDraft(r.settings);
+        setDraft(kind==='announcements'?{...r.settings,events:{...r.settings.events,dice:r.settings.events.dice||{enabled:false,template:'{character}의 결과는 {result}입니다.',visibility:null,deduplicate:true,retryEnabled:false,maxAttempts:null,retryMinutes:null,thresholds:[]}}}:r.settings);
         setBefore(r.settings);
         setMessage('');
        }
@@ -192,6 +193,7 @@ export default function OperatingPolicyPanel({onDenied}) {
  function getDescription() {
   if (kind === 'anemia') return '표시 전용입니다. 활성화 시 혈량 1~100을 빠짐없이 한 번씩 포함해야 합니다. 혈량 0과 사망 상태는 변경할 수 없습니다.';
   if (kind === 'recovery') return '조회·미리보기 정책만 저장합니다. 복구 실행 및 과거 데이터 변경은 차단됩니다.';
+  if(kind === 'announcements') return '실제 발송은 서버 게시 활성화와 별도 스케줄 승인이 필요합니다. 중복 방지는 필수이며 재시도는 최대 3회·최소 5분입니다. 조사율은 구역별 기준입니다. 스토리·레이드는 조건 확정 전 활성화할 수 없습니다.';
   return '연동 준비용 정책입니다. 저장해도 실제 게시·수집은 실행되지 않으며 기존 홈페이지 안내를 유지합니다. 게시 실패 기록·재시도 실행은 연동 단계에서 구현합니다.';
  }
 

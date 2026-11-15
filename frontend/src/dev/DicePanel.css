@@ -1,0 +1,110 @@
+.dice-panel {
+    min-width: 0;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px dashed #d0d0d0;
+}
+
+.dice-panel-main {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.dice-panel-label {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    gap: 4px;
+    min-width: 0;
+}
+
+.dice-panel-label strong {
+    color: #303034;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.dice-panel-label small {
+    color: #888888;
+    font-size: 10px;
+}
+
+.dice-panel-result {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex: 0 0 auto;
+}
+
+.dice-panel-result span {
+    color: #777777;
+    font-size: 11px;
+}
+
+.dice-panel-result strong {
+    min-width: 32px;
+    color: #650c13;
+    font-size: 22px;
+    font-weight: 900;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}
+
+.dice-panel-main button {
+    flex: 0 0 auto;
+    min-height: 34px;
+    padding: 7px 15px;
+    border: 1px solid #650c13;
+    border-radius: 5px;
+    background: #650c13;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 750;
+    cursor: pointer;
+}
+
+.dice-panel-main button:hover:not(:disabled) {
+    background: #80141e;
+}
+
+.dice-panel-main button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.dice-panel-status,
+.dice-panel-message,
+.dice-panel-error {
+    margin: 8px 0 0;
+    color: #888888;
+    font-size: 10px;
+    line-height: 1.6;
+}
+
+.dice-panel-error {
+    color: #9b2828;
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 480px) {
+    .dice-panel-main {
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .dice-panel-label {
+        flex-basis: 100%;
+    }
+
+    .dice-panel-result {
+        flex: 1 1 auto;
+        justify-content: flex-start;
+    }
+
+    .dice-panel-main button {
+        min-width: 85px;
+    }
+}

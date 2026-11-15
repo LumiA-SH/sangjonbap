@@ -24,6 +24,7 @@ const defaults = {
     is_active: true
   },
   foods: {
+    image_url: null,
     grade_id: null,
     is_failure: false,
     item_id: '',
@@ -36,6 +37,7 @@ const defaults = {
     rp_effect_texts: []
   },
   recipes: {
+    image_url: null,
     name: '',
     description: null,
     discovery_grade: null,
@@ -498,8 +500,8 @@ function MasterEditor({kind, record, onSaved, onDenied, onBusy}) {
                 k === 'image_url' ? (
                     <ImageUploadField
                         key={k}
-                        kind="areas"
-                        label="구역 이미지"
+                        kind={kind==='foods'?'items':kind}
+                        label={kind==='foods'?'음식 이미지':kind==='recipes'?'레시피 이미지':'구역 이미지'}
                         value={draft[k]}
                         onChange={value => change(k, value)}
                         disabled={busy}
@@ -525,7 +527,8 @@ function MasterEditor({kind, record, onSaved, onDenied, onBusy}) {
                             setDraft(current=>({
                               ...current,
                               item_id:id||'',
-                              name:item?.name||''
+                              name:item?.name||'',
+                              image_url:item?.image_url||null
                             }));
                           }else{
                             change(k,id);
@@ -849,7 +852,7 @@ export default function MasterPanel({kind, onDenied, recordId, onOpen, after, on
   });
 
   return (
-      <section aria-label="마스터 관리">
+      <section aria-label="마스터 관리" className="admin-record-workspace"><div className="admin-list-pane">
         <p role="status">{busy ? '불러오는 중…' : message}</p>
 
         <div className="admin-toolbar-actions">
@@ -938,6 +941,7 @@ export default function MasterPanel({kind, onDenied, recordId, onOpen, after, on
             </button>
         )}
 
+        </div><div className="admin-detail-pane">
         {!busy && (!onOpen || recordId === 'new' || selected) && (
             <Editor
                 key={revision}
@@ -957,6 +961,7 @@ export default function MasterPanel({kind, onDenied, recordId, onOpen, after, on
                 }}
             />
         )}
-      </section>
+        {!selected&&recordId!=='new'&&<p className="admin-empty-detail">목록에서 항목을 선택하거나 새로 등록하세요.</p>}
+        </div></section>
   );
 }

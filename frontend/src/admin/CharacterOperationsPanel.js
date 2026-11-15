@@ -173,7 +173,7 @@ export default function CharacterOperationsPanel({onDenied,recordId,onOpen}) {
   }
 
   return (
-      <section>
+      <section className="admin-record-workspace"><div className="admin-list-pane">
         <h2>캐릭터 운영 관리</h2>
 
         <p>
@@ -211,15 +211,12 @@ export default function CharacterOperationsPanel({onDenied,recordId,onOpen}) {
           {rows.length>0&&(
             <ul className="public-character-list">
               {rows.map(r=>(
-                <li key={r.id} className="public-character-item">
+                <li key={r.id} className="public-character-item admin-character-row">
+                  <button type="button" className="admin-character-open" disabled={busy} aria-label={`${r.name} 상세 보기`} onClick={()=>onOpen?onOpen(String(r.id)):work(()=>select(r.id))}>
                   <CharacterAvatar character={r}/>
 
                   <div className="public-character-info">
-                    <button type="button" className="public-character-name"
-                            disabled={busy}
-                            onClick={()=>onOpen?onOpen(String(r.id)):work(()=>select(r.id))}>
-                      {r.name}
-                    </button>
+                    <strong className="public-character-name">{r.name}</strong>
 
                     <div className="public-character-information">
                       <span>
@@ -253,10 +250,7 @@ export default function CharacterOperationsPanel({onDenied,recordId,onOpen}) {
                     </div>
                   </div>
 
-                  <button type="button" className="public-character-detail-button"
-                          disabled={busy}
-                          onClick={()=>onOpen?onOpen(String(r.id)):work(()=>select(r.id))}>
-                    선택
+                  <span className="admin-character-arrow" aria-hidden="true">›</span>
                   </button>
                 </li>
               ))}
@@ -277,6 +271,7 @@ export default function CharacterOperationsPanel({onDenied,recordId,onOpen}) {
           )}
         </div>
 
+        </div><div className="admin-detail-pane">
         {data&&(
             <>
               <h3>
@@ -351,7 +346,7 @@ export default function CharacterOperationsPanel({onDenied,recordId,onOpen}) {
               <h3>보유 아이템</h3>
 
               <ul>
-                {data.inventory.map(r=>(
+                {data.inventory.filter(r=>Number(r.quantity)>0).map(r=>(
                     <li key={r.item_id}>
                       {r.name} · ID {r.item_id} · {r.quantity}개
                       <button disabled={busy} onClick={()=>{
@@ -379,6 +374,7 @@ export default function CharacterOperationsPanel({onDenied,recordId,onOpen}) {
               </form>
             </>
         )}
-      </section>
+        {!data&&<p className="admin-empty-detail">목록에서 캐릭터를 선택하세요.</p>}
+        </div></section>
   );
 }

@@ -21,3 +21,9 @@ test('duplicate events forwarded; DB remains dedup authority',async()=>{let n=0;
 test('external HTTP never schedules work',async()=>{assert.equal((await worker.fetch(new Request('https://invalid/run',{method:'POST'}))).status,404);});
 
 test('approved half-hour expression executes both paths; retired five-minute trigger is ignored',async()=>{assert.equal(RETRY,'*/30 * * * *');let calls=0;const deps={...options,fetcher:async u=>{calls++;return good(u);}};await runScheduled({...event,cron:'*/30 * * * *'},env,deps);assert.equal(calls,2);await runScheduled({...event,cron:'*/5 * * * *'},env,deps);assert.equal(calls,2);});
+
+test('posting is opt-in and independent; HOLD is never success',async()=>{
+ const urls=[];const deps={log:()=>{},fetcher:async url=>{urls.push(url);return url.endsWith('/system-posts')?response(503,{ok:false,error:{code:'SYSTEM_POST_HOLD'}}):good(url);}};
+ await runScheduled(event,env,deps);assert.equal(urls.length,2);urls.length=0;
+ const result=await runScheduled(event,{...env,SYSTEM_POSTING_SCHEDULE_ENABLED:'true'},deps);assert.equal(urls.length,3);assert.equal(result.find(r=>r.operation==='system-posts').status,'HOLD');
+});

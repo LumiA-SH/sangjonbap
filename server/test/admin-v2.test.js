@@ -49,7 +49,7 @@ test('area visibility, scheduled opening and explicit progress adjustment valida
         assert.deepEqual(validateMasterInput('areas', {is_open: true, unlock_at, requestKey}, false).patch, {is_open: true, unlock_at});
     }
     assert.equal(validateMasterInput('areas', {is_open: false, requestKey}, false).patch.is_open, false);
-    assert.equal(validateMasterInput('areas', {investigation_rate: 100, requestKey}, false).patch.investigation_rate, 100);
+    assert.throws(()=>validateMasterInput('areas', {investigation_rate: 100, requestKey}, false));
     assert.doesNotThrow(() => validateMasterInput('areas', {name: '새 지역', is_open: false, encounter_rate: 40, requestKey}, true));
     for (const patch of [{is_open: 'true'}, {unlock_at: '2026-11-02T00:00:00'}, {unlock_at: 123}, {investigation_rate: 101}]) {
         assert.throws(() => validateMasterInput('areas', {...patch, requestKey}, false));
@@ -98,4 +98,12 @@ test('all phase 2 routes authenticate and require ADMIN; roles revoked immediate
         for (const [path, method] of [['characters/1', 'PATCH'], ['characters/1/inventory', 'PATCH'], ['areas/1/results', 'POST'], ['areas/1/results/2', 'PATCH'], ['balance', 'PATCH'], ['items/1', 'DELETE'], ['monsters/1', 'DELETE']]) assert.equal((await fetch(`${base}/admin/${path}`, {method, headers: {Authorization: `Bearer ${token}`, 'Content-Type': 'application/json'}, body: JSON.stringify({requestKey: randomUUID()})})).status, 403);
         assert.equal((await fetch(`${base}/admin/users/2/role`, {method: 'PATCH', headers: {Authorization: `Bearer ${token}`, Origin: config.origin, 'Content-Type': 'application/json'}, body: JSON.stringify({role: 'ADMIN', requestKey: randomUUID()})})).status, 403);
     } finally {await new Promise(r => server.close(r));}
+});
+
+ test('food and recipe image metadata accepts safe paths and rejects executable schemes',()=>{
+ for(const kind of ['foods','recipes']) {
+  assert.equal(validateMasterInput(kind,{image_url:'/assets/food.png',requestKey:randomUUID()},false).patch.image_url,'/assets/food.png');
+  assert.equal(validateMasterInput(kind,{image_url:null,requestKey:randomUUID()},false).patch.image_url,null);
+  assert.throws(()=>validateMasterInput(kind,{image_url:'javascript:alert(1)',requestKey:randomUUID()},false));
+ }
 });

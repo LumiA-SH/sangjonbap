@@ -67,3 +67,15 @@ recoverDailyReset: async () => ({completed: []}), expireBattles: async options =
     const response = await request({headers: {'x-maintenance-secret': secret}});
     assert.equal(response.status, 503); const body = await response.json(); assert.equal(body.ok, false); assert.equal(body.error.code, 'MAINTENANCE_PARTIAL_FAILURE'); assert.equal(body.data.expired, 9);
 });
+
+test('system posting uses maintenance auth but cannot release gameplay HOLD',async t=>{
+ let calls=0,mode='HOLD';const app=createMaintenanceApp({sendSystemPosts:async()=>{calls++;return {state:mode};}},{secret,executionReady:false});
+ const server=app.listen(0,'127.0.0.1');await new Promise(r=>server.once('listening',r));t.after(()=>new Promise(r=>server.close(r)));
+ const base=`http://127.0.0.1:${server.address().port}/maintenance`;
+ const headers={'x-maintenance-secret':secret};const call=(path,h=headers)=>fetch(base+path,{method:'POST',headers:h});
+ assert.equal((await call('/system-posts',{})).status,401);
+ assert.equal((await call('/system-posts',{...headers,Origin:'https://survivalbob.site'})).status,403);assert.equal(calls,0);
+ assert.equal((await call('/system-posts')).status,503);mode='SENT';assert.equal((await call('/system-posts')).status,200);
+ mode='FAILED';assert.equal((await call('/system-posts')).status,503);
+ assert.equal((await call('/daily-reset')).status,503);
+});

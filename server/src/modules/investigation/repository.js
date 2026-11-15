@@ -1,3 +1,4 @@
+import {enqueueProgressEvents} from '../mastodon-system/jobs.js';
 import {enqueueSystemEvent} from '../mastodon-system/outbox.js';
 import {beginGameTransaction, commitGameTransaction, rollbackGameTransaction} from '../../shared/daily-gate.js';
 import {AppError} from '../../shared/http.js';
@@ -256,6 +257,7 @@ export function createInvestigationRepository(pool, {random = randomUnit, battle
 
         const progressAfter = await getAreaInvestigationProgress(client, areaId);
         const rateIncrease = Number((progressAfter.rate - progressBefore.rate).toFixed(2));
+        await enqueueProgressEvents(client,area,before,progressBefore.rate,progressAfter.rate);
 
         const result = {
           result: {

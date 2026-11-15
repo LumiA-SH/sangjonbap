@@ -32,9 +32,16 @@ export function createMaintenanceApp(repository,{secret='',executionReady=false}
     }
     app.use((req,res,next)=>{
         const started=performance.now();
-        const operation=['/maintenance','/maintenance/daily-reset','/maintenance/battle-expiry','/maintenance/diagnostics/db'].includes(req.path)?req.path:'unknown';
+        const operation=['/maintenance','/maintenance/daily-reset','/maintenance/battle-expiry','/maintenance/diagnostics/db','/maintenance/system-posts'].includes(req.path)?req.path:'unknown';
         res.on('finish',()=>console.info('Maintenance result',{operation,status:res.statusCode,durationMs:Math.round(performance.now()-started),requestId:res.locals.requestId,...(res.locals.maintenanceResult||{})}));
         next();
+    });
+    app.post('/maintenance/system-posts',async(req,res)=>{
+        if(!repository.sendSystemPosts)throw new AppError(503,'SYSTEM_POST_HOLD','시스템 게시가 활성화되지 않았습니다.');
+        let result;try{result=await repository.sendSystemPosts();}catch{throw new AppError(503,'SYSTEM_POST_FAILED','시스템 게시 처리에 실패했습니다. 보호된 대기열을 확인하세요.');}
+        if(result.state==='HOLD')throw new AppError(503,'SYSTEM_POST_HOLD','시스템 게시가 활성화되지 않았습니다.');
+        if(result.state==='FAILED')return res.status(503).json({ok:false,error:{code:'SYSTEM_POST_FAILED',message:'게시 실패 상태를 확인하세요.'},data:result,requestId:res.locals.requestId});
+        return ok(res,result);
     });
     app.post('/maintenance/daily-reset',async(req,res)=>{
         if(!executionReady)throw new AppError(503,'MAINTENANCE_CONCURRENCY_HOLD','동시성 검증 및 활성화 승인이 필요합니다.');

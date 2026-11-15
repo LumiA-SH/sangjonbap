@@ -1,11 +1,13 @@
+import AdminDashboard from './AdminDashboard';
 import ContentAdminPanel from './ContentAdminPanel';
 import StorageAdminPanel from './StorageAdminPanel';
 import ClueAdminPanel from './ClueAdminPanel';
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {api} from '../api/client';
-import {adminMenus} from './navigation';
+import {adminMenus,adminMenuGroups} from './navigation';
 import './admin.css';
 import './admin-ui-fixes.css';
+import './admin-organization.css';
 import OperatingPolicyPanel from './OperatingPolicyPanel';
 import DiagnosticsPanel from './DiagnosticsPanel';
 import MasterPanel from './MasterPanel';
@@ -374,6 +376,7 @@ export default function AdminPanel({
                                        onNavigate
                                    }) {
     const [authentication,setAuthentication]=useState('');
+    const [menuSearch,setMenuSearch]=useState('');
     const [allowed,setAllowed]=useState(false);
     const [localKind,setLocalKind]=useState('items');
     const [rows,setRows]=useState([]);
@@ -395,8 +398,13 @@ export default function AdminPanel({
     const accessLost=useRef(onAccessLost);
     accessLost.current=onAccessLost;
 
+    const [areaNavOpen,setAreaNavOpen]=useState(true);
     const kind=route?.menu||localKind;
     const recordId=route?.record;
+    const currentGroup=adminMenuGroups.find(group=>group.menus.includes(kind.startsWith('guide-')?'guide-world':kind));
+    const menuLabel=id=>adminMenus.find(([key])=>key===id)?.[1]||id;
+    const visibleGroups=adminMenuGroups.map(group=>({...group,menus:group.menus.filter(id=>
+        (group.title+' '+menuLabel(id)).toLocaleLowerCase().includes(menuSearch.trim().toLocaleLowerCase()))})).filter(group=>group.menus.length);
 
     function setKind(menu) {
         setSearch('');
@@ -644,19 +652,12 @@ export default function AdminPanel({
     function renderContent() {
         if (kind==='dashboard') {
             return (
-                <div className="admin-dashboard">
-                    {adminMenus.filter(([id])=>id!=='dashboard').map(([id,label])=>(
-                        <button key={id} onClick={()=>setKind(id)}>
-                            <strong>{label}</strong>
-                            <span>조회 및 관리 →</span>
-                        </button>
-                    ))}
-                </div>
+                <AdminDashboard onNavigate={setKind} onDenied={denied}/>
             );
         }
 
         if (kind.startsWith('guide-')) {
-            return <ContentAdminPanel key={kind} kind={kind.slice(6)} onDenied={denied}/>;
+            return <div className="admin-guide-workspace"><nav className="admin-guide-tabs" aria-label="안내 콘텐츠 종류">{[["world","세계관"],["system","시스템 안내"],["schedule","러닝 일정"]].map(([id,label])=><button type="button" key={id} aria-pressed={kind===`guide-${id}`} onClick={()=>setKind(`guide-${id}`)}>{label}</button>)}</nav><ContentAdminPanel key={kind} kind={kind.slice(6)} onDenied={denied}/></div>;
         }
 
         if (kind==='area-hub') {
@@ -715,7 +716,7 @@ export default function AdminPanel({
         });
 
         return (
-            <>
+            <div className="admin-record-workspace"><div className="admin-list-pane">
                 <p>
                     혈액팩은 무료(+10, 0코인, 하루 1개)와 일반(+30, 유료)을
                     별도 아이템으로 관리합니다. 일반팩 가격은 운영진이 정합니다.
@@ -821,6 +822,7 @@ export default function AdminPanel({
                     </button>
                 }
 
+                </div><div className="admin-detail-pane">
                 {(!route||recordId==='new'||selected)&&!busy&&
                     <Editor
                         key={`${kind}-${editorKey}`}
@@ -831,7 +833,8 @@ export default function AdminPanel({
                         onSaved={handleSaved}
                     />
                 }
-            </>
+                {!selected&&recordId!=='new'&&<p className="admin-empty-detail">목록에서 항목을 선택하거나 새로 등록하세요.</p>}
+            </div></div>
         );
     }
 
@@ -859,18 +862,22 @@ export default function AdminPanel({
             {allowed&&
                 <>
                     <nav className="admin-navigation" aria-label="관리자 메뉴">
-                        {adminMenus.map(([type,label])=>(
-                            <button key={type}
-                                    aria-current={kind===type?'page':undefined}
-                                    disabled={busy}
-                                    onClick={()=>setKind(type)}>
-                                {label}
-                            </button>
-                        ))}
+                        <label className="admin-menu-search">메뉴 찾기<input type="search" value={menuSearch} onChange={e=>setMenuSearch(e.target.value)} placeholder="캐릭터, 레시피, 구역…"/></label>
+                        {visibleGroups.map(group=>{const Group=group.title==='세부 관리'?'details':'section';return <Group className="admin-menu-group" key={group.title} aria-label={group.title}>
+                            {group.title==='세부 관리'?<summary>추가 설정 · 관리자 권한</summary>:<h2>{group.title}</h2>}
+                            {group.menus.map(type=>{
+ if(['areas','area-hub'].includes(type)) {
+  if(type!==group.menus.find(id=>['areas','area-hub'].includes(id)))return null;
+  return <div className="admin-area-folder" key="area-folder"><button type="button" aria-expanded={areaNavOpen} aria-controls="admin-area-children" onClick={()=>setAreaNavOpen(open=>!open)}>구역 <span aria-hidden="true">{areaNavOpen?'▾':'▸'}</span></button>{areaNavOpen&&<div id="admin-area-children" className="admin-area-children">{['area-hub','areas'].map(id=><button type="button" key={id} aria-current={kind===id?'page':undefined} disabled={busy} onClick={()=>setKind(id)}>{menuLabel(id)}</button>)}</div>}</div>;
+ }
+ return <button type="button" key={type} aria-current={(kind===type||(type==='guide-world'&&kind.startsWith('guide-')))?'page':undefined} disabled={busy} onClick={()=>setKind(type)}>{menuLabel(type)}</button>;
+})}
+                        </Group>;})}
+                        {!visibleGroups.length&&<p className="admin-menu-empty" role="status">일치하는 메뉴가 없습니다.</p>}
                     </nav>
 
                     <div className="admin-content">
-                        <h2>{adminMenus.find(([id])=>id===kind)?.[1]}</h2>
+                        <div className="admin-page-heading"><small>{currentGroup?.title} / {recordId?(recordId==='new'?'등록':'상세 · 수정'):'목록 · 관리'}</small><h2>{menuLabel(kind.startsWith('guide-')?'guide-world':kind)}</h2></div>
 
                         {recordId&&
                             <button disabled={busy} onClick={()=>onNavigate({record:null})}>

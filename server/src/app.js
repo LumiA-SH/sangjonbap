@@ -1,3 +1,4 @@
+import {diceRoutes} from './modules/dice/routes.js';
 import {publicContentRoutes} from './modules/public-content/routes.js';
 import express from 'express';
 import {battleRoutes} from './modules/battle/routes.js';
@@ -111,6 +112,7 @@ export function createApp(config, repository, authDependencies={}) {
   app.use('/api/records', recordsRoutes(repository, sessions));
   app.use('/api/shop', shopRoutes(repository, sessions));
   app.use('/api/training', trainingRoutes(repository, sessions));
+  app.use('/api/dice', diceRoutes(repository, sessions));
   app.use('/api/cooking', cookingRoutes(repository, sessions));
   app.use('/api/gacha', gachaRoutes(repository, sessions));
   app.use('/api/battles', battleRoutes(repository, sessions));

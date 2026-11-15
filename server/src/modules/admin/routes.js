@@ -30,19 +30,26 @@ export function adminRoutes(config,repository,sessions) {
         next();
     });
 
+    router.get('/dashboard',async(req,res)=>{
+        if(!repository.getAdminDashboard)throw new AppError(501,'ADMIN_UNAVAILABLE','현황 조회가 준비되지 않았습니다.');
+        ok(res,{counts:await repository.getAdminDashboard(req.auth.user.id)});
+    });
+
     router.get('/items/search', async (req,res) => {
-        const q=req.query.q;
+        const q=req.query.q??'';
+        const after=req.query.after??'0';
         const type=req.query.type??'all';
 
-        if (typeof q!=='string'||!q.trim()||q.length>100||
-            Object.keys(req.query).some(k=>!['q','rp','type'].includes(k))||
+        if (typeof q!=='string'||q.length>100||(after!=='0'&&!validId(after))||
+            Object.keys(req.query).some(k=>!['q','rp','type','after'].includes(k))||
             (req.query.rp!==undefined&&req.query.rp!=='true')||
             !['all','food','failure-food'].includes(type)||
             (req.query.rp==='true'&&type!=='all')) {
             throw new AppError(400,'INVALID_SEARCH','검색어 또는 음식 유형을 확인하세요.');
         }
 
-        ok(res,{records:await repository.searchAdminItems(q.trim(),req.query.rp==='true',type)});
+        const records=await repository.searchAdminItems(q.trim(),req.query.rp==='true',type,after);
+        ok(res,{records,nextAfter:records.length===30?records.at(-1).id:null});
     });
 
     for (const kind of ['items','products']) {

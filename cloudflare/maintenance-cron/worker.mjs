@@ -1,9 +1,10 @@
 export const MIDNIGHT='0 15 * * *', RETRY='*/30 * * * *';
 const BASE='https://grkohfxvafbquhmgnvwj.supabase.co/functions/v1/maintenance';
-const codes=new Set(['MAINTENANCE_CONCURRENCY_HOLD','DAILY_RESET_START_HOLD','DAILY_RESET_ACTIVITY_HOLD','MAINTENANCE_PARTIAL_FAILURE','MAINTENANCE_UNAUTHORIZED','MAINTENANCE_BROWSER_DENIED']);
+const codes=new Set(['MAINTENANCE_CONCURRENCY_HOLD','DAILY_RESET_START_HOLD','DAILY_RESET_ACTIVITY_HOLD','MAINTENANCE_PARTIAL_FAILURE','MAINTENANCE_UNAUTHORIZED','MAINTENANCE_BROWSER_DENIED','SYSTEM_POST_HOLD','SYSTEM_POST_FAILED']);
 export const kstDate=t=>new Date(t+9*3600000).toISOString().slice(0,10);
 export async function runScheduled(event,env,{fetcher=fetch,log=e=>console.log(JSON.stringify(e)),timeoutMs=120000}={}) {
  const operations=event.cron===MIDNIGHT?['daily-reset']:event.cron===RETRY?['daily-reset','battle-expiry']:[];
+ if(event.cron===RETRY&&env.SYSTEM_POSTING_SCHEDULE_ENABLED==='true')operations.push('system-posts');
  // Edge's DB lock decides date completion; no local cache or immediate retry after uncertain commits.
  return Promise.all(operations.map(async operation=>{
   const started=Date.now(),entry={operation,scheduledAt:new Date(event.scheduledTime).toISOString(),kstDate:kstDate(event.scheduledTime)};
@@ -23,6 +24,7 @@ export async function runScheduled(event,env,{fetcher=fetch,log=e=>console.log(J
     if(body?.data?.reset?.hold||entry.code?.endsWith('_HOLD'))return finish('HOLD');
     if(entry.code==='MAINTENANCE_PARTIAL_FAILURE'||entry.failed>0||entry.deferred>0)return finish('PARTIAL_FAILURE');
     if(!response.ok||body?.ok!==true)return finish('FAILED');
+    if(operation==='system-posts')return finish(['SENT','IDLE'].includes(body.data?.state)?(body.data.state==='SENT'?'OK':'SKIPPED'):'INVALID_RESPONSE');
     if(operation==='daily-reset'){
      if(!Array.isArray(body.data?.reset?.completed))return finish('INVALID_RESPONSE');
      entry.completedDays=body.data.reset.completed.length;return finish(entry.completedDays?'OK':'SKIPPED');

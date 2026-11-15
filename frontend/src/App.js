@@ -19,6 +19,7 @@ import InvestigationPanel from './dev/InvestigationPanel';
 import RecordsPanel from './dev/RecordsPanel';
 import BattlePanel from './dev/BattlePanel';
 import {HomeHeaderDecor} from './HomeDecor';
+import DicePanel from './dev/DicePanel';
 
 const FALLBACK_IMAGE = publicAsset('test.png');
 
@@ -583,6 +584,8 @@ export default function App() {
                           <div><span>진행 중 전투</span><strong>{character?.in_active_battle ? '있음' : '없음'}</strong></div>
                         </div>
                       </div>
+
+                      <DicePanel/>
                     </DashboardCard>
 
                     <DashboardCard title="주요 행동" subtitle="QUICK ACCESS" className="survival-actions-card">

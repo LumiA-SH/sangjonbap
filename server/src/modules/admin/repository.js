@@ -21,6 +21,18 @@ const fail = (code, message, status = 409) => {
 
 export function createAdminRepository(pool) {
     return {
+        async getAdminDashboard(actor) {
+            const result=await pool.query(`select
+              (select count(*)::int from public.item where is_active) items,
+              (select count(*)::int from public.food_config) foods,
+              (select count(*)::int from public.recipe where is_active) recipes,
+              (select count(*)::int from public.area) areas,
+              (select count(*)::int from public.investigation_result) results,
+              (select count(*)::int from public.game_character where is_active) characters
+              where exists(select 1 from public.auth_user where id=$1 and role='ADMIN' and is_active)`,[actor]);
+            if(!result.rows.length)throw new AppError(403,'ADMIN_REQUIRED','관리자 권한이 필요합니다.');
+            return result.rows[0];
+        },
         ...createAdminDiagnostics(pool),
         ...createAdminCompletionRepository(pool),
         ...createOperatingPolicyRepository(pool),
@@ -33,9 +45,9 @@ export function createAdminRepository(pool) {
         ...createAdminMasterRepository(pool),
         ...createAdminRoleRepository(pool),
 
-        async searchAdminItems(query, rpOnly = false, type = 'all') {
+        async searchAdminItems(query, rpOnly = false, type = 'all', after = '0') {
             return (await pool.query(
-                `select i.id::text,i.name,i.category,i.is_active,i.effect_type,i.blood_pack_kind,
+                `select i.id::text,i.name,i.image_url,i.category,i.is_active,i.effect_type,to_jsonb(i)->>'blood_pack_kind' as blood_pack_kind,
                         f.item_id is not null as is_food,
                         case when f.item_id is null then null
                              when f.is_failure then 'FAILURE'
@@ -43,14 +55,14 @@ export function createAdminRepository(pool) {
                              else 'NORMAL' end as food_type
                  from public.item i
                           left join public.food_config f on f.item_id=i.id
-                 where strpos(lower(i.name),lower($1))>0
+                 where ($1='' or strpos(lower(i.name),lower($1))>0) and i.id>$3
                    and ($2='all'
                      or ($2='food' and f.item_id is not null and not f.is_failure
                          and not exists(select 1 from public.recipe r where r.failure_item_id=i.id))
                      or ($2='failure-food' and f.item_id is not null and f.is_failure))
                      ${rpOnly ? "and i.is_active and i.transferable and not i.usable and not i.battle_usable and i.effect_type is null and i.effect_value is null and i.use_target='NONE' and i.category<>'FOOD' and f.item_id is null" : ''}
-                 order by i.name,i.id limit 30`,
-                [query, type]
+                 order by i.id limit 30`,
+                [query, type, after]
             )).rows;
         },
 

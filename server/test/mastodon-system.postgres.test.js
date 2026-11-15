@@ -10,14 +10,17 @@ test('existing outbox isolated migration, atomic rollback, dedupe and concurrent
     await raw.query(`create schema ${schema}`);
     try {
         await raw.query(`create table ${schema}.mastodon_event(like public.mastodon_event including all);create table ${schema}.system_config(like public.system_config including all)`);
-        await pool.query(fs.readFileSync(new URL('../../supabase/migrations/20261110160000_mastodon_delivery.sql', import.meta.url), 'utf8'));
+        await pool.query(fs.readFileSync(new URL('../../supabase/migrations/20261115110543_mastodon_delivery.sql', import.meta.url), 'utf8'));
         await pool.query("insert into public.system_config(config_key,config_value) values('operating_announcements',$1)", [JSON.stringify({events: {death: {enabled: true, visibility: 'unlisted', template: '{character} 사망', retryEnabled: true, maxAttempts: 3, retryMinutes: 5}}})]);
         const event = {type: 'death', key: '1:1', values: {character: '테스트'}};
         const c = await pool.connect(); await c.query('begin'); await enqueueSystemEvent(c, event); await c.query('rollback'); c.release();
         assert.equal((await pool.query('select * from public.mastodon_event')).rowCount, 0);
         await enqueueSystemEvent(pool, event); await enqueueSystemEvent(pool, event);
         assert.equal((await pool.query('select * from public.mastodon_event')).rowCount, 1);
-        const outbox = createSystemOutbox(pool), claims = await Promise.all([outbox.claim(), outbox.claim()]); assert.equal(claims.filter(Boolean).length, 1);
+        const outbox = createSystemOutbox(pool);
+        await pool.query("update public.system_config set config_value=jsonb_set(config_value,'{events,death,enabled}','false') where config_key='operating_announcements'");assert.equal(await outbox.claim(),null);
+        await pool.query("update public.system_config set config_value=jsonb_set(config_value,'{events,death,enabled}','true') where config_key='operating_announcements'");
+        const claims = await Promise.all([outbox.claim(), outbox.claim()]); assert.equal(claims.filter(Boolean).length, 1);
         await outbox.finish(claims.find(Boolean), {remoteId: '789'}); assert.equal((await pool.query('select status from public.mastodon_event')).rows[0].status, 'SENT');
         await enqueueSystemEvent(pool, {...event, key: '1:2'});
         await pool.query("update public.mastodon_event set attempt_at=clock_timestamp()-interval '10 seconds'");

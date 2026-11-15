@@ -5,8 +5,8 @@ import {validateStockChange} from '../gacha/rules.js';
 export const masterFields = {
     areas: ['name','description','image_url','sort_order','encounter_rate','is_open','unlock_at'],
     'food-grades': ['name','blood_recovery','stat_growth_rate','is_active'],
-    foods: ['grade_id','is_failure','item_id','name','blood_recovery','stat_growth_enabled','stat_growth_rate','stat_growth_target','stat_growth_value','rp_effect_text','rp_effect_texts'],
-    recipes: ['name','description','discovery_grade','learn_cost','success_rate','result_quantity','result_item_id','failure_item_id','is_active','ingredients','area_recipes'],
+    foods: ['image_url','grade_id','is_failure','item_id','name','blood_recovery','stat_growth_enabled','stat_growth_rate','stat_growth_target','stat_growth_value','rp_effect_text','rp_effect_texts'],
+    recipes: ['image_url','name','description','discovery_grade','learn_cost','success_rate','result_quantity','result_item_id','failure_item_id','is_active','ingredients','area_recipes'],
     gachas: ['name','price','is_active','start_at','end_at','period_enabled','start_inclusive','end_inclusive','rewards']
 };
 
@@ -69,6 +69,8 @@ export function validateMasterInput(kind,body,create) {
             invalid(`${k}: 문자열 또는 NULL이 필요합니다.`);
         }
     }
+
+    if ('image_url' in patch && patch.image_url!==null && (patch.image_url.length>2048 || !/^(https?:\/\/[^\s]+|\/(?!\/)[^\s]*)$/.test(patch.image_url))) invalid('이미지 주소는 HTTP(S) 또는 사이트 내부 경로여야 합니다.');
 
     for (const k of ['stat_growth_enabled','is_active','is_open','is_failure']) {
         if (k in patch && typeof patch[k]!=='boolean')invalid(`${k}: boolean이 필요합니다.`);

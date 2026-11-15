@@ -7,27 +7,35 @@ export const gameTabs = [
 
 export const adminMenus = [
  ['dashboard', '운영 대시보드'],
- ['guide-world', '세계관 관리'],
+ ['guide-world', '세계관 · 안내'],
  ['guide-system', '시스템 안내 관리'],
  ['guide-schedule', '러닝 일정 관리'],
  ['items', '아이템'],
  ['products', '상점 상품'],
- ['foods', '음식 설정'],
+ ['foods', '음식'],
  ['food-grades', '음식 등급'],
  ['recipes', '레시피'],
  ['gachas', '가챠'],
- ['area-hub', '구역 통합 관리'],
- ['areas', '지역 공개·조우'],
+ ['area-hub', '조사 현황'],
+ ['areas', '구역 관리'],
  ['investigation', '조사 결과·보상'],
  ['storage', '공용창고 재고'],
- ['clues', '단서 관리'],
+ ['clues', '단서 · 아카이브'],
  ['characters', '캐릭터 운영 관리'],
  ['balance', '공통 밸런스'],
  ['policies', '운영 정책'],
- ['battle', '마물 등록'],
+ ['battle', '마물'],
  ['users', '관리자 권한'],
  ['diagnostics', '데이터 진단'],
  ['logs', '전체 행동 로그']
+];
+
+// Presentation groups only: existing route IDs and authorization stay unchanged.
+export const adminMenuGroups = [
+ {title:'대시보드',description:'운영 현황과 최근 기록',menus:['dashboard']},
+ {title:'데이터',description:'아이템 · 음식 · 레시피 · 마물 · 단서 · 구역',menus:['items','foods','recipes','battle','clues','areas','area-hub']},
+ {title:'운영',description:'캐릭터 · 상점 · 가챠 · 창고 · 공통 설정',menus:['characters','products','gachas','storage','balance','guide-world','logs','diagnostics']},
+ {title:'세부 관리',description:'기존 세부 설정과 권한 관리',menus:['food-grades','investigation','policies','users']}
 ];
 
 export function readLocation() {

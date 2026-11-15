@@ -1,9 +1,10 @@
+import {events as supportedPostEvents,messageFor,templateVariables} from '../mastodon-system/outbox.js';
 import {AppError} from '../../shared/http.js';
 import {writeActionLog} from '../../shared/game.js';
 import {adminTransaction,requireAdminRow,checkDuplicate} from './transaction.js';
 import {requestKey} from './master-service.js';
 
-export const eventNames=['death','revive','area_unlock','monster_discovery','clue_discovery','investigation_progress','story','raid','gacha','failure_food'];
+export const eventNames=['death','revive','area_unlock','monster_discovery','clue_discovery','investigation_progress','story','raid','gacha','failure_food','dice'];
 export const policyDefaults={
  anemia:{enabled:false,stages:[]},
  announcements:{events:Object.fromEntries(eventNames.map(name=>[name,{enabled:false,template:'',visibility:null,deduplicate:true,retryEnabled:false,maxAttempts:null,retryMinutes:null,thresholds:[]}]))},
@@ -24,7 +25,7 @@ export function validatePolicy(kind,v){
   }
   if(v.enabled||v.stages.length){const sorted=[...v.stages].sort((a,b)=>a.min-b.min);let next=1;for(const s of sorted){if(s.min!==next)invalid();next=s.max+1;}if(next!==101)invalid();}
  }else if(kind==='announcements'){
-  object(v.events,eventNames.filter(name=>!['gacha','failure_food'].includes(name)||Object.hasOwn(v.events,name)));
+  object(v.events,eventNames.filter(name=>!['gacha','failure_food','dice'].includes(name)||Object.hasOwn(v.events,name)));
   for(const [name,e] of Object.entries(v.events)){
    object(e,Object.keys(policyDefaults.announcements.events[name]));
    for(const k of ['enabled','deduplicate','retryEnabled'])bool(e[k]);
@@ -35,7 +36,7 @@ export function validatePolicy(kind,v){
    if(name!=='investigation_progress'&&e.thresholds.length)invalid();
    if(e.enabled&&(!e.template.trim()||!e.visibility||(name==='investigation_progress'&&!e.thresholds.length)))invalid();
    if(e.retryEnabled&&(e.maxAttempts===null||e.retryMinutes===null))invalid();
-   if(/\{(?!character\}|provider\}|reward\}|quantity\}|rp\}|area\}|monster\}|clue\}|progress\}|event\})/.test(e.template))invalid();
+   if(/\{(?!character\}|provider\}|reward\}|quantity\}|rp\}|area\}|monster\}|clue\}|progress\}|result\}|event\})/.test(e.template))invalid();
   }
  }else if(kind==='homepage'){
   for(const k of ['enabled','publicOnly','excludeReplies','excludeBoosts'])bool(v[k]);
@@ -56,6 +57,13 @@ export function createOperatingPolicyRepository(pool){return {
  async getOperatingPolicy(kind){return {settings:await readPolicy(pool,kind),executionReady:false};},
  async saveOperatingPolicy(actor,kind,body){
   object(body,['settings','before','requestKey']);const key=requestKey(body),settings=validatePolicy(kind,body.settings);
+  if(kind==='announcements')for(const [name,e] of Object.entries(settings.events)){
+   if(!e.enabled)continue;
+   if(!supportedPostEvents.includes(name))throw new AppError(400,'POST_EVENT_NOT_READY','스토리·레이드 게시 조건은 확정 후 연결해야 합니다.');
+   if(!e.deduplicate)throw new AppError(400,'POST_DEDUPE_REQUIRED','같은 사건의 중복 게시 방지는 해제할 수 없습니다.');
+   if(e.retryEnabled&&(e.maxAttempts>3||e.retryMinutes<5))throw new AppError(400,'POST_RETRY_LIMIT','재시도는 최대 3회, 간격은 최소 5분입니다.');
+   try{messageFor(name,Object.fromEntries(templateVariables[name].map(k=>[k,'값'])),e.template);}catch{throw new AppError(400,'INVALID_POST_TEMPLATE','이벤트에 맞는 변수와 500자 이내 문구를 사용하세요.');}
+  }
   return adminTransaction(pool,async c=>{
    await requireAdminRow(c,actor);await checkDuplicate(c,key);
    const row=(await c.query('select config_value,config_value=$2::jsonb as unchanged from public.system_config where config_key=$1 for update',['operating_'+kind,JSON.stringify(body.before)])).rows[0];

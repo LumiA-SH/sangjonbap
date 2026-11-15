@@ -764,3 +764,6 @@
         flex: 1 1 auto;
     }
 }
+.area-hub-feedback { position:sticky; bottom:12px; z-index:2; background:var(--admin-surface,#fff); border-radius:8px; }
+.area-hub-feedback:has(p) { padding:12px; border:1px solid #ddd; }
+.area-hub-buttons [aria-pressed="true"] { background:var(--admin-red,#690c17); color:#fff; }

@@ -1,3 +1,4 @@
+import {createSystemPostJob} from '../../../server/src/modules/mastodon-system/jobs.js';
 import {createMaintenanceDiagnostics} from '../../../server/src/modules/maintenance/diagnostics.js';
 import {createDailyRecovery} from '../../../server/src/modules/daily/recovery.js';
 import {createBattleRepository} from '../../../server/src/modules/battle/repository.js';
@@ -10,7 +11,7 @@ const env=Deno.env.toObject();
 const config=loadEdgeConfig({...env,MASTODON_CLIENT_ID:'MAINTENANCE_DISABLED',MASTODON_CLIENT_SECRET:'MAINTENANCE_DISABLED'});
 const pool=createEdgePool(config);
 const battle=createBattleRepository(pool);
-const app=createMaintenanceApp({diagnoseDatabase:createMaintenanceDiagnostics(pool),recoverDailyReset:createDailyRecovery(pool),expireBattles:battle.expireBattles},
+const app=createMaintenanceApp({sendSystemPosts:createSystemPostJob(pool,env),diagnoseDatabase:createMaintenanceDiagnostics(pool),recoverDailyReset:createDailyRecovery(pool),expireBattles:battle.expireBattles},
     {secret:env.MAINTENANCE_SECRET,executionReady:false});
 // Intentionally fail closed until all gameplay transactions share a proven barrier.
 // No environment switch can activate maintenance in this draft.

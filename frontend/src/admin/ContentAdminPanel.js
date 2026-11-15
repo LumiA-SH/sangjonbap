@@ -38,7 +38,7 @@ export default function ContentAdminPanel({kind, onDenied}) {
  async function load() {
   const r = await api('/admin/content/' + kind);
   setLoaded(r);
-  setDraft(r.content);
+  setDraft(kind === 'system' && r.content.items.length === 0 ? {...r.content, items:[{id:crypto.randomUUID(),title:'',body:'',published:false,order:0}]} : r.content);
  }
 
  useEffect(() => {
@@ -66,7 +66,7 @@ export default function ContentAdminPanel({kind, onDenied}) {
 
       <label>
        내용
-       <textarea maxLength={3000} value={row.body} onChange={e => update(index, 'body', e.target.value)}/>
+       <textarea rows={12} maxLength={3000} value={row.body} onChange={e => update(index, 'body', e.target.value)}/>
       </label>
 
       <label>
@@ -140,7 +140,7 @@ export default function ContentAdminPanel({kind, onDenied}) {
  }
 
  return (
-     <section>
+     <section className="admin-operations-page admin-content-editor">
       <h2>{{world: '세계관 관리', system: '시스템 안내 관리', schedule: '러닝 일정 관리'}[kind]}</h2>
       <button disabled={busy} onClick={() => work(load)}>저장된 내용 다시 조회</button>
 

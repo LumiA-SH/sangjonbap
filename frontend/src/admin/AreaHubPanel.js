@@ -427,6 +427,7 @@ function InvestigationEditor({areaId, data, busy, onSave, onDenied, onRemove}) {
 }
 
 function MonsterEditor({areaId, data, busy, onSave}) {
+    const [validationError,setValidationError]=useState('');
     const [draft, setDraft] = useState(() =>
         (data.assignments || []).map(row => ({
             monster_id: String(row.monster_id),
@@ -475,6 +476,7 @@ function MonsterEditor({areaId, data, busy, onSave}) {
 
     async function save(event) {
         event.preventDefault();
+        setValidationError('');
 
         await onSave(
             'monsters',
@@ -577,12 +579,14 @@ function MonsterEditor({areaId, data, busy, onSave}) {
                 <div className="area-hub-buttons">
                     <button disabled={busy}>마물 출현 설정 저장</button>
                 </div>
+            {validationError && <p role="alert">{validationError}</p>}
             </form>
         </AreaSection>
     );
 }
 
 function RecipeEditor({areaId, data, recipes, busy, onSave}) {
+    const [validationError,setValidationError]=useState('');
     const [draft, setDraft] = useState(() =>
         (data.areaRecipes || []).map(row => ({
             recipe_id: String(row.recipe_id),
@@ -601,11 +605,12 @@ function RecipeEditor({areaId, data, recipes, busy, onSave}) {
 
     async function save(event) {
         event.preventDefault();
+        setValidationError('');
 
         const ids = draft.map(row => row.recipe_id);
 
         if (ids.some(id => !id) || new Set(ids).size !== ids.length) {
-            window.alert('레시피가 선택되지 않았거나 중복되었습니다.');
+            setValidationError('레시피가 선택되지 않았거나 중복되었습니다.');
             return;
         }
 
@@ -723,6 +728,7 @@ function RecipeEditor({areaId, data, recipes, busy, onSave}) {
                     최초 발견된 레시피는 구역에서 제거할 수 없습니다.
                     기존 가중치와 발견 확률은 수정할 수 있습니다.
                 </p>
+            {validationError && <p role="alert">{validationError}</p>}
             </form>
         </AreaSection>
     );
@@ -963,6 +969,8 @@ export default function AreaHubPanel({route, onNavigate, onDenied}) {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
     const [message, setMessage] = useState('');
+    const [section, setSection] = useState('results');
+    const [areaSearch, setAreaSearch] = useState('');
     const [revision, setRevision] = useState({
         base: 0,
         results: 0,
@@ -1055,9 +1063,8 @@ export default function AreaHubPanel({route, onNavigate, onDenied}) {
             refreshArea(areaId);
         }
 
-        return () => {
-            sequence.current++;
-        };
+        const cancelPending = () => { sequence.current++; };
+    return cancelPending;
 
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [areaId]);
@@ -1130,10 +1137,10 @@ export default function AreaHubPanel({route, onNavigate, onDenied}) {
     const busy = loading || saving;
 
     return (
-        <section className="area-hub">
+        <section className="area-hub admin-record-workspace"><div className="admin-list-pane">
             <header className="area-hub-heading">
                 <div>
-                    <h2>구역 통합 관리</h2>
+                    <h2>구역 조사 관리</h2>
                     <p>한 구역의 조사 결과, 마물, 레시피, 단서를 이 페이지에서 관리합니다.</p>
                 </div>
 
@@ -1166,9 +1173,11 @@ export default function AreaHubPanel({route, onNavigate, onDenied}) {
                 </button>
             </div>
 
-            {error && <p className="area-hub-error" role="alert">{error}</p>}
-            {message && <p className="area-hub-message" role="status">{message}</p>}
 
+
+            <label>구역 이름 검색<input type="search" value={areaSearch} onChange={e=>setAreaSearch(e.target.value)}/></label>
+            <ul className="admin-area-menu">{areas.filter(item=>item.name.toLowerCase().includes(areaSearch.trim().toLowerCase())).map(item=><li key={item.id}><button type="button" disabled={busy} aria-current={String(item.id)===String(areaId)?'true':undefined} onClick={()=>selectArea(String(item.id))}>{item.name}</button></li>)}</ul>
+            </div><div className="admin-detail-pane">
             {!areaId && (
                 <p className="area-hub-empty">관리할 구역을 선택하세요.</p>
             )}
@@ -1203,39 +1212,41 @@ export default function AreaHubPanel({route, onNavigate, onDenied}) {
                         </div>
                     </div>
 
+                    <nav className="area-hub-buttons" aria-label="구역 관리 항목">{[["base","구역 설정"],["results","조사 결과·보상"],["monsters","마물 배치"],["recipes","레시피 발견"],["clues","단서 공개"]].map(([id,label])=><button type="button" key={id} disabled={busy} aria-pressed={section===id} onClick={()=>{setSection(id);setError('');setMessage('');}}>{label}</button>)}</nav>
                     <div className="area-hub-sections">
-                        <AreaBasicEditor
+                        {section==='base' && (<AreaBasicEditor
                             key={`${areaId}:${revision.base}`}
                             area={area} busy={busy} onSave={saveSection}
                             onDenied={onDenied}
-                        />
+                        />)}
 
-                        <InvestigationEditor
+                        {section==='results' && (<InvestigationEditor
                             key={`${areaId}:${revision.results}`}
                             areaId={areaId} data={data} busy={busy}
                             onSave={saveSection} onDenied={onDenied} onRemove={refreshAfterDelete}
-                        />
+                        />)}
 
-                        <MonsterEditor
+                        {section==='monsters' && (<MonsterEditor
                             key={`${areaId}:${revision.monsters}`}
                             areaId={areaId} data={monsterData} busy={busy}
                             onSave={saveSection}
-                        />
+                        />)}
 
-                        <RecipeEditor
+                        {section==='recipes' && (<RecipeEditor
                             key={`${areaId}:${revision.recipes}`}
                             areaId={areaId} data={data} recipes={recipes}
                             busy={busy} onSave={saveSection}
-                        />
+                        />)}
 
-                        <ClueEditor
+                        {section==='clues' && (<ClueEditor
                             key={`${areaId}:${revision.clues}`}
                             areaId={areaId} data={data} busy={busy}
                             onSave={saveSection} onDenied={onDenied} onRemove={refreshAfterDelete}
-                        />
+                        />)}
                     </div>
                 </>
             )}
-        </section>
+        <div className="area-hub-feedback" aria-live="polite">{error && <p className="area-hub-error" role="alert">{error}</p>}{message && <p className="area-hub-message" role="status">{message}</p>}</div>
+        </div></section>
     );
 }

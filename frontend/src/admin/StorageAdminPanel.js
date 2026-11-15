@@ -69,7 +69,7 @@ export default function StorageAdminPanel({onDenied}) {
  }
 
  return (
-     <section>
+     <section className="admin-record-workspace admin-storage-workspace"><div className="admin-list-pane">
       <h2>공용창고 재고 조정</h2>
 
       <form onSubmit={e => {e.preventDefault(); work(() => load());}}>
@@ -80,17 +80,17 @@ export default function StorageAdminPanel({onDenied}) {
        <button disabled={busy}>검색</button>
       </form>
 
-      <ul>
+      <ul className="admin-storage-list">
        {rows.map(r => (
-           <li key={r.item_id}>
-            {r.name} · 현재 {r.quantity}개
-            <button disabled={busy} onClick={() => selectItem(r)}>재고 수정</button>
+           <li key={r.item_id}><button type="button" disabled={busy} onClick={() => selectItem(r)}><strong>{r.name}</strong><span>현재 {r.quantity}개</span></button>
            </li>
        ))}
       </ul>
 
       {next && <button disabled={busy} onClick={() => work(() => load(next))}>다음 100건</button>}
 
+      </div><div className="admin-detail-pane">
+      {!selected && <p className="admin-empty-detail">목록에서 재고를 수정할 아이템을 선택하세요.</p>}
       {selected && (
           <form className="admin-form" onSubmit={save}>
            <p>{selected.name}: 변경 전 {selected.quantity} → 변경 후 {quantity}</p>
@@ -112,6 +112,6 @@ export default function StorageAdminPanel({onDenied}) {
 
       <p>조회 이후 입출고가 발생하면 저장을 거부합니다. 다시 검색해 현재 수량을 확인하세요.</p>
       <p role="status">{busy ? '처리 중…' : message}</p>
-     </section>
+     </div></section>
  );
 }

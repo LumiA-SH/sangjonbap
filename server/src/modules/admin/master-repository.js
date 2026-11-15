@@ -24,7 +24,7 @@ async function records(client,kind,id,after='0') {
     where ar.recipe_id=p.id),'[]'::jsonb) area_recipes`:'';
     const timestamps=kind==='gachas'?`,to_char(p.start_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') start_at,to_char(p.end_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') end_at`:'';
     const foodName=kind==='foods'
-        ? ",(select i.name from public.item i where i.id=p.item_id) as name"
+        ? ",(select i.name from public.item i where i.id=p.item_id) as name,(select i.image_url from public.item i where i.id=p.item_id) as image_url"
         : '';
     const progressSelect=kind==='areas'?',ip.investigation_rate as calculated_investigation_rate':'';
     const progressJoin=kind==='areas'?' left join public.investigation_progress ip on ip.area_id=p.id':'';
@@ -178,7 +178,7 @@ export function createAdminMasterRepository(pool) {
                 if (kind==='recipes')await validateRecipeFoodLinks(c,id,merged,before);
 
                 const values=Object.fromEntries(
-                    Object.entries(patch).filter(([k])=>k!==d.rows&&k!=='area_recipes'&&!(kind==='foods'&&k==='name'))
+                    Object.entries(patch).filter(([k])=>k!==d.rows&&k!=='area_recipes'&&!(kind==='foods'&&['name','image_url'].includes(k)))
                 );
                 const columns=Object.keys(values);
                 const params=Object.values(values);
@@ -225,6 +225,9 @@ export function createAdminMasterRepository(pool) {
                     );
                 }
 
+                if(kind==='foods'&&Object.hasOwn(patch,'image_url')){
+                    await c.query('update public.item set image_url=$2 where id=$1',[savedId,patch.image_url]);
+                }
                 const after=(await records(c,kind,savedId))[0];
 
                 await writeActionLog(c,{

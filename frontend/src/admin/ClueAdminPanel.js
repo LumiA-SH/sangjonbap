@@ -152,7 +152,7 @@ export default function ClueAdminPanel({onDenied, recordId, onOpen}) {
  }
 
  return (
-     <section>
+     <section className="admin-record-workspace"><div className="admin-list-pane">
       <h2>단서 등록·수정</h2>
       <p>미발견 단서는 공개 설정과 관계없이 숨깁니다. 발견자·발견 시각·조사율은 이 화면에서 변경하지 않습니다.</p>
 
@@ -209,6 +209,7 @@ export default function ClueAdminPanel({onDenied, recordId, onOpen}) {
           </button>
       )}
 
+      </div><div className="admin-detail-pane">
       {draft && (
           <form className="admin-form" onSubmit={save}>
            <label>
@@ -285,6 +286,7 @@ export default function ClueAdminPanel({onDenied, recordId, onOpen}) {
       )}
 
       <p role="status">{busy ? '처리 중…' : message}</p>
-     </section>
+      {!draft&&<p className="admin-empty-detail">목록에서 단서를 선택하거나 새로 등록하세요.</p>}
+      </div></section>
  );
 }

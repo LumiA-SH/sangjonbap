@@ -1,20 +1,22 @@
 import {createHash,randomUUID} from 'node:crypto';
 
-export const events=['death','revive','area_unlock','monster_discovery','clue_discovery','gacha','failure_food'];
-const defaults={death:'{character} 사망',revive:'{provider}님이 {character}님을 부활시켰습니다.',area_unlock:'{area} 개방',monster_discovery:'{character} · {area}에서 {monster} 전역 최초 발견',clue_discovery:'{character} · {clue} 전역 최초 발견',gacha:'【보급품 뽑기】\n{character}님이 보급품 상자를 개봉했습니다.\n획득한 물품: 「{reward}」 ×{quantity}',failure_food:'{character} · {rp}'};
+export const events=['death','revive','area_unlock','monster_discovery','clue_discovery','gacha','failure_food','investigation_progress','dice'];
+export const templateVariables={death:['character'],revive:['character','provider'],area_unlock:['area'],monster_discovery:['character','area','monster'],clue_discovery:['character','clue'],gacha:['character','reward','quantity'],failure_food:['character','rp'],investigation_progress:['character','area','progress'],dice:['character','result']};
+const safeText=value=>value.replace(/<[^>]*>/g,'').replace(/@/g,'＠').replace(/[\u0000-\u0008\u000b-\u001f\u007f]/g,'');
+const defaults={investigation_progress:'{area} 조사율 {progress}% 달성 · {character}',dice:'{character}의 결과는 {result}입니다.',death:'{character} 사망',revive:'{provider}님이 {character}님을 부활시켰습니다.',area_unlock:'{area} 개방',monster_discovery:'{character} · {area}에서 {monster} 전역 최초 발견',clue_discovery:'{character} · {clue} 전역 최초 발견',gacha:'【보급품 뽑기】\n{character}님이 보급품 상자를 개봉했습니다.\n획득한 물품: 「{reward}」 ×{quantity}',failure_food:'{character} · {rp}'};
 export function messageFor(type,values,template=defaults[type]) {
   if(!events.includes(type)||typeof template!=='string'||!template.trim())throw Error('INVALID_POST_EVENT');
   const message=template.replace(/\{([^{}]+)\}/g,(_,key)=>{
-    if(!['character','provider','area','monster','clue','reward','quantity','rp'].includes(key)||typeof values[key]!=='string'||!values[key].trim())throw Error('INVALID_POST_VALUES');
-    return values[key];
+    if(!templateVariables[type].includes(key)||typeof values[key]!=='string'||!values[key].trim())throw Error('INVALID_POST_VALUES');
+    return safeText(values[key]);
   });
   if(/[{}]/.test(message)||Array.from(message).length>500)throw Error('INVALID_POST_LENGTH');
-  return message;
+  return safeText(message);
 }
 
 // Must receive the caller's game transaction, never a separate pool connection.
 // Disabled/unconfigured policies create no events. Snapshot text and visibility.
-export async function enqueueSystemEvent(client,{type,key,characterId=null,values}) {
+export async function enqueueSystemEvent(client,{type,key,characterId=null,targetType=null,targetId=null,values}) {
   if(!events.includes(type)||typeof key!=='string'||!key)throw Error('INVALID_POST_EVENT');
   const {rows}=await client.query("select config_value from public.system_config where config_key='operating_announcements'");
   const policy=rows[0]?.config_value?.events?.[type];
@@ -24,9 +26,9 @@ export async function enqueueSystemEvent(client,{type,key,characterId=null,value
   const retry=policy.retryEnabled===true;
   if(retry&&(!Number.isInteger(policy.maxAttempts)||policy.maxAttempts<1||!Number.isInteger(policy.retryMinutes)||policy.retryMinutes<1))throw Error('INVALID_POST_RETRY');
   const dedupe=createHash('sha256').update(type+':'+key).digest('hex');
-  await client.query(`insert into public.mastodon_event(event_type,character_id,message,dedupe_key,visibility,delivery_enabled,auto_retry,max_attempts,retry_delay_seconds)
-    values($1,$2,$3,$4,$5,true,$6,$7,$8) on conflict(dedupe_key) do nothing`,
-    [type,characterId,message,dedupe,policy.visibility,retry,retry?Math.min(3,policy.maxAttempts):1,retry?Math.min(604800,Math.max(300,policy.retryMinutes*60)):300]);
+  await client.query(`insert into public.mastodon_event(event_type,character_id,message,dedupe_key,visibility,delivery_enabled,auto_retry,max_attempts,retry_delay_seconds,target_type,target_id)
+    values($1,$2,$3,$4,$5,true,$6,$7,$8,$9,$10) on conflict(dedupe_key) do nothing`,
+    [type,characterId,message,dedupe,policy.visibility,retry,retry?Math.min(3,policy.maxAttempts):1,retry?Math.min(604800,Math.max(300,policy.retryMinutes*60)):300,targetType,targetId]);
   return true;
 }
 
@@ -41,9 +43,13 @@ export function createSystemOutbox(pool) {
         // A crashed sender may already have published. Never automatically resend it.
         await c.query(`update public.mastodon_event set status='FAILED',delivery_enabled=false,last_error='DELIVERY_UNCERTAIN',lease_token=null,lease_until=null
           where lease_until<clock_timestamp() and lease_token is not null`);
+        const paused=await c.query("select 1 from public.mastodon_event where last_error='RATE_LIMITED' and next_attempt_at>clock_timestamp() limit 1");
+        if(paused.rowCount){await c.query('commit');return null;}
         const recent=await c.query("select 1 from public.mastodon_event where attempt_at>clock_timestamp()-interval '5 seconds' limit 1");
         if(recent.rowCount){await c.query('commit');return null;}
         const result=await c.query(`select * from public.mastodon_event where delivery_enabled and status in ('PENDING','FAILED')
+          and exists(select 1 from public.system_config policy where policy.config_key='operating_announcements'
+            and policy.config_value->'events'->mastodon_event.event_type->>'enabled'='true')
           and retry_count<max_attempts and lease_token is null and (next_attempt_at is null or next_attempt_at<=clock_timestamp())
           order by created_at,id for update skip locked limit 1`);
         const row=result.rows[0];

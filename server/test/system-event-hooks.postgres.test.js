@@ -1,3 +1,9 @@
+import {createBattleRepository} from '../src/modules/battle/repository.js';
+import {sendSystemPost} from '../src/modules/mastodon-system/sender.js';
+import {createSystemOutbox} from '../src/modules/mastodon-system/outbox.js';
+import {createAdminCharacterOperations} from '../src/modules/admin/character-operations.js';
+import {createDiceRepository} from '../src/modules/dice/repository.js';
+import {enqueueOpenAreas,enqueueProgressEvents} from '../src/modules/mastodon-system/jobs.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -21,7 +27,10 @@ test('real game event hooks commit and rollback together', {skip: !process.env.I
         const tables = (await raw.query("select tablename from pg_tables where schemaname='public'")).rows;
         for (const {tablename} of tables) {assert.match(tablename, /^[a-z_]+$/); await raw.query(`create table ${schema}.${tablename}(like public.${tablename} including all)`);}
         await raw.query(`insert into ${schema}.system_config select * from public.system_config`);
-        await pool.query(fs.readFileSync(new URL('../../supabase/migrations/20261110160000_mastodon_delivery.sql', import.meta.url), 'utf8'));
+        await pool.query(fs.readFileSync(new URL('../../supabase/migrations/20261115110543_mastodon_delivery.sql', import.meta.url), 'utf8'));
+        await pool.query('alter table public.food_grade add column if not exists stat_growth_rate numeric default 20');
+        await pool.query('create table if not exists public.area_recipe(area_id bigint,recipe_id bigint,weight integer default 1,drop_rate numeric default 0,primary key(area_id,recipe_id))');
+        await pool.query(`create view public.investigation_progress as select a.id area_id,0::numeric investigation_rate,0::bigint discovered_count,0::bigint total_count from public.area a`);
         await pool.query('insert into public.daily_reset_state(singleton) values(true)');
         const policies = Object.fromEntries(events.map(type => [type, {enabled: true, template: '', visibility: 'unlisted', retryEnabled: false}]));
         await pool.query("update public.system_config set config_value=$1 where config_key='operating_announcements'", [JSON.stringify({events: policies})]);
@@ -55,5 +64,36 @@ test('real game event hooks commit and rollback together', {skip: !process.env.I
         const investigation = createInvestigationRepository(pool); await Promise.all([a, b].map(x => investigation.investigate(x.u.id, area.id, randomUUID())));
         assert.equal(await count('clue_discovery'), 1); const msg = (await pool.query("select message from public.mastodon_event where event_type='clue_discovery'")).rows[0].message;
         assert.ok(!msg.includes('비밀 제목') && !msg.includes('스포일러 내용'));
+        await pool.query("insert into public.area(name,is_open,unlock_at) values('비공개',false,null),('미래',true,clock_timestamp()+interval '1 day')");
+        await Promise.all([enqueueOpenAreas(pool),enqueueOpenAreas(pool)]);assert.equal(await count('area_unlock'),1);
+        assert.equal((await pool.query("select message from public.mastodon_event where event_type='area_unlock'")).rows[0].message,'구역 개방');
+        policies.investigation_progress.thresholds=[50,100];await pool.query("update public.system_config set config_value=$1 where config_key='operating_announcements'",[JSON.stringify({events:policies})]);
+        await Promise.all([1,2].map(()=>enqueueProgressEvents(pool,area,a.c,40,100)));assert.equal(await count('investigation_progress'),2);
+        const dice=createDiceRepository(pool),diceKey=randomUUID();const rolls=await Promise.all([dice.rollDice(a.u.id,diceKey),dice.rollDice(a.u.id,diceKey)]);
+        assert.equal(rolls[0].result,rolls[1].result);assert.equal(await count('dice'),1);
+        const log=(await pool.query("select detail from public.action_log where request_key=$1",[diceKey])).rows[0];assert.equal(log.detail.result,rolls[0].result);
+        const post=(await pool.query("select message from public.mastodon_event where event_type='dice'")).rows[0];assert.ok(post.message.includes(String(rolls[0].result)));
+        policies.dice.enabled=false;await pool.query("update public.system_config set config_value=$1 where config_key='operating_announcements'",[JSON.stringify({events:policies})]);
+        await dice.rollDice(a.u.id,randomUUID());assert.equal(await count('dice'),1);
+        policies.dice.enabled=true;await pool.query("update public.system_config set config_value=$1 where config_key='operating_announcements'",[JSON.stringify({events:policies})]);
+        const failedKey=randomUUID();failOutbox=true;await assert.rejects(dice.rollDice(a.u.id,failedKey),/outbox fault/);failOutbox=false;
+        assert.equal((await pool.query('select id from public.action_log where request_key=$1',[failedKey])).rowCount,0);
+        await pool.query("update public.auth_user set role='ADMIN' where id=$1",[a.u.id]);
+        await pool.query("update public.game_character set hp=0,status='DEAD' where id=$1",[b.c.id]);
+        const reviveBefore=await count('revive');await createAdminCharacterOperations(pool).saveAdminCharacter(a.u.id,b.c.id,{hp:100,requestKey:randomUUID()});
+        assert.equal(await count('revive'),reviveBefore);
+        await pool.query('alter table public.monster_drop add column if not exists ingredient_role text');
+        const monster=(await pool.query("insert into public.monster(name,max_hp,atk,def,agi) values('테스트 마물',10,1,1,1) returning *")).rows[0];
+        await pool.query("insert into public.monster_action(monster_id,name,action_type,probability) values($1,'공격','ATTACK',100)",[monster.id]);
+        await pool.query("insert into public.monster_drop(monster_id,item_id,drop_rate,is_ingredient,ingredient_role) values($1,$2,100,true,'BASE')",[monster.id,item.id]);
+        const discoverers=await Promise.all([actor('발견1'),actor('발견2')]);const areas=[];
+        for(const x of discoverers){const ar=(await pool.query("insert into public.area(name,is_open,encounter_rate) values($1,true,100) returning *",[x.c.name+' 구역'])).rows[0];areas.push(ar);await pool.query('insert into public.area_monster(area_id,monster_id,weight) values($1,$2,1)',[ar.id,monster.id]);await pool.query("insert into public.investigation_result(area_id,result_grade,result_text,is_unique,investigation_rate_value) values($1,'NORMAL','조사',false,0)",[ar.id]);}
+        const battles=createBattleRepository(pool,{random:()=>0});const explorer=createInvestigationRepository(pool,{battleRepository:battles,random:()=>0});
+        failOutbox=true;await assert.rejects(explorer.investigate(discoverers[0].u.id,areas[0].id,randomUUID()),/outbox fault/);failOutbox=false;
+        assert.equal((await pool.query('select first_discoverer_id from public.monster where id=$1',[monster.id])).rows[0].first_discoverer_id,null);
+        await Promise.all(discoverers.map((x,i)=>explorer.investigate(x.u.id,areas[i].id,randomUUID())));assert.equal(await count('monster_discovery'),1);
+        const beforeFailure=(await pool.query('select currency,ap,hp from public.game_character where id=$1',[a.c.id])).rows[0];let requests=0;
+        const result=await sendSystemPost(createSystemOutbox(pool),{MASTODON_SYSTEM_POSTING_ENABLED:'true',MASTODON_SYSTEM_ACCESS_TOKEN:'fixture',MASTODON_SYSTEM_ACCOUNT_ID:'123'},{fetcher:async()=>++requests===1?new Response('{"id":"123","username":"System"}'):new Response('',{status:500})});
+        assert.equal(result.state,'FAILED');assert.deepEqual((await pool.query('select currency,ap,hp from public.game_character where id=$1',[a.c.id])).rows[0],beforeFailure);
     } finally {await raw.query(`drop schema ${schema} cascade`); await raw.end();}
 });

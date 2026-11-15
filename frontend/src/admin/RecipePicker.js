@@ -51,9 +51,8 @@ export default function RecipePicker({
  useEffect(() => {
   load();
 
-  return () => {
-   sequence.current++;
-  };
+  const cancelPending = () => { sequence.current++; };
+    return cancelPending;
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
  }, []);
@@ -89,9 +88,8 @@ export default function RecipePicker({
        }
       });
 
-  return () => {
-   selectionSequence.current++;
-  };
+  const cancelPending = () => { selectionSequence.current++; };
+    return cancelPending;
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
  }, [value, rows]);

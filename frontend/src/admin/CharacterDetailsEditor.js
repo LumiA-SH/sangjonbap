@@ -62,9 +62,8 @@ export default function CharacterDetailsEditor({id, onDenied, onSaved}) {
  useEffect(() => {
   work(load);
 
-  return () => {
-   generation.current++;
-  };
+  const cancelPending = () => { generation.current++; };
+    return cancelPending;
  }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
  async function save(e) {

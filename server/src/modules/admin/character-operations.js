@@ -66,7 +66,7 @@ export function createAdminCharacterOperations(pool) {
             `select i.item_id, i.quantity, m.name, m.category
              from public.inventory i
                       join public.item m on m.id=i.item_id
-             where i.character_id=$1
+             where i.character_id=$1 and i.quantity>0
              order by i.item_id`,
             [id]
         )).rows;
