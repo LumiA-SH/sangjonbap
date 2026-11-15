@@ -1,3 +1,4 @@
+import {itemCategoryLabel} from '../features/itemCategory';
 import {useEffect, useRef, useState} from 'react';
 import {api} from '../api/client';
 
@@ -143,14 +144,7 @@ export default function ItemPicker({
   }
 
   function itemDescription(item) {
-    const categoryNames = {
-      MATERIAL: '재료',
-      CONSUMABLE: '소모품',
-      FOOD: '음식',
-      ETC: '기타'
-    };
-
-    const category = categoryNames[item.category] || item.category;
+    const category = itemCategoryLabel(item.category);
 
     if (item.is_food) {
       const foodType = item.food_type === 'FAILURE'

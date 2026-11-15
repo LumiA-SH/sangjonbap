@@ -1,3 +1,4 @@
+import {itemCategoryLabel} from '../features/itemCategory';
 import {useRef, useState} from 'react';
 import {api} from '../api/client';
 import ItemTransferPanel from './ItemTransferPanel';
@@ -200,7 +201,7 @@ export default function InventoryPanel({inventory = [], storage = [], cookingCat
                 <input type="search" value={query} placeholder="아이템 이름 검색" aria-label="아이템 이름 검색" onChange={event => changeQuery(event.target.value)}/>
                 <select value={category} aria-label="아이템 분류 선택" onChange={event => changeCategory(event.target.value)}>
                   <option value="ALL">전체 분류</option>
-                  {categories.map(value => <option key={value} value={value}>{value}</option>)}
+                  {categories.map(value => <option key={value} value={value}>{itemCategoryLabel(value)}</option>)}
                 </select>
               </div>
 
@@ -214,7 +215,7 @@ export default function InventoryPanel({inventory = [], storage = [], cookingCat
                             <ItemImage key={`${item.item_id}:${item.image_url || ''}`} item={item}/>
                             <div className="inventory-item-info">
                               <strong>{item.name || `아이템 ID ${item.item_id}`}</strong>
-                              <small>{item.category || '기타'}</small>
+                              <small>{itemCategoryLabel(item.category)}</small>
                               {inactive && <small className="inventory-item-disabled">비활성 · 조회 전용</small>}
                             </div>
                             <span className="inventory-item-count">× {item.quantity}</span>
@@ -241,7 +242,7 @@ export default function InventoryPanel({inventory = [], storage = [], cookingCat
                   <div className="inventory-detail-main">
                     <ItemImage key={`${selectedItem.item_id}:${selectedItem.image_url || ''}`} item={selectedItem} large/>
                     <div>
-                      <span className="inventory-detail-category">{selectedItem.category || '기타'}</span>
+                      <span className="inventory-detail-category">{itemCategoryLabel(selectedItem.category)}</span>
                       <h4>{selectedItem.name || `아이템 ID ${selectedItem.item_id}`}</h4>
                       <p>보유 수량 <strong>{selectedItem.quantity}개</strong></p>
                     </div>

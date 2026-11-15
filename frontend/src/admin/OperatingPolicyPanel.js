@@ -1,3 +1,4 @@
+import {displayLabel} from '../features/displayLabels';
 import {useEffect, useState, useRef} from 'react';
 import {api} from '../api/client';
 
@@ -116,14 +117,14 @@ export default function OperatingPolicyPanel({onDenied}) {
     input = (
         <select value={v || ''} onChange={e => change(k, e.target.value || null)}>
          <option value="">미설정</option>
-         {['public', 'unlisted', 'private'].map(x => <option key={x}>{x}</option>)}
+         {['public', 'unlisted', 'private'].map(x => <option key={x} value={x}>{displayLabel(x)}</option>)}
         </select>
     );
    } else if (kind === 'recovery') {
     input = (
         <select value={v} onChange={e => change(k, e.target.value)}>
-         <option>HOLD</option>
-         <option>PREVIEW_ONLY</option>
+         <option value="HOLD">보류</option>
+         <option value="PREVIEW_ONLY">미리보기만</option>
         </select>
     );
    } else if (k === 'template') {

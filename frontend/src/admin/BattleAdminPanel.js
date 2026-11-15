@@ -1,3 +1,4 @@
+import {displayLabel} from '../features/displayLabels';
 import {useEffect, useRef, useState} from 'react';
 import {api} from '../api/client';
 import ItemPicker from './ItemPicker';
@@ -172,7 +173,7 @@ export default function BattleAdminPanel({onDenied, recordId, onOpen}) {
 
   const number = (label, value, onChange) => (
       <label>
-        {label}
+        {displayLabel(label)}
         <input type="number" min="0" step="any" required value={value}
                disabled={busy}
                onChange={e => onChange(e.target.value === '' ? '' : Number(e.target.value))}/>
@@ -377,7 +378,7 @@ export default function BattleAdminPanel({onDenied, recordId, onOpen}) {
           </div><div className="admin-detail-pane">
           {(!onOpen || recordId === 'new' || id) && (
               <form className="admin-form admin-structured-editor" onSubmit={saveMonster}>
-                <header className="admin-editor-heading admin-editor-heading-actions"><div><small>{id?'EDIT / '+id:'CREATE / NEW'}</small><h3>{draft.name||'신규 마물'}</h3></div><label className="admin-editor-toggle"><input type="checkbox" checked={draft.is_active} disabled={busy} onChange={e=>change('is_active',e.target.checked)}/>활성</label></header><section className="admin-editor-section"><h4>마물 기본 정보 · 능력치</h4><div className="admin-editor-grid">
+                <header className="admin-editor-heading admin-editor-heading-actions"><div><small>{id?'수정 / '+id:'신규 등록'}</small><h3>{draft.name||'신규 마물'}</h3></div><label className="admin-editor-toggle"><input type="checkbox" checked={draft.is_active} disabled={busy} onChange={e=>change('is_active',e.target.checked)}/>활성</label></header><section className="admin-editor-section"><h4>마물 기본 정보 · 능력치</h4><div className="admin-editor-grid">
 
                 {['name', 'description'].map(k => (
                     <label key={k}>
@@ -461,7 +462,7 @@ export default function BattleAdminPanel({onDenied, recordId, onOpen}) {
                         <select value={a.action_type} disabled={busy}
                                 onChange={e => rowChange('actions', i, 'action_type', e.target.value)}>
                           {['ATTACK', 'SPECIAL_ATTACK', 'FLEE'].map(v => (
-                              <option key={v}>{v}</option>
+                              <option key={v} value={v}>{displayLabel(v)}</option>
                           ))}
                         </select>
                       </label>
@@ -477,7 +478,7 @@ export default function BattleAdminPanel({onDenied, recordId, onOpen}) {
                       </label>
 
                       {a.condition_type && (
-                          <p>조건부 행동 {a.condition_type}: 수정 HOLD</p>
+                          <p>조건부 행동 {displayLabel(a.condition_type)}: 수정 보류</p>
                       )}
 
                       <button type="button" disabled={busy}

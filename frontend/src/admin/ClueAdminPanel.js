@@ -211,7 +211,7 @@ export default function ClueAdminPanel({onDenied, recordId, onOpen}) {
 
       </div><div className="admin-detail-pane">
       {draft && (
-          <form className="admin-form admin-structured-editor" onSubmit={save}><header className="admin-editor-heading"><small>{loaded?'EDIT / CLUE':'CREATE / NEW'}</small><h3>{draft.title||'새 단서'}</h3></header><section className="admin-editor-section"><h4>단서 기본 정보</h4><div className="admin-editor-grid">
+          <form className="admin-form admin-structured-editor" onSubmit={save}><header className="admin-editor-heading"><small>{loaded?'수정 / 단서':'신규 등록'}</small><h3>{draft.title||'새 단서'}</h3></header><section className="admin-editor-section"><h4>단서 기본 정보</h4><div className="admin-editor-grid">
            <label>
             제목
             <input required maxLength={100} disabled={busy}

@@ -1,3 +1,4 @@
+import {displayLabel} from '../features/displayLabels';
 import {useRef, useState} from 'react';
 import {api} from '../api/client';
 
@@ -92,7 +93,7 @@ export default function InitialCharacterSettings({character, onSaved, onDenied})
 
        {['atk', 'def', 'agi'].map(k => (
            <label key={k}>
-            {k.toUpperCase()}
+            {displayLabel(k)}
             <input required type="number" min="8" max="40" step="1" value={draft[k]} disabled={busy} onChange={e => change(k, e.target.value)}/>
            </label>
        ))}

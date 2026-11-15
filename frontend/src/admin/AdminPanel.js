@@ -1,3 +1,5 @@
+import {displayLabel} from '../features/displayLabels';
+import {itemCategoryLabel} from '../features/itemCategory';
 import AdminDashboard from './AdminDashboard';
 import ContentAdminPanel from './ContentAdminPanel';
 import StorageAdminPanel from './StorageAdminPanel';
@@ -284,14 +286,14 @@ export function Editor({kind,record,seed,onSaved,onDenied,deleteControl}) {
             );
         } else if (key==='use_target') {
             input=(
-                <input value={draft[key]??''} readOnly/>
+                <input value={displayLabel(draft[key])} readOnly/>
             );
         } else if (key==='category') {
             input=(
                 <select value={draft[key]} disabled={busy||!!draft.effect_type}
                         onChange={e=>change(key,e.target.value)}>
                     {['MATERIAL','CONSUMABLE','FOOD','ETC'].map(value=>
-                        <option key={value}>{value}</option>
+                        <option key={value} value={value}>{itemCategoryLabel(value)}</option>
                     )}
                 </select>
             );
@@ -345,7 +347,7 @@ export function Editor({kind,record,seed,onSaved,onDenied,deleteControl}) {
 
     return (
         <form className="admin-form admin-structured-editor" onSubmit={submit}>
-<header className="admin-editor-heading admin-editor-heading-actions"><div><small>{record?'EDIT / '+record.id:'CREATE / NEW'}</small><h3>{record?record.name||'등록 정보':'새로 등록'}</h3></div><div className="admin-editor-heading-controls"><label className="admin-editor-toggle"><input type="checkbox" checked={!!draft.is_active} disabled={busy} onChange={e=>change('is_active',e.target.checked)}/>활성</label>{deleteControl}</div></header>
+<header className="admin-editor-heading admin-editor-heading-actions"><div><small>{record?'수정 / '+record.id:'신규 등록'}</small><h3>{record?record.name||'등록 정보':'새로 등록'}</h3></div><div className="admin-editor-heading-controls"><label className="admin-editor-toggle"><input type="checkbox" checked={!!draft.is_active} disabled={busy} onChange={e=>change('is_active',e.target.checked)}/>활성</label>{deleteControl}</div></header>
 {(kind==='items'?[
  ['아이템 기본 정보',['name','category','description','image_url']],
  ['사용 · 이동 설정',['transferable','usable','battle_usable']],
@@ -784,7 +786,7 @@ export default function AdminPanel({
                                 <small>
                                     {kind==='products'
                                         ? `가격 ${row.price}코인 · ${row.is_active?'판매 중':'비활성'}`
-                                        : `${row.category||'아이템'} · ${row.is_active?'활성':'비활성'}`}
+                                        : `${itemCategoryLabel(row.category)} · ${row.is_active?'활성':'비활성'}`}
                                 </small>
 
                                 <small>등록 ID {row.id}</small>
@@ -846,7 +848,7 @@ export default function AdminPanel({
                 </div>
             </header>
 
-            <p>서버 ADMIN 권한 검증 영역입니다. 인증 방식: {authentication||'확인 중'}</p>
+            <p>서버 관리자 권한 검증 영역입니다. 인증 방식: {authentication?displayLabel(authentication):'확인 중'}</p>
             <p role="alert">{message}</p>
 
             {allowed&&

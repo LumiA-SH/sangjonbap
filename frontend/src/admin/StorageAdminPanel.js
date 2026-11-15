@@ -92,7 +92,7 @@ export default function StorageAdminPanel({onDenied}) {
       </div><div className="admin-detail-pane">
       {!selected && <p className="admin-empty-detail">목록에서 재고를 수정할 아이템을 선택하세요.</p>}
       {selected && (
-          <form className="admin-form admin-structured-editor" onSubmit={save}><header className="admin-editor-heading"><small>EDIT / STORAGE</small><h3>{selected.name}</h3></header><section className="admin-editor-section"><h4>재고 조정</h4>
+          <form className="admin-form admin-structured-editor" onSubmit={save}><header className="admin-editor-heading"><small>수정 / 공용창고</small><h3>{selected.name}</h3></header><section className="admin-editor-section"><h4>재고 조정</h4>
            <p>{selected.name}: 변경 전 {selected.quantity} → 변경 후 {quantity}</p>
 
            <label>

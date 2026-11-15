@@ -1,3 +1,4 @@
+import {displayLabel} from '../features/displayLabels';
 import {actionLabel,actionSummary} from './recordSummary';
 import {useEffect, useRef, useState} from 'react';
 import {api} from '../api/client';
@@ -77,13 +78,13 @@ function RecordDetail({record, kind}) {
           {record.category && (
               <div>
                 <span>기록 분류</span>
-                <strong>{record.category}</strong>
+                <strong>{displayLabel(record.category)}</strong>
               </div>
           )}
           {record.target_type && (
               <div>
                 <span>대상</span>
-                <strong>{record.target_type} {record.target_id || ''}</strong>
+                <strong>{displayLabel(record.target_type)} {record.target_id || ''}</strong>
               </div>
           )}
           {record.related_target && (

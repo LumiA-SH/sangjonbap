@@ -1,3 +1,4 @@
+import {displayLabel} from '../features/displayLabels';
 /* global BigInt */
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {api} from '../api/client';
@@ -516,7 +517,7 @@ export function MasterEditor({kind, record, onSaved, onDenied, onBusy}) {
                           <select value={draft[k] ?? ''} disabled={busy}
                                   onChange={e => change(k, e.target.value || null)}>
                             <option value="">성장 능력치 선택</option>
-                            {['ATK', 'DEF', 'AGI'].map(s => <option key={s}>{s}</option>)}
+                            {['ATK', 'DEF', 'AGI'].map(s => <option key={s} value={s}>{displayLabel(s)}</option>)}
                           </select>
                       ) : k === 'discovery_grade' ? (
                           <select value={draft[k] ?? ''} disabled={busy}
@@ -555,7 +556,7 @@ export function MasterEditor({kind, record, onSaved, onDenied, onBusy}) {
 
   return (
       <form onSubmit={save} className="admin-form admin-structured-editor">
-        <header className="admin-editor-heading admin-editor-heading-actions"><div><small>{record ? `EDIT / ${record.id}` : 'CREATE / NEW'}</small><h3>
+        <header className="admin-editor-heading admin-editor-heading-actions"><div><small>{record ? `수정 / ${record.id}` : '신규 등록'}</small><h3>
           {record ? (
               kind === 'foods'
                   ? <><AdminReferenceName itemId={record.item_id} eager onDenied={onDenied}/> 상세/수정</>

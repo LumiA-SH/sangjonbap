@@ -1,3 +1,4 @@
+import {displayLabel} from '../features/displayLabels';
 import {useRef, useState} from 'react';
 import {api} from '../api/client';
 
@@ -44,7 +45,7 @@ export default function RolePanel({onDenied}) {
     if (working.current) return;
 
     const role = row.role === 'ADMIN' ? 'USER' : 'ADMIN';
-    const confirmMessage = `계정 ID ${row.id} (${row.character_name || '캐릭터 없음'}) 역할을 ${row.role} → ${role}로 변경할까요?`;
+    const confirmMessage = `계정 ID ${row.id} (${row.character_name || '캐릭터 없음'}) 역할을 ${displayLabel(row.role)} → ${displayLabel(role)}로 변경할까요?`;
 
     if (!window.confirm(confirmMessage)) return;
 
@@ -122,7 +123,7 @@ export default function RolePanel({onDenied}) {
         <ul>
           {rows.map(row => (
               <li key={row.id}>
-                계정 ID {row.id} · {row.character_name || '캐릭터 없음'} · {row.role} · {row.is_active ? '활성' : '비활성'}
+                계정 ID {row.id} · {row.character_name || '캐릭터 없음'} · {displayLabel(row.role)} · {row.is_active ? '활성' : '비활성'}
                 <button disabled={busy} onClick={() => change(row)}>{row.role === 'ADMIN' ? '권한 회수' : '관리자 지정'}</button>
                 {' · 테스트 '}
                 {row.role === 'ADMIN' ? '관리자 허용' : row.game_test_enabled ? '허용' : '미지정'}

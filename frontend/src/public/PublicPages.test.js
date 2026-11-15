@@ -1,3 +1,6 @@
+import {displayLabel} from '../features/displayLabels';
+import RolePanel from '../admin/RolePanel';
+import {itemCategoryLabel} from '../features/itemCategory';
 import ImageUploadField from '../admin/ImageUploadField';
 import {adminMenuGroups} from '../admin/navigation';
 import {actionLabel,actionSummary} from '../dev/recordSummary';
@@ -197,4 +200,36 @@ test('food grade partial save reports completed rows and preserves remaining edi
  for(const name of ['일반','희귀'])await act(async()=>Simulate.change(div.querySelector('[aria-label="'+name+' 혈량 회복량"]'),{target:{value:'25'}}));
  await act(async()=>Simulate.submit(div.querySelector('form')));
  expect(div.textContent).toContain('1건 저장 완료 · 나머지 저장 실패');expect(denied).toHaveBeenCalled();expect(div.querySelector('[aria-label="희귀 혈량 회복량"]').value).toBe('25');
+});
+
+test('item categories show Korean labels while preserving stored API codes',async()=>{
+ expect(['MATERIAL','CONSUMABLE','FOOD','ETC'].map(itemCategoryLabel)).toEqual(['재료','소모품','음식','기타']);
+ api.mockResolvedValue({record:{id:'1'}});
+ await act(async()=>root.render(<Editor kind="items" record={{id:'1',name:'나무',category:'MATERIAL',is_active:true}} onSaved={jest.fn()} onDenied={jest.fn()}/>));
+ const category=[...div.querySelectorAll('select')].find(select=>select.querySelector('option[value="MATERIAL"]'));
+ expect(category.value).toBe('MATERIAL');expect([...category.options].map(o=>o.textContent)).toEqual(['재료','소모품','음식','기타']);
+ await act(async()=>Simulate.change(category,{target:{value:'ETC'}}));
+ await act(async()=>Simulate.submit(div.querySelector('form')));
+ expect(api).toHaveBeenCalledWith('/admin/items/1',expect.objectContaining({body:expect.objectContaining({category:'ETC'})}));
+});
+
+test('admin use target and effects display Korean without changing stored values',async()=>{
+ api.mockResolvedValue({record:{id:'8'}});
+ await act(async()=>root.render(<Editor kind="items" record={{id:'8',name:'혈액팩',category:'CONSUMABLE',effect_type:'BLOOD_PACK',blood_pack_kind:'STANDARD',effect_value:30,usable:true,use_target:'SELF',battle_usable:true,is_active:true}} onSaved={jest.fn()} onDenied={jest.fn()}/>));
+ expect(div.querySelector('input[readonly]').value).toBe('자신');
+ expect(div.querySelector('option[value="BLOOD_PACK"]').textContent).toBe('혈액팩');
+ await act(async()=>Simulate.submit(div.querySelector('form')));
+ expect(api).toHaveBeenCalledWith('/admin/items/8',expect.objectContaining({body:expect.objectContaining({use_target:'SELF',effect_type:'BLOOD_PACK'})}));
+ expect(displayLabel('battle_ability_s_ap_cost')).toBe('S등급 이능 AP 비용');
+ expect(displayLabel('SPECIAL_ATTACK')).toBe('특수 공격');
+ expect(displayLabel('HOLD')).toBe('보류');
+});
+test('role display and confirmation are translated while authorization payload stays coded',async()=>{
+ api.mockResolvedValue({records:[{id:'12',role:'USER',is_active:true,character_name:'러너',game_test_enabled:false}]});
+ await act(async()=>root.render(<RolePanel onDenied={jest.fn()}/>));
+ await act(async()=>Simulate.submit(div.querySelector('form')));
+ expect(div.textContent).toContain('일반 사용자');
+ await act(async()=>button('관리자 지정').click());
+ expect(window.confirm).toHaveBeenCalledWith(expect.stringContaining('일반 사용자 → 관리자'));
+ expect(api).toHaveBeenCalledWith('/admin/users/12/role',expect.objectContaining({body:expect.objectContaining({role:'ADMIN'})}));
 });

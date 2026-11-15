@@ -110,7 +110,7 @@ export default function GachaStockEditor({record, onSaved, onDenied, onBusy}) {
 
   return (
       <form className="admin-form admin-structured-editor" onSubmit={save}>
-        <header className="admin-editor-heading"><small>{record?'EDIT / '+record.id:'CREATE / NEW'}</small><h3>{draft.name||'가챠 등록'}</h3></header><section className="admin-editor-section"><h4>가챠 기본 정보 · 운영 기간</h4>
+        <header className="admin-editor-heading"><small>{record?'수정 / '+record.id:'신규 등록'}</small><h3>{draft.name||'가챠 등록'}</h3></header><section className="admin-editor-section"><h4>가챠 기본 정보 · 운영 기간</h4>
         <p>1회 코인 1개 · RP 아이템 1개. 양도 가능하며 사용 효과가 없는 아이템만 등록합니다.</p>
 
         <label>

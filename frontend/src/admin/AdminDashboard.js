@@ -1,3 +1,4 @@
+import {displayLabel} from '../features/displayLabels';
 import {useEffect,useState} from 'react';
 import {api} from '../api/client';
 
@@ -18,7 +19,7 @@ export default function AdminDashboard({onNavigate,onDenied}) {
   {errors.map((e,i)=><p role="alert" key={i}>{e}</p>)}
   <button type="button" onClick={()=>setRevision(v=>v+1)}>현황 새로고침</button>
   <section className="admin-overview-group"><h3>자주 쓰는 관리 메뉴</h3><div className="admin-quick-links">{[['characters','캐릭터 운영'],['items','아이템'],['foods','음식'],['recipes','레시피'],['area-hub','구역 관리'],['logs','전체 행동 로그']].map(([id,label])=>go(id,label))}</div></section>
-  <section className="admin-overview-group"><h3>최근 행동 및 운영 로그</h3>{logs===null?<p>기록을 불러오는 중입니다. 조회 실패 시 위 오류를 확인하세요.</p>:logs.length===0?<p>표시할 기록이 없습니다.</p>:<ul className="admin-dashboard-logs">{logs.map(log=><li key={log.id}><div><small>{log.category} · {log.character_name||'운영 기록'}</small><p>{log.description}</p></div><time dateTime={log.created_at}>{new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',dateStyle:'short',timeStyle:'short'}).format(new Date(log.created_at))} KST</time></li>)}</ul>}{go('logs','전체 로그 확인')}</section>
+  <section className="admin-overview-group"><h3>최근 행동 및 운영 로그</h3>{logs===null?<p>기록을 불러오는 중입니다. 조회 실패 시 위 오류를 확인하세요.</p>:logs.length===0?<p>표시할 기록이 없습니다.</p>:<ul className="admin-dashboard-logs">{logs.map(log=><li key={log.id}><div><small>{displayLabel(log.category)} · {log.character_name||'운영 기록'}</small><p>{log.description}</p></div><time dateTime={log.created_at}>{new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',dateStyle:'short',timeStyle:'short'}).format(new Date(log.created_at))} KST</time></li>)}</ul>}{go('logs','전체 로그 확인')}</section>
   <section className="admin-overview-group"><h3>데이터 등록 흐름</h3><div className="admin-quick-links">{[['items','1. 아이템'],['foods','2. 음식'],['recipes','3. 레시피'],['area-hub','4. 구역 배치']].map(([id,label])=>go(id,label))}</div></section>
  </div>;
 }
