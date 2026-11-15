@@ -1,14 +1,9 @@
-import {useEffect, useState} from 'react';
+import {useContext,useEffect,useState} from 'react';
 import {api} from '../api/client';
 import {publicAsset} from '../publicAsset';
+import {AnemiaPolicyContext,characterStateText} from '../public/AnemiaNotice';
 
 const FALLBACK_AVATAR = publicAsset('assets/decor/icon-user.svg');
-
-const statusNames = {
-  ALIVE: '생존',
-  NEAR_DEATH: '빈사',
-  DEAD: '사망'
-};
 
 function ResourceMeter({label, value, max}) {
   const current = Number(value);
@@ -41,6 +36,7 @@ export default function CharacterPanel({
                                        }) {
   const [name, setName] = useState('');
   const [imageFailed, setImageFailed] = useState(false);
+  const anemiaPolicy=useContext(AnemiaPolicyContext);
 
   const imageUrl = character?.image_url || character?.profile_image_url || '';
   const validImage = typeof imageUrl === 'string' &&
@@ -148,7 +144,7 @@ export default function CharacterPanel({
                                 </span>
 
                     <span className={`survival-character-state state-${String(character.status || '').toLowerCase()}`}>
-                                    {statusNames[character.status] || character.status || '미확인'}
+                                    {characterStateText(character,anemiaPolicy)}
                                 </span>
                   </div>
 

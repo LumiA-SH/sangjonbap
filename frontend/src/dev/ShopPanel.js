@@ -46,7 +46,7 @@ function ProductImage({product, small = false}) {
       <div className={`shop-product-image${small ? ' is-small' : ''}`}>
         {valid && !failed
             ? <img src={url} alt={`${product.name} 상품 이미지`} loading="lazy" onError={() => setFailed(true)}/>
-            : <span>이미지 없음</span>}
+            : <span className="shop-product-placeholder" aria-hidden="true"/>}
       </div>
   );
 }

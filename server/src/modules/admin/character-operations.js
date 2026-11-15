@@ -167,6 +167,26 @@ export function createAdminCharacterOperations(pool) {
                 `select c.id,
                         c.name,
                         c.status,
+                        case
+                            when c.status='ALIVE'
+                                and c.hp>0
+                                and c.blood between 1 and 100
+                            then (
+                                select stage->>'name'
+                                from public.system_config policy
+                                cross join lateral jsonb_array_elements(
+                                    policy.config_value->'stages'
+                                ) stage
+                                where policy.config_key='operating_anemia'
+                                    and policy.config_value->>'enabled'='true'
+                                    and c.blood between
+                                        (stage->>'min')::integer
+                                        and (stage->>'max')::integer
+                                order by (stage->>'order')::integer
+                                limit 1
+                            )
+                            else null
+                        end as anemia_stage,
                         c.is_active,
                         c.profile_image_url,
                         c.hunter_grade,

@@ -43,7 +43,7 @@ test('P3 public content PostgreSQL integration', {skip: !process.env.ISOLATED_PG
         });
         await t.test('guest roster explicit profile projection, search, status, no data mutation', async () => {
             const before = (await pool.query('select * from public.game_character order by id')).rows, logs = (await pool.query('select count(*)::int n from public.action_log')).rows[0].n;
-            for (const a of [runner, dead, near]) {const r = await characters.getVisitorCharacter(a.c.id); assert.deepEqual(Object.keys(r).sort(), ['id', 'name', 'hunter_grade', 'has_ability', 'ability_grade', 'status'].sort()); assert.equal(r.status, a.c.status); assert.equal((await characters.listVisitorCharacters(a.c.name)).length, 1);}
+            for (const a of [runner, dead, near]) {const r = await characters.getVisitorCharacter(a.c.id); assert.deepEqual(Object.keys(r).sort(), ['id', 'name', 'hunter_grade', 'has_ability', 'ability_grade', 'status', 'profile_image_url', 'anemia_stage'].sort()); assert.equal(r.status, a.c.status); assert.equal((await characters.listVisitorCharacters(a.c.name)).length, 1);}
             await pool.query('update public.auth_user set is_active=false where id=$1', [near.u.id]); await assert.rejects(characters.getVisitorCharacter(near.c.id), {code: 'CHARACTER_NOT_FOUND'}); assert.equal((await characters.listVisitorCharacters(near.c.name)).length, 0);
             assert.deepEqual((await pool.query('select * from public.game_character order by id')).rows, before); assert.equal((await pool.query('select count(*)::int n from public.action_log')).rows[0].n, logs); assert.equal((await characters.getPublicCharacter(dead.u.id, runner.c.id)).character.id, runner.c.id);
         });

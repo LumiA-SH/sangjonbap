@@ -1,8 +1,35 @@
 import InitialCharacterSettings from './InitialCharacterSettings';
 import CharacterDetailsEditor from './CharacterDetailsEditor';
-import {useEffect,useRef,useState} from 'react';
+import {useContext,useEffect,useRef,useState} from 'react';
 import {api} from '../api/client';
 import ItemPicker from './ItemPicker';
+import {publicAsset} from '../publicAsset';
+import {AnemiaPolicyContext,characterStateText} from '../public/AnemiaNotice';
+import '../public/public.css';
+
+const FALLBACK_AVATAR=publicAsset('assets/decor/icon-user.svg');
+
+function CharacterAvatar({character}){
+    const source=character?.profile_image_url||character?.image_url||'';
+    const [failed,setFailed]=useState(false);
+
+    useEffect(()=>{
+        setFailed(false);
+    },[source]);
+
+    const valid=typeof source==='string'&&
+        (/^https?:\/\//i.test(source)||/^\/(?!\/)/.test(source));
+
+    const image=valid&&!failed?source:FALLBACK_AVATAR;
+    const fallback=image===FALLBACK_AVATAR;
+
+    return (
+        <div className={'public-character-avatar'+(fallback?' is-fallback':'')}>
+            <img src={image} alt={(character?.name||'캐릭터')+' 프로필'}
+                 loading="lazy" onError={()=>setFailed(true)}/>
+        </div>
+    );
+}
 
 const fields={
   hp:'HP',
@@ -12,12 +39,6 @@ const fields={
   atk:'ATK',
   def:'DEF',
   agi:'AGI'
-};
-
-const statusLabels={
-  ALIVE:'생존',
-  NEAR_DEATH:'빈사',
-  DEAD:'사망'
 };
 
 export default function CharacterOperationsPanel({onDenied,recordId,onOpen}) {
@@ -32,6 +53,7 @@ export default function CharacterOperationsPanel({onDenied,recordId,onOpen}) {
   const [busy,setBusy]=useState(false);
   const [message,setMessage]=useState('');
   const pending=useRef(false);
+  const anemiaPolicy=useContext(AnemiaPolicyContext);
 
   async function work(fn) {
     if(pending.current)return;
@@ -160,58 +182,106 @@ export default function CharacterOperationsPanel({onDenied,recordId,onOpen}) {
           진행 중인 전투가 있으면 수정을 제한합니다.
         </p>
 
-        <form onSubmit={searchSubmit}>
-          <label>
-            캐릭터 이름
-            <input value={query} maxLength={100} disabled={busy}
-                   onChange={e=>setQuery(e.target.value)}/>
-          </label>
-          <button disabled={busy}>캐릭터 검색</button>
-        </form>
+        <div className="public-content public-character-directory">
+          <div className="public-directory-heading">
+            <div>
+              <span className="badge">SURVIVOR ROSTER</span>
+              <h2>캐릭터 목록</h2>
+            </div>
+            <span className="public-directory-count">{rows.length}명 표시</span>
+          </div>
 
-        <p>
-          빈 검색어로 등록된 러너·캐릭터를 조회할 수 있습니다.
-          계정 권한과 게임 초기 설정은 별개입니다.
-        </p>
+          <form className="public-character-search" onSubmit={searchSubmit}>
+            <label>
+              캐릭터 이름
+              <input type="search" value={query} maxLength={100}
+                     placeholder="캐릭터 이름을 입력하세요."
+                     disabled={busy} onChange={e=>setQuery(e.target.value)}/>
+            </label>
+            <button disabled={busy}>검색</button>
+          </form>
 
-        <p role="alert">{message}</p>
+          <p>
+            빈 검색어로 등록된 러너·캐릭터를 조회할 수 있습니다.
+            계정 권한과 게임 초기 설정은 별개입니다.
+          </p>
 
-        <ul>
-          {rows.map(r=>(
-              <li key={r.id}>
-                {r.profile_image_url&&(
-                    <img src={r.profile_image_url} width="40" height="40" alt=""
-                         loading="lazy" onError={e=>{e.currentTarget.hidden=true;}}/>
-                )}
-                {r.name} · ID {r.id} · {statusLabels[r.status]||r.status} ·
-                {r.user_id
-                    ? ` 러너 계정 ${r.user_id} (${r.user_role==='ADMIN'?'관리자':'일반 러너'})`
-                    : ' 연결 계정 없음'} ·
-                {r.initial_setup_complete===false?' 초기 설정 미완료':' 초기 설정 완료'} ·
-                헌터 {r.hunter_grade??'미설정'} ·
-                이능 {r.initial_setup_complete===false
-                  ? '미설정'
-                  : r.has_ability?r.ability_grade:'없음'} ·
-                {r.is_active?'활성':'비활성'}
+          <p role="alert">{message}</p>
 
-                <button disabled={busy} onClick={()=>
-                    onOpen?onOpen(String(r.id)):work(()=>select(r.id))
-                }>선택</button>
-              </li>
-          ))}
-        </ul>
+          {rows.length>0&&(
+            <ul className="public-character-list">
+              {rows.map(r=>(
+                <li key={r.id} className="public-character-item">
+                  <CharacterAvatar character={r}/>
 
-        {next&&(
-            <button disabled={busy} onClick={()=>work(()=>search(next))}>
-              다음 50건
-            </button>
-        )}
+                  <div className="public-character-info">
+                    <button type="button" className="public-character-name"
+                            disabled={busy}
+                            onClick={()=>onOpen?onOpen(String(r.id)):work(()=>select(r.id))}>
+                      {r.name}
+                    </button>
+
+                    <div className="public-character-information">
+                      <span>
+                        헌터등급 <strong>{r.hunter_grade||'미설정'}</strong>
+                      </span>
+                      <span>
+                        이능등급 <strong>
+                          {r.initial_setup_complete===false
+                            ? '미설정'
+                            : r.has_ability?r.ability_grade||'미설정':'없음'}
+                        </strong>
+                      </span>
+                      <span className={'public-character-status status-'+String(r.status||'').toLowerCase()}>
+                        상태 <strong>{characterStateText(r,anemiaPolicy)}</strong>
+                      </span>
+                    </div>
+
+                    <div className="public-character-information">
+                      <span>ID <strong>{r.id}</strong></span>
+                      <span>
+                        {r.user_id
+                          ? '계정 '+r.user_id+' ('+(r.user_role==='ADMIN'?'관리자':'일반 러너')+')'
+                          : '연결 계정 없음'}
+                      </span>
+                      <span>
+                        {r.initial_setup_complete===false
+                          ? '초기 설정 미완료'
+                          : '초기 설정 완료'}
+                      </span>
+                      <span>{r.is_active?'활성':'비활성'}</span>
+                    </div>
+                  </div>
+
+                  <button type="button" className="public-character-detail-button"
+                          disabled={busy}
+                          onClick={()=>onOpen?onOpen(String(r.id)):work(()=>select(r.id))}>
+                    선택
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {!busy&&rows.length===0&&(
+            <p className="public-directory-empty">조회된 캐릭터가 없습니다.</p>
+          )}
+
+          {next&&(
+            <div className="public-directory-pagination">
+              <button type="button" disabled={busy}
+                      onClick={()=>work(()=>search(next))}>
+                다음 50건
+              </button>
+            </div>
+          )}
+        </div>
 
         {data&&(
             <>
               <h3>
                 {data.character.name} ·
-                {statusLabels[data.character.status]||data.character.status}
+                {characterStateText(data.character,anemiaPolicy)}
               </h3>
 
               <p>

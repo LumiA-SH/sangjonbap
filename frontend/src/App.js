@@ -1,6 +1,6 @@
 import GuidePage from './public/GuidePage';
 import CharacterDirectory from './public/CharacterDirectory';
-import AnemiaNotice, {AnemiaPolicyContext} from './public/AnemiaNotice';
+import AnemiaNotice, {AnemiaPolicyContext,characterStateText} from './public/AnemiaNotice';
 import MobileLoginHelp from './MobileLoginHelp';
 import {publicAsset} from './publicAsset';
 import OAuthErrorNotice from './OAuthErrorNotice';
@@ -104,28 +104,6 @@ function getKstDay(date) {
   );
 
   return `${values.year}-${values.month}-${values.day}`;
-}
-
-function getMainCharacterStatus(character) {
-  if (!character) return '-';
-
-  const hp = Number(character.hp);
-  if (character.status === 'DEAD' || (character.hp != null && Number.isFinite(hp) && hp <= 0)) {
-    return '사망';
-  }
-
-  const blood = Number(character.blood);
-  if (character.status === 'NEAR_DEATH' || (character.blood != null && Number.isFinite(blood) && blood <= 0)) {
-    return '빈사';
-  }
-
-  if (character.blood == null || !Number.isFinite(blood) || blood > 100) return '미확인';
-  if (blood >= 80) return '정상';
-  if (blood >= 60) return '빈혈';
-  if (blood >= 30) return '중증 빈혈';
-  if (blood >= 1) return '중증 빈혈 2단계';
-
-  return '미확인';
 }
 
 function HomeDailyTraining({character, busy, run, refresh, today}) {
@@ -236,6 +214,32 @@ export default function App() {
   const [now, setNow] = useState(() => new Date());
 
   const running = useRef(false);
+  const adminWasOpen = useRef(false);
+
+  async function refreshAfterAdmin(){
+    try{
+      const result=await api('/characters/me');
+      setCharacter(result.character);
+      setErrors(previous=>({...previous,character:undefined}));
+    }catch(error){
+      setErrors(previous=>({...previous,character:error.message}));
+    }
+  }
+
+  useEffect(()=>{
+    if(adminOpen){
+      adminWasOpen.current=true;
+      return;
+    }
+
+    if(!adminWasOpen.current)return;
+    adminWasOpen.current=false;
+
+    if(loggedIn&&user?.character_id){
+      refreshAfterAdmin();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[adminOpen,loggedIn,user?.character_id]);
 
   useEffect(() => {
     if (!loggedIn || !user?.character_id) {
@@ -549,7 +553,7 @@ export default function App() {
                             <div className="survival-identity-name">{character?.name || '불러오는 중'}</div>
                             <span className="survival-role-badge">{character?.role || '생존자'}</span>
                             <p>헌터등급 <b>{character?.hunter_grade ?? '-'}</b> <span className="survival-divider">|</span> 이능등급 <b>{character?.ability_grade ?? '-'}</b></p>
-                            <p>상태: <strong>{getMainCharacterStatus(character)}</strong></p>
+                            <p>상태: <strong>{characterStateText(character,anemiaPolicy)}</strong></p>
                           </div>
                         </div>
 
