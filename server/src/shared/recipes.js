@@ -1,3 +1,4 @@
+import {enqueueSystemEvent} from '../modules/mastodon-system/outbox.js';
 import {AppError} from './http.js';
 import {requireActionCharacter} from './actions.js';
 import {changeCharacterResources,writeActionLog} from './game.js';
@@ -79,6 +80,8 @@ export async function discoverRecipe(client,characterId,recipe,sourceType,source
     const result={recipeId:recipe.id,name:recipe.name,firstDiscovery:true,learned:true,newlyLearned:learned.rowCount>0,productId:product.id,price};
     await writeActionLog(client,{characterId,category:'RECIPE',actionType:'RECIPE_DISCOVERY',targetType:'RECIPE',targetId:recipe.id,
         description:'레시피 최초 발견·무료 습득·상점 등록',detail:{...result,sourceType,sourceId}});
+    const finder=(await client.query('select name from public.game_character where id=$1',[characterId])).rows[0];
+    await enqueueSystemEvent(client,{type:'recipe_discovery',key:String(recipe.id),characterId,targetType:'RECIPE',targetId:recipe.id,values:{character:finder?.name||'캐릭터',recipe:recipe.name}});
     return result;
 }
 

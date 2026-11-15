@@ -34,10 +34,10 @@ recoverDailyReset: async () => {
 });
 test('battle expiry keeps default 100 and parameterizes bounded batch size', async () => {
     const calls = []; const repo = createBattleRepository({query: async (sql, args) => {calls.push({sql, args}); return {rows: []};}});
-    assert.equal(await repo.expireBattles(), 0); assert.deepEqual(calls[0].args, [100]);
-    await repo.expireBattles({limit: 10}); assert.deepEqual(calls[1].args, [10]); assert.match(calls[1].sql, /limit \$1/);
+    assert.equal(await repo.expireBattles(), 0); assert.equal(calls.length,0);
+    await repo.expireBattles({limit: 10}); assert.equal(calls.length,0);
     for (const limit of [0, 101, 1.5, '10']) await assert.rejects(repo.expireBattles({limit}), {code: 'INVALID_EXPIRY_LIMIT'});
-    assert.equal(calls.length, 2);
+    assert.equal(calls.length, 0);
 });
 
 

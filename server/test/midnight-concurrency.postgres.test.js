@@ -190,8 +190,9 @@ release: () => client.release(), async query(q, p) {
                 assert.equal((await pool.query('select quantity from public.inventory where character_id=$1 and item_id=$2', [c.id, ingredient.id])).rows[0].quantity, 8);
             }
         });
-        await t.test('midnight defeat and expiry race never issue two endings or rewards', async () => {
-            const c = await setup(); await pool.query('update public.game_character set blood=5');
+        await t.test('midnight interruption and retired expiry calls never issue two endings or rewards', async () => {
+            for(const blood of [5,35]){
+            const c = await setup(); await pool.query('update public.game_character set blood=$1',[blood]);
             const monster = (await pool.query("insert into public.monster(name,max_hp,atk,def,agi) values('test',10,1,1,1) returning id")).rows[0];
             const area = (await pool.query("insert into public.area(name) values('expiry') returning id")).rows[0];
             const b = (await pool.query(`insert into public.battle(character_id,monster_id,area_id,character_hp,monster_hp,monster_max_hp,monster_atk,monster_def,monster_agi,battle_status,started_at)
@@ -202,9 +203,14 @@ release: () => client.release(), async query(q, p) {
             for (const r of results) if (r.status === 'rejected') assert.equal(r.reason.code, 'DAILY_RESET_REQUIRED');
             await battles.expireBattles();
             const ended = (await pool.query('select * from public.battle where id=$1', [b.id])).rows[0];
-            assert.equal(ended.battle_status, 'DEFEAT'); assert.equal(ended.end_reason, 'MIDNIGHT_NEAR_DEATH');
+            assert.equal(ended.battle_status, 'FLED'); assert.equal(ended.end_reason, 'MIDNIGHT_INTERRUPTED');
             assert.equal((await pool.query('select * from public.battle_log where battle_id=$1', [b.id])).rowCount, 1);
             assert.equal((await row()).currency, 5); assert.equal((await row()).hp, 70);
+            assert.equal((await row()).blood,Math.max(0,blood-10));
+            assert.equal(ended.fled_actor_type,null);
+            assert.equal((await battles.getBattle(c.userId,b.id)).battle.end_reason,'MIDNIGHT_INTERRUPTED');
+            await assert.rejects(battles.commandBattle(c.userId,b.id,{requestKey:randomUUID(),turnNo:1,action:'ATTACK'}),{code:'BATTLE_FINISHED'});
+            }
         });
         await t.test('lock wait is bounded and rollback releases the shared lock', async () => {
             const c = await setup(), blocker = await pool.connect();

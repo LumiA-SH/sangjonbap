@@ -149,13 +149,13 @@ name: 'DEV isolated monster', description: null, image_url: null, max_hp: 100, a
             const used = await command(b, {action: 'ITEM', itemId: pack.id}); assert.equal(used.character.blood, 35); assert.equal(used.character.hp, 89);
             await rejects(command(used.battle, {action: 'ITEM', itemId: pack.id}), 'NOT_ENOUGH_ITEMS');
         });
-        await t.test('timeout from start/last command persists without resource changes, concurrent sweeps once', async () => {
+        await t.test('old start/last command timestamps never expire battles or mutate read state', async () => {
             let b = await start(); await pool.query("update public.battle set started_at=now()-interval '25 hours' where id=$1", [b.id]);
             const before = await current(); await Promise.all([repo.expireBattles(), repo.expireBattles()]);
-            assert.equal((await repo.getBattle(user.id, b.id)).battle.end_reason, 'TIMEOUT'); assert.deepEqual(await current(), before);
-            assert.equal((await pool.query("select count(*)::int n from public.action_log where target_id=$1 and action_type='BATTLE_TIMEOUT'", [b.id])).rows[0].n, 1);
+            assert.equal((await repo.getBattle(user.id, b.id)).battle.end_reason, null); assert.deepEqual(await current(), before);
+            assert.equal((await pool.query("select count(*)::int n from public.action_log where target_id=$1 and action_type='BATTLE_TIMEOUT'", [b.id])).rows[0].n, 0);
             b = await start(); await pool.query("update public.battle set last_command_at=now()-interval '24 hours' where id=$1", [b.id]);
-            assert.equal((await command(b)).battle.end_reason, 'TIMEOUT');
+            assert.equal((await command(b)).battle.battle_status, 'ACTIVE');
         });
         await t.test('failure rolls back resources, inventory, turn, logs; retry succeeds', async () => {
             const b = await start(); await pool.query('update public.battle set monster_hp=1 where id=$1', [b.id]);
@@ -242,7 +242,7 @@ name: 'DEV isolated monster', description: null, image_url: null, max_hp: 100, a
             assert.equal((await current()).blood, 5);
             await rejects(repo.getBattle(user.id, b.id), 'DAILY_RESET_REQUIRED');
             assert.equal((await pool.query('select battle_status from public.battle where id=$1', [b.id])).rows[0].battle_status, 'ACTIVE');
-            assert.equal((await pool.query("select 1 from public.battle_log where battle_id=$1 and action_type='MIDNIGHT_DEFEAT'", [b.id])).rowCount, 0);
+            assert.equal((await pool.query("select 1 from public.battle_log where battle_id=$1 and action_type='MIDNIGHT_INTERRUPTED'", [b.id])).rowCount, 0);
 
             let locked, release, attempted;
             const lockedPromise = new Promise(r => locked = r), gate = new Promise(r => release = r), attempt = new Promise(r => attempted = r);
@@ -266,12 +266,12 @@ release: () => c.release(), async query(q, p) {
             await resetPromise; await commandCheck;
             assert.equal((await current()).blood, 0); assert.equal((await current()).status, 'NEAR_DEATH');
             const ended = (await repo.getBattle(user.id, b.id)).battle;
-            assert.equal(ended.battle_status, 'DEFEAT'); assert.equal(ended.end_reason, 'MIDNIGHT_NEAR_DEATH');
-            assert.equal((await pool.query("select 1 from public.battle_log where battle_id=$1 and action_type='MIDNIGHT_DEFEAT'", [b.id])).rowCount, 1);
-            assert.equal((await pool.query("select 1 from public.action_log where target_id=$1 and action_type='BATTLE_MIDNIGHT_DEFEAT'", [b.id])).rowCount, 1);
+            assert.equal(ended.battle_status, 'FLED'); assert.equal(ended.end_reason, 'MIDNIGHT_INTERRUPTED');
+            assert.equal((await pool.query("select 1 from public.battle_log where battle_id=$1 and action_type='MIDNIGHT_INTERRUPTED'", [b.id])).rowCount, 1);
+            assert.equal((await pool.query("select 1 from public.action_log where target_id=$1 and action_type='BATTLE_MIDNIGHT_INTERRUPTED'", [b.id])).rowCount, 1);
             assert.deepEqual((await pool.query('select * from public.inventory where character_id=$1 order by item_id', [character.id])).rows, rewardsBefore);
             await Promise.all([createDailyRecovery(pool)(), createDailyRecovery(pool)(), repo.expireBattles()]);
-            assert.equal((await pool.query("select 1 from public.battle_log where battle_id=$1 and action_type='MIDNIGHT_DEFEAT'", [b.id])).rowCount, 1);
+            assert.equal((await pool.query("select 1 from public.battle_log where battle_id=$1 and action_type='MIDNIGHT_INTERRUPTED'", [b.id])).rowCount, 1);
         });
     } finally {await raw.query(`drop schema ${schema} cascade`); await raw.end();}
 });

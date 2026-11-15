@@ -18,13 +18,14 @@ test('recipe discovery isolated PostgreSQL: global uniqueness, integration and r
 query: (q, p) => raw.query(rewrite(q), p), async connect() {            
 const c = await raw.connect(); return {                
 release: () => c.release(), query(q, p) {
+                    if(fail==='OUTBOX'&&q.includes('insert into public.mastodon_event'))throw Error('injected outbox failure');
                     if (fail && q.includes('insert into public.action_log') && p?.[3] === fail) throw Error('injected final log failure');
                     return c.query(rewrite(q), p);
                 }            
 };        
 }    
 };
-    const tables = ['area_recipe','food_grade', 'daily_reset_state', 'auth_user', 'game_character', 'item', 'inventory', 'action_log', 'system_config', 'recipe', 'recipe_ingredient', 'character_recipe', 'food_config',
+    const tables = ['mastodon_event','area_recipe','food_grade', 'daily_reset_state', 'auth_user', 'game_character', 'item', 'inventory', 'action_log', 'system_config', 'recipe', 'recipe_ingredient', 'character_recipe', 'food_config',
         'shop_product', 'shop_purchase', 'blood_pack_purchase_day', 'area', 'investigation_result', 'investigation_reward', 'unique_discovery', 'clue',
         'monster', 'monster_action', 'monster_drop', 'area_monster', 'battle', 'battle_log', 'gacha'];
     const migrated = (await raw.query("select to_regclass('public.recipe_discovery') is not null as ready")).rows[0].ready;
@@ -45,6 +46,8 @@ release: () => c.release(), query(q, p) {
         const viewClient=await raw.connect();try{await viewClient.query('begin');await viewClient.query('set local search_path to '+schema+',public');await viewClient.query('create view '+schema+'.investigation_progress as '+view.replaceAll('public.',schema+'.'));await viewClient.query('commit');}finally{viewClient.release();}
         await raw.query(`insert into ${schema}.system_config select * from public.system_config`);
         await pool.query(readFileSync(new URL('../../supabase/migrations/20261101032815_common_rules_v02.sql', import.meta.url), 'utf8'));
+        await pool.query(readFileSync(new URL('../../supabase/migrations/20261115110543_mastodon_delivery.sql',import.meta.url),'utf8'));
+        await pool.query("update public.system_config set config_value=jsonb_set(config_value,'{events,recipe_discovery}',$1) where config_key='operating_announcements'",[JSON.stringify({enabled:true,template:'{character} · {recipe}',visibility:'unlisted',retryEnabled:false})]);
         const item = (await pool.query("insert into public.item(name,category) values('isolated ingredient','MATERIAL') returning *")).rows[0];
         const food = (await pool.query("insert into public.item(name,category) values('isolated food','FOOD') returning *")).rows[0];
         const users = [];
@@ -196,6 +199,18 @@ await c.query('begin'); const pc = await lockCharacterByUser(c, user.u.id);
             const crossBattle = await start(users[3]), crossArea = await source(cross);
             const crossResults = await Promise.all([command(users[3], crossBattle), inv.investigate(users[4].u.id, crossArea.id, randomUUID())]);
             assert.equal(crossResults.flatMap(x => x.rewards).filter(x => x.recipeId === cross.id).length, 1);
+        });
+        await t.test('recipe announcements are atomic, unique across investigation and combat, and policy can disable them',async()=>{
+            const discovered=(await pool.query('select recipe_id from public.recipe_discovery')).rows;
+            const events=(await pool.query("select target_id,message from public.mastodon_event where event_type='recipe_discovery'")).rows;
+            assert.equal(events.length,discovered.length);assert.equal(new Set(events.map(e=>e.target_id)).size,events.length);
+            const r=await recipe(),before=await inspect(users[0].c.id);
+            fail='OUTBOX';await assert.rejects(discover(r),/injected outbox/);fail=false;
+            assert.deepEqual(await inspect(users[0].c.id),before);
+            assert.equal((await pool.query('select 1 from public.recipe_discovery where recipe_id=$1',[r.id])).rowCount,0);
+            assert.equal((await pool.query('select 1 from public.shop_product where recipe_id=$1',[r.id])).rowCount,0);
+            await pool.query("update public.system_config set config_value=jsonb_set(config_value,'{events,recipe_discovery,enabled}','false') where config_key='operating_announcements'");
+            await discover(r);assert.equal((await pool.query("select 1 from public.mastodon_event where event_type='recipe_discovery' and target_id=$1",[r.id])).rowCount,0);
         });
     } finally {await raw.query(`drop schema ${schema} cascade`); await raw.end();}
 });

@@ -32,6 +32,7 @@ const labels = {
  area_unlock: '구역 해금',
  monster_discovery: '마물 최초 발견',
  clue_discovery: '중요 단서 최초 발견',
+ recipe_discovery: '레시피 최초 발견',
  investigation_progress: '조사율 달성',
  story: '스토리 이벤트',
  raid: '최종 레이드',

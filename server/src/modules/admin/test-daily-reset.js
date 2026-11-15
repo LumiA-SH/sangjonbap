@@ -1,7 +1,8 @@
+import {applyDailyCharacterReset} from '../daily/recovery.js';
 import {AppError} from '../../shared/http.js';
 import {requestKey} from './master-service.js';
 import {requireAdminRow,checkDuplicate} from './transaction.js';
-import {changeCharacterResources,writeActionLog} from '../../shared/game.js';
+import {writeActionLog} from '../../shared/game.js';
 import {readNumberSettings,resourceNumber} from '../../shared/settings.js';
 
 // Explicit administrative QA operation. Never called by maintenance or startup.
@@ -23,17 +24,8 @@ export function createTestDailyReset(pool) {
             const characters=(await c.query('select * from public.game_character order by id for update')).rows;
             let battlesInterrupted=0;
             for(const before of characters) {
-                const after=await changeCharacterResources(c,before,{
-                    ap:Number(before.max_ap)-Number(before.ap),
-                    blood:before.status==='DEAD'?0:-settings.daily_blood_decay
-                });
-                await c.query('update public.game_character set daily_meal_count=0,daily_training_done=false where id=$1',[before.id]);
-                const battles=(await c.query("select id,turn_no from public.battle where character_id=$1 and battle_status='ACTIVE' order by id for update",[before.id])).rows;
-                for(const battle of battles) {
-                    await c.query("update public.battle set battle_status='DEFEAT',end_reason='ADMIN_TEST_MIDNIGHT',character_hp=$2,ended_at=clock_timestamp(),updated_at=clock_timestamp() where id=$1",[battle.id,after.hp]);
-                    await c.query("insert into public.battle_log(battle_id,turn_no,actor_type,action_type,message) values($1,$2,'SYSTEM','TEST_MIDNIGHT','관리자 수동 자정 테스트로 전투 중단')",[battle.id,battle.turn_no]);
-                    battlesInterrupted++;
-                }
+                const applied=await applyDailyCharacterReset(c,before,{day,bloodDecay:settings.daily_blood_decay,mode:'MANUAL_TEST'});
+                const {after}=applied; battlesInterrupted+=applied.battlesInterrupted;
                 await writeActionLog(c,{characterId:before.id,adminUserId:actor,category:'CHARACTER',actionType:'TEST_DAILY_RESET_CHARACTER',description:'관리자 수동 자정 테스트',detail:{day,requestKey:key,before,after:{...after,daily_meal_count:0,daily_training_done:false}}});
             }
             // Counter only: purchase history, inventory and action logs are preserved.

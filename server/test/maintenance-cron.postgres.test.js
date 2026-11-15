@@ -63,33 +63,19 @@ test('maintenance retries and Cron SQL with isolated pg_net/Vault stubs', {skip:
             ids.push((await pool.query("insert into public.battle(character_id,monster_id,area_id,character_hp,monster_hp,monster_max_hp,monster_atk,monster_def,monster_agi,battle_status,started_at) values($1,1,1,70,10,10,1,1,1,'ACTIVE',clock_timestamp()-interval '25 hours') returning id", [c.id])).rows[0].id);
         }
         const repo = createBattleRepository(pool);
-        await t.test('ten poison battles roll back; later batches make progress and failed battles retry', async () => {
-            failIds = new Set(ids.slice(0, 10).map(String));
-            const first = await repo.expireBattles({limit: 10, resilient: true}); assert.equal(first.attempted, 10); assert.equal(first.failed, 10); assert.equal(first.expired, 0);
-            assert.equal((await pool.query('select count(*)::int n from public.battle_log')).rows[0].n, 0);
-            const second = await repo.expireBattles({limit: 10, resilient: true}); assert.equal(second.expired, 10); assert.equal(second.failed, 0);
-            const concurrent = await Promise.all([repo.expireBattles({limit: 10, resilient: true}), repo.expireBattles({limit: 10, resilient: true})]); assert.equal(concurrent.reduce((n, r) => n + r.expired, 0), 2);
-            assert.equal((await pool.query("select count(*)::int n from public.battle where battle_status='ACTIVE'")).rows[0].n, 10);
-            failIds.clear(); await pool.query("update maintenance_control.battle_expiry_retry set next_attempt_at=clock_timestamp()-interval '1 second'");
-            const retry = await repo.expireBattles({limit: 10, resilient: true}); assert.equal(retry.expired, 10);
-            assert.equal((await pool.query('select count(*)::int n from public.battle_log')).rows[0].n, 22);
-            assert.equal((await pool.query('select count(*)::int n from public.action_log')).rows[0].n, 22);
-            assert.equal((await pool.query('select count(*)::int n from maintenance_control.battle_expiry_retry')).rows[0].n, 0);
-            assert.equal((await pool.query('select count(*)::int n from public.game_character where hp=70 and blood=35 and ap=2 and currency=5')).rows[0].n, 22);
+        await t.test('retired timeout batches cannot mutate aged battles under concurrent calls', async()=>{
+            const before=(await pool.query('select * from public.battle order by id')).rows;
+            const results=await Promise.all([repo.expireBattles({limit:10,resilient:true}),repo.expireBattles({limit:10,resilient:true})]);
+            assert.ok(results.every(r=>r.expired===0&&r.attempted===0&&r.disabled==='TIMEOUT_POLICY_REMOVED'));
+            assert.deepEqual((await pool.query('select * from public.battle order by id')).rows,before);
+            assert.equal((await pool.query('select count(*)::int n from public.battle_log')).rows[0].n,0);
         });
-
-        await t.test('real PostgreSQL lock timeout rolls back and is retryable', async () => {
-            const c = (await pool.query("insert into public.game_character(name,hunter_grade,atk,def,agi,hp,blood,ap,currency) values('locked','B',12,12,12,70,35,2,5) returning id")).rows[0];
-            const b = (await pool.query("insert into public.battle(character_id,monster_id,area_id,character_hp,monster_hp,monster_max_hp,monster_atk,monster_def,monster_agi,battle_status,started_at) values($1,1,1,70,10,10,1,1,1,'ACTIVE',clock_timestamp()-interval '25 hours') returning id", [c.id])).rows[0];
-            const blocker = await pool.connect(); await blocker.query('begin'); await blocker.query('select id from public.game_character where id=$1 for update', [c.id]);
-            try {                
-const failed = await repo.expireBattles({limit: 10, resilient: true}); assert.equal(failed.failed, 1); assert.equal(failed.expired, 0);
-                assert.equal((await pool.query('select battle_status from public.battle where id=$1', [b.id])).rows[0].battle_status, 'ACTIVE');
-                assert.equal((await pool.query('select last_error_code from maintenance_control.battle_expiry_retry where battle_id=$1', [b.id])).rows[0].last_error_code, '55P03');
-            } finally {await blocker.query('rollback'); blocker.release();}
-            await pool.query("update maintenance_control.battle_expiry_retry set next_attempt_at=clock_timestamp()-interval '1 second' where battle_id=$1", [b.id]);
-            assert.equal((await repo.expireBattles({limit: 10, resilient: true})).expired, 1);
-            assert.equal((await pool.query('select count(*)::int n from public.battle_log where battle_id=$1', [b.id])).rows[0].n, 1);
+        await t.test('retired timeout never waits on character locks or schedules retries',async()=>{
+            const blocker=await pool.connect();await blocker.query('begin');
+            try{await blocker.query('select id from public.game_character for update');
+                assert.equal((await repo.expireBattles({limit:10,resilient:true})).attempted,0);
+                assert.equal((await pool.query('select count(*)::int n from maintenance_control.battle_expiry_retry')).rows[0].n,0);
+            }finally{await blocker.query('rollback');blocker.release();}
         });
     } finally {await raw.query('rollback'); for (const s of [base + '_control', base + '_net', base + '_vault', base]) await raw.query('drop schema if exists ' + s + ' cascade'); await raw.end();}
 });

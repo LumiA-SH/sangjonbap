@@ -1,9 +1,9 @@
 import {createHash,randomUUID} from 'node:crypto';
 
-export const events=['death','revive','area_unlock','monster_discovery','clue_discovery','gacha','failure_food','investigation_progress','dice'];
-export const templateVariables={death:['character'],revive:['character','provider'],area_unlock:['area'],monster_discovery:['character','area','monster'],clue_discovery:['character','clue'],gacha:['character','reward','quantity'],failure_food:['character','rp'],investigation_progress:['character','area','progress'],dice:['character','result']};
+export const events=['death','revive','area_unlock','monster_discovery','clue_discovery','recipe_discovery','gacha','failure_food','investigation_progress','dice'];
+export const templateVariables={recipe_discovery:['character','recipe'],death:['character'],revive:['character','provider'],area_unlock:['area'],monster_discovery:['character','area','monster'],clue_discovery:['character','clue'],gacha:['character','reward','quantity'],failure_food:['character','rp'],investigation_progress:['character','area','progress'],dice:['character','result']};
 const safeText=value=>value.replace(/<[^>]*>/g,'').replace(/@/g,'＠').replace(/[\u0000-\u0008\u000b-\u001f\u007f]/g,'');
-const defaults={investigation_progress:'{area} 조사율 {progress}% 달성 · {character}',dice:'{character}의 결과는 {result}입니다.',death:'{character} 사망',revive:'{provider}님이 {character}님을 부활시켰습니다.',area_unlock:'{area} 개방',monster_discovery:'{character} · {area}에서 {monster} 전역 최초 발견',clue_discovery:'{character} · {clue} 전역 최초 발견',gacha:'【보급품 뽑기】\n{character}님이 보급품 상자를 개봉했습니다.\n획득한 물품: 「{reward}」 ×{quantity}',failure_food:'{character} · {rp}'};
+const defaults={recipe_discovery:'{character} · 「{recipe}」 레시피 최초 발견',investigation_progress:'{area} 조사율 {progress}% 달성 · {character}',dice:'{character}의 결과는 {result}입니다.',death:'{character} 사망',revive:'{provider}님이 {character}님을 부활시켰습니다.',area_unlock:'{area} 개방',monster_discovery:'{character} · {area}에서 {monster} 전역 최초 발견',clue_discovery:'{character} · {clue} 전역 최초 발견',gacha:'【보급품 뽑기】\n{character}님이 보급품 상자를 개봉했습니다.\n획득한 물품: 「{reward}」 ×{quantity}',failure_food:'{character} · {rp}'};
 export function messageFor(type,values,template=defaults[type]) {
   if(!events.includes(type)||typeof template!=='string'||!template.trim())throw Error('INVALID_POST_EVENT');
   const message=template.replace(/\{([^{}]+)\}/g,(_,key)=>{

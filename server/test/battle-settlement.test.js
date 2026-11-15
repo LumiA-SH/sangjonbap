@@ -50,10 +50,10 @@ test('battle settlement audit failure rolls back battle, death, coins, drops and
     await assert.rejects(f.repo.commandBattle('u', '3', {requestKey: randomUUID(), turnNo: 1, action: 'ATTACK'}), /audit failed/); assert.deepEqual(f.state(), before); assert.equal(f.calls.at(-1), 'rollback');
 });
 test('defeat, flee and timeout grant no victory rewards', async () => {
-    for (const [options, action, status] of [[{monsterHp: 999}, 'ATTACK', 'DEFEAT'], [{random: () => 0}, 'FLEE', 'FLED'], [{expired: true}, 'ATTACK', 'DEFEAT']]) {
+    for (const [options, action, status] of [[{monsterHp: 999}, 'ATTACK', 'DEFEAT'], [{random: () => 0}, 'FLEE', 'FLED']]) {
         const f = fixture(options); const r = await f.repo.commandBattle('u', '3', {requestKey: randomUUID(), turnNo: 1, action});
         assert.equal(r.battle.battle_status, status); assert.equal(f.state().character.currency, 5); assert.equal(f.state().inventory, 0); assert.deepEqual(r.rewards, []);
-        if (options.expired) {assert.equal(r.battle.end_reason, 'TIMEOUT'); assert.equal(f.state().character.hp, 10);}
+
     }
 });
 test('stale turn rejects before any settlement', async () => {

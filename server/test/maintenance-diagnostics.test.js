@@ -47,9 +47,9 @@ test('isolated Cron preview, read-only enforcement, bounded overlapping expiry b
         const repo = createBattleRepository(pool);
         await Promise.all([repo.expireBattles({limit: 10}), repo.expireBattles({limit: 10})]);
         await repo.expireBattles({limit: 10});
-        assert.equal((await pool.query("select count(*)::int n from public.battle where battle_status='DEFEAT' and end_reason='TIMEOUT'")).rows[0].n, 12);
-        assert.equal((await pool.query('select count(*)::int n from public.battle_log')).rows[0].n, 12);
-        assert.equal((await pool.query('select count(*)::int n from public.action_log')).rows[0].n, 12);
+        assert.equal((await pool.query("select count(*)::int n from public.battle where battle_status='ACTIVE'")).rows[0].n, 12);
+        assert.equal((await pool.query('select count(*)::int n from public.battle_log')).rows[0].n, 0);
+        assert.equal((await pool.query('select count(*)::int n from public.action_log')).rows[0].n, 0);
         assert.equal((await pool.query('select count(*)::int n from public.game_character where hp=70 and blood=35 and ap=2 and currency=5')).rows[0].n, 12);
         assert.equal(await repo.expireBattles({limit: 10}), 0);
     } finally {await raw.query('drop schema if exists ' + schema + ' cascade'); await raw.end();}

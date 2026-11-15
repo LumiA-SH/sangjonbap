@@ -46,42 +46,6 @@ export function battleView(battle) {
 }
 
 export function createBattleRepository(pool,{random=randomUnit}={}) {
-    async function expire(client,battle) {
-        if (!battle||battle.battle_status!=='ACTIVE') return battle;
-
-        const result=await client.query(
-            `update public.battle
-             set battle_status='DEFEAT',
-                 end_reason='TIMEOUT',
-                 ended_at=clock_timestamp(),
-                 updated_at=clock_timestamp()
-             where id=$1
-               and coalesce(last_command_at,started_at)<=clock_timestamp()-interval '24 hours'
-                 returning *`,
-            [battle.id]
-        );
-
-        if (!result.rowCount) return battle;
-
-        await client.query(
-            `insert into public.battle_log(battle_id,turn_no,actor_type,action_type,message)
-             values($1,$2,'SYSTEM','TIMEOUT','24시간 미행동으로 패배')`,
-            [battle.id,battle.turn_no]
-        );
-
-        await writeActionLog(client,{
-            characterId:battle.character_id,
-            category:'BATTLE',
-            actionType:'BATTLE_TIMEOUT',
-            targetType:'BATTLE',
-            targetId:battle.id,
-            description:'24시간 미행동으로 패배',
-            detail:{turn:battle.turn_no}
-        });
-
-        return result.rows[0];
-    }
-
     async function ensureNoActiveBattle(client,character) {
         const row=(await client.query(
             "select * from public.battle where character_id=$1 and battle_status='ACTIVE' for update",
@@ -245,7 +209,7 @@ export function createBattleRepository(pool,{random=randomUnit}={}) {
                     fail('BATTLE_NOT_FOUND','전투를 찾을 수 없습니다.',404);
                 }
 
-                const current=await expire(client,battle);
+                const current=battle;
 
                 const logs=current
                     ? (await client.query(
@@ -298,16 +262,6 @@ export function createBattleRepository(pool,{random=randomUnit}={}) {
 
                 if (battle.battle_status!=='ACTIVE') {
                     fail('BATTLE_FINISHED','이미 종료된 전투입니다.');
-                }
-
-                battle=await expire(client,battle);
-
-                if (battle.battle_status!=='ACTIVE') {
-                    return {
-                        battle:battleView(battle),
-                        character:before,
-                        rewards:[]
-                    };
                 }
 
                 if (battle.turn_no!==turnNo) {
@@ -571,6 +525,9 @@ export function createBattleRepository(pool,{random=randomUnit}={}) {
                     targetId:id,
                     description:'전투 턴 처리',
                     detail:{
+                        monsterName:battle.snapshot.monster.name,
+                        battleStatus:after.battle_status,endReason:after.end_reason,
+                        after:{hp:character.hp,blood:character.blood,ap:character.ap,currency:character.currency},
                         turnNo,
                         action,
                         itemId,
@@ -597,110 +554,10 @@ export function createBattleRepository(pool,{random=randomUnit}={}) {
             });
         },
 
+        // Compatibility endpoint only: the retired timeout policy never reads or writes battles.
         async expireBattles({limit=100,resilient=false}={}) {
-            if (!Number.isInteger(limit)||limit<1||limit>100) {
-                fail('INVALID_EXPIRY_LIMIT','전투 만료 처리 한도를 확인하세요.',400);
-            }
-
-            const started=performance.now();
-
-            const due=(await pool.query(
-                resilient
-                    ? `select b.id,b.character_id
-                       from public.battle b
-                                left join maintenance_control.battle_expiry_retry r
-                                          on r.battle_id=b.id
-                       where b.battle_status='ACTIVE'
-                         and coalesce(b.last_command_at,b.started_at)<=clock_timestamp()-interval '24 hours'
-                         and (r.next_attempt_at is null or r.next_attempt_at<=clock_timestamp())
-                       order by r.last_attempt_at nulls first,b.character_id
-                           limit $1`
-                    : `select id,character_id
-                       from public.battle
-                       where battle_status='ACTIVE'
-                         and coalesce(last_command_at,started_at)<=clock_timestamp()-interval '24 hours'
-                       order by character_id
-                           limit $1`,
-                [limit]
-            )).rows;
-
-            const result={
-                attempted:0,
-                expired:0,
-                skipped:0,
-                failed:0,
-                deferred:0,
-                durationMs:0
-            };
-
-            for (const row of due) {
-                if (resilient&&performance.now()-started>=60000) break;
-
-                result.attempted++;
-
-                try {
-                    const ended=await actionTransaction(pool,async client=>{
-                        if (resilient) {
-                            await client.query("set local statement_timeout='2000ms'");
-                            await client.query("set local lock_timeout='1000ms'");
-                        }
-
-                        await lockCharacter(client,row.character_id);
-
-                        const battle=(await client.query(
-                            'select * from public.battle where id=$1 for update',
-                            [row.id]
-                        )).rows[0];
-
-                        const after=await expire(client,battle);
-
-                        return battle?.battle_status==='ACTIVE'&&
-                            after?.battle_status==='DEFEAT'&&
-                            after?.end_reason==='TIMEOUT';
-                    });
-
-                    if (ended) result.expired++;
-                    else result.skipped++;
-                } catch(error) {
-                    if (!resilient) throw error;
-
-                    result.failed++;
-
-                    const code=/^[A-Z0-9_]{1,64}$/.test(error.code||'')
-                        ? error.code
-                        : 'EXPIRY_FAILED';
-
-                    await pool.query(
-                        `insert into maintenance_control.battle_expiry_retry(
-                            battle_id,last_attempt_at,next_attempt_at,last_error_code
-                        )
-                         select id,clock_timestamp(),
-                                clock_timestamp()+interval '5 minutes',$2
-                         from public.battle
-                         where id=$1 and battle_status='ACTIVE'
-                         on conflict(battle_id)
-                             do update set
-                            last_attempt_at=excluded.last_attempt_at,
-                                    next_attempt_at=excluded.next_attempt_at,
-                                    last_error_code=excluded.last_error_code`,
-                        [row.id,code]
-                    );
-
-                    continue;
-                }
-
-                if (resilient) {
-                    await pool.query(
-                        'delete from maintenance_control.battle_expiry_retry where battle_id=$1',
-                        [row.id]
-                    );
-                }
-            }
-
-            result.deferred=due.length-result.attempted;
-            result.durationMs=Math.round(performance.now()-started);
-
-            return resilient?result:due.length;
+            if (!Number.isInteger(limit)||limit<1||limit>100) fail('INVALID_EXPIRY_LIMIT','처리 한도를 확인하세요.',400);
+            return resilient?{attempted:0,expired:0,skipped:0,failed:0,deferred:0,durationMs:0,disabled:'TIMEOUT_POLICY_REMOVED'}:0;
         }
     };
 }

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {events, messageFor, enqueueSystemEvent} from '../src/modules/mastodon-system/outbox.js';
 import {sendSystemPost} from '../src/modules/mastodon-system/sender.js';
 test('all required event messages, missing values and lengths', () => {
-    for (const type of events) assert.ok(messageFor(type, {provider: '제공자', quantity: '1', character: '러너', area: '구역', monster: '마물', clue: '단서', reward: '상품', rp: 'RP 문구', progress:'50',result:'42'}));
+    for (const type of events) assert.ok(messageFor(type, {recipe:'레시피', provider: '제공자', quantity: '1', character: '러너', area: '구역', monster: '마물', clue: '단서', reward: '상품', rp: 'RP 문구', progress:'50',result:'42'}));
     assert.throws(() => messageFor('death', {})); assert.throws(() => messageFor('death', {character: 'a'.repeat(501)}));
     assert.throws(() => messageFor('unknown', {}));
 });

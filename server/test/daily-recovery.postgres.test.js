@@ -129,7 +129,7 @@ test('QA manual reset, scheduled visibility and action descriptions preserve HOL
    const key=randomUUID(),results=await Promise.allSettled([reset(admin.id,{requestKey:key}),reset(admin.id,{requestKey:key})]);
    assert.equal(results.filter(r=>r.status==='fulfilled').length,1);
    assert.equal(results.find(r=>r.status==='fulfilled').value.battlesInterrupted,1);
-   assert.equal((await pool.query('select end_reason from public.battle')).rows[0].end_reason,'ADMIN_TEST_MIDNIGHT');assert.equal(results.find(r=>r.status==='rejected').reason.code,'DUPLICATE_REQUEST');
+   assert.equal((await pool.query('select end_reason from public.battle')).rows[0].end_reason,'MIDNIGHT_INTERRUPTED');assert.equal(results.find(r=>r.status==='rejected').reason.code,'DUPLICATE_REQUEST');
    const c=(await pool.query('select * from public.game_character where id=$1',[alive.id])).rows[0];assert.equal(c.blood,25);assert.equal(c.hp,70);assert.equal(c.ap,10);assert.equal(c.daily_meal_count,0);assert.equal(c.daily_training_done,false);
    const d=(await pool.query('select * from public.game_character where id=$1',[dead.id])).rows[0];assert.equal(d.blood,50);assert.equal(d.ap,10);
    assert.equal((await pool.query('select * from public.blood_pack_purchase_day')).rowCount,0);

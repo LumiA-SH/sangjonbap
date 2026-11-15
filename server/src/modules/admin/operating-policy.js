@@ -4,7 +4,7 @@ import {writeActionLog} from '../../shared/game.js';
 import {adminTransaction,requireAdminRow,checkDuplicate} from './transaction.js';
 import {requestKey} from './master-service.js';
 
-export const eventNames=['death','revive','area_unlock','monster_discovery','clue_discovery','investigation_progress','story','raid','gacha','failure_food','dice'];
+export const eventNames=['death','revive','area_unlock','monster_discovery','clue_discovery','investigation_progress','story','raid','gacha','failure_food','dice','recipe_discovery'];
 export const policyDefaults={
  anemia:{enabled:false,stages:[]},
  announcements:{events:Object.fromEntries(eventNames.map(name=>[name,{enabled:false,template:'',visibility:null,deduplicate:true,retryEnabled:false,maxAttempts:null,retryMinutes:null,thresholds:[]}]))},
@@ -25,7 +25,7 @@ export function validatePolicy(kind,v){
   }
   if(v.enabled||v.stages.length){const sorted=[...v.stages].sort((a,b)=>a.min-b.min);let next=1;for(const s of sorted){if(s.min!==next)invalid();next=s.max+1;}if(next!==101)invalid();}
  }else if(kind==='announcements'){
-  object(v.events,eventNames.filter(name=>!['gacha','failure_food','dice'].includes(name)||Object.hasOwn(v.events,name)));
+  object(v.events,eventNames.filter(name=>!['gacha','failure_food','dice','recipe_discovery'].includes(name)||Object.hasOwn(v.events,name)));
   for(const [name,e] of Object.entries(v.events)){
    object(e,Object.keys(policyDefaults.announcements.events[name]));
    for(const k of ['enabled','deduplicate','retryEnabled'])bool(e[k]);
@@ -36,7 +36,7 @@ export function validatePolicy(kind,v){
    if(name!=='investigation_progress'&&e.thresholds.length)invalid();
    if(e.enabled&&(!e.template.trim()||!e.visibility||(name==='investigation_progress'&&!e.thresholds.length)))invalid();
    if(e.retryEnabled&&(e.maxAttempts===null||e.retryMinutes===null))invalid();
-   if(/\{(?!character\}|provider\}|reward\}|quantity\}|rp\}|area\}|monster\}|clue\}|progress\}|result\}|event\})/.test(e.template))invalid();
+   if(/\{(?!recipe\}|character\}|provider\}|reward\}|quantity\}|rp\}|area\}|monster\}|clue\}|progress\}|result\}|event\})/.test(e.template))invalid();
   }
  }else if(kind==='homepage'){
   for(const k of ['enabled','publicOnly','excludeReplies','excludeBoosts'])bool(v[k]);

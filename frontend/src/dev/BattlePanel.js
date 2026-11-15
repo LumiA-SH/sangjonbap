@@ -220,10 +220,10 @@ export default function BattlePanel({inventory = [], busy, run, refresh, revisio
         <header className="battle-header">
           <div>
             <h2>일반 PVE 전투</h2>
-            <p>전투 상황을 확인하고 다음 행동을 선택하세요.</p>
+            <p>전투 상황을 확인하고 다음 행동을 선택하세요. 진행 중인 일반 전투는 매일 00:00 KST에 중단됩니다.</p>
           </div>
           <div className="battle-header-controls">
-            {battle && <span className={`battle-status-badge${active ? ' is-active' : ''}`}>{battleStatusLabels[battle.battle_status] || battle.battle_status}</span>}
+            {battle && <span className={`battle-status-badge${active ? ' is-active' : ''}`}>{battle.end_reason==='MIDNIGHT_INTERRUPTED'?'자정 중단':battle.battle_status==='FLED'?(battle.fled_actor_type==='MONSTER'?'마물 도주':'캐릭터 도주'):(battleStatusLabels[battle.battle_status] || battle.battle_status)}</span>}
             <button type="button" disabled={busy || loading} onClick={load}>전투 새로고침</button>
           </div>
         </header>
@@ -269,7 +269,7 @@ export default function BattlePanel({inventory = [], busy, run, refresh, revisio
                         {battle.declaration?.action_type && <small>{battle.declaration.action_type}</small>}
                       </div>
                   ) : (
-                      <p className="battle-end-reason">전투 종료 · 종료 사유: {battle.end_reason || '-'}</p>
+                      <p className="battle-end-reason">전투 종료 · 종료 사유: {({MIDNIGHT_INTERRUPTED:'자정 시스템 중단',MONSTER_KILLED:'마물 처치',PC_DEAD:'캐릭터 사망',PC_NEAR_DEATH:'캐릭터 빈사',ESCAPED:'도주 성공',TIMEOUT:'과거 만료 기록'})[battle.end_reason] || battle.end_reason || '-'}</p>
                   )}
                 </div>
               </div>
@@ -364,7 +364,7 @@ export default function BattlePanel({inventory = [], busy, run, refresh, revisio
                   <section className="battle-result" aria-label="전투 결과">
                     <div className="battle-result-heading">
                       <span>전투 종료</span>
-                      <h3>{battleStatusLabels[battle.battle_status] || battle.battle_status}</h3>
+                      <h3>{battle.end_reason==='MIDNIGHT_INTERRUPTED'?'자정 중단':battle.battle_status==='FLED'?(battle.fled_actor_type==='MONSTER'?'마물 도주':'캐릭터 도주'):(battleStatusLabels[battle.battle_status] || battle.battle_status)}</h3>
                     </div>
 
                     {battle.battle_status === 'VICTORY' && Number(battle.character_hp ?? character.hp) === 0 && (

@@ -1,3 +1,4 @@
+import {actionLabel,actionSummary} from '../dev/recordSummary';
 import {Editor} from '../admin/AdminPanel';
 import {MasterEditor} from '../admin/MasterPanel';
 import OperatingPolicyPanel from '../admin/OperatingPolicyPanel';
@@ -114,4 +115,11 @@ test('area date input uses KST independent of browser timezone',async()=>{
  await act(async()=>root.render(<MasterEditor kind="areas" record={null} onSaved={jest.fn()} onDenied={jest.fn()} onBusy={jest.fn()}/>));
  expect(div.querySelector('input[type="datetime-local"]')).not.toBeNull();
  expect(div.textContent).toContain('지정 시각에 예약 공개');
+});
+
+test('action record summaries distinguish midnight interruption and retain legacy fallback',()=>{
+ expect(actionLabel({action_type:'DAILY_TRAINING'})).toBe('일일훈련');
+ expect(actionSummary({action_type:'BATTLE_MIDNIGHT_INTERRUPTED',detail:{before:{hp:30},after:{hp:30}}})).toContain('자정 중단');
+ expect(actionSummary({detail:{monsterName:'마물',battleStatus:'VICTORY',currencyReward:2,rewards:[{name:'재료',quantity:1}]}})).toContain('재료 ×1');
+ expect(actionSummary({description:'과거 기록'})).toBe('과거 기록');
 });

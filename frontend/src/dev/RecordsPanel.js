@@ -1,3 +1,4 @@
+import {actionLabel,actionSummary} from './recordSummary';
 import {useEffect, useRef, useState} from 'react';
 import {api} from '../api/client';
 import './RecordsPanel.css';
@@ -30,11 +31,11 @@ function recordTitle(record, kind) {
   if (record.title) return record.title;
   if (kind === 'discoveries') return '최초 발견 기록';
   if (kind === 'clues') return '공개 단서';
-  return record.action_type || '행동 기록';
+  return actionLabel(record);
 }
 
 function recordDescription(record) {
-  return record.description || record.result_text || record.content || '등록된 상세 내용이 없습니다.';
+  return actionSummary(record);
 }
 
 function RecordDetail({record, kind}) {
@@ -186,9 +187,9 @@ export default function RecordsPanel({admin = false, onDenied}) {
                   <tr key={record.id}>
                     <td>{record.created_at || '시각 미기록'}</td>
                     <td>{record.character_name || '이름 미기록'}<small>ID {record.character_id || '-'}</small></td>
-                    <td>{record.action_type}<small>ID {record.id}</small></td>
+                    <td>{actionLabel(record)}<small>ID {record.id}</small></td>
                     <td>
-                      {record.description}
+                      {actionSummary(record)}
                       {record.target_type && <p>대상: {record.target_type} {record.target_id}</p>}
                       {record.detail && <details><summary>상세 JSON</summary><pre>{JSON.stringify(record.detail, null, 2)}</pre></details>}
                     </td>
