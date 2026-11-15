@@ -5,6 +5,7 @@ import ItemPicker from './ItemPicker';
 import GachaStockEditor from './GachaStockEditor';
 import ImageUploadField from './ImageUploadField';
 import AdminReferenceName, {invalidateAdminNames} from './AdminReferenceName';
+import AdminDeleteControl from './AdminDeleteControl';
 
 const defaults = {
   areas: {
@@ -704,38 +705,6 @@ function MasterEditor({kind, record, onSaved, onDenied, onBusy}) {
             </details>
         )}
 
-        {kind === 'food-grades' && record && (
-            <button type="button" disabled={busy} onClick={async () => {
-              if (!window.confirm('참조 없는 등급만 영구 삭제합니다. 삭제하시겠습니까?')) {
-                return;
-              }
-
-              setBusy(true);
-              onBusy(true);
-
-              try {
-                await api('/admin/food-grades/' + record.id, {
-                  method: 'DELETE',
-                  body: {requestKey: crypto.randomUUID()}
-                });
-
-                invalidateAdminNames();
-                await onSaved(null);
-              } catch (e) {
-                setMessage(e.message);
-
-                if ([401, 403].includes(e.status)) {
-                  onDenied(e.message);
-                }
-              } finally {
-                setBusy(false);
-                onBusy(false);
-              }
-            }}>
-              미참조 등급 삭제
-            </button>
-        )}
-
         <button disabled={busy || imageUploading}>
           {imageUploading ? '이미지 업로드 중…' : busy ? '저장 중…' : '저장'}
         </button>
@@ -919,9 +888,20 @@ export default function MasterPanel({kind, onDenied, recordId, onOpen, after, on
                   </details>
                 </div>
 
-                <button disabled={busy || saving} onClick={() => select(row)}>
-                  상세/수정
-                </button>
+                <div className="admin-record-actions">
+                  <button disabled={busy || saving} onClick={() => select(row)}>상세/수정</button>
+                  <AdminDeleteControl menu={kind} recordId={String(row.id)} disabled={busy || saving} onDenied={onDenied}
+                    onDeleted={async()=>{
+                      invalidateAdminNames();
+                      if(String(selected?.id)===String(row.id)||String(recordId)===String(row.id)){
+                        setSelected(null);
+                        setRevision(v=>v+1);
+                        onOpen?.(null);
+                      }
+                      await load();
+                      setMessage('삭제 완료');
+                    }}/>
+                </div>
               </li>
           ))}
         </ul>

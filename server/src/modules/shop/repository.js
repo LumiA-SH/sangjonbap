@@ -35,7 +35,7 @@ export function createShopRepository(pool) {
             // One statement keeps ownership, products and both counts in one snapshot.
             const result = await pool.query(
                 `select c.id,c.status,coalesce((select jsonb_agg(to_jsonb(p) order by p.sort_order,p.id)
-                                                from (select s.id::text,s.item_id::text,s.recipe_id::text,coalesce(i.name,r.name) name,coalesce(i.description,r.description) description,i.effect_type,i.blood_pack_kind,s.price,s.purchase_limit,s.stock_limit,s.daily_limit,s.sort_order,
+                                                from (select s.id::text,s.item_id::text,s.recipe_id::text,coalesce(i.name,r.name) name,coalesce(i.description,r.description) description,i.image_url as image_url,i.effect_type,i.blood_pack_kind,s.price,s.purchase_limit,s.stock_limit,s.daily_limit,s.sort_order,
                                                              exists(select 1 from public.character_recipe cr where cr.character_id=c.id and cr.recipe_id=s.recipe_id) learned,
                                                              case when i.blood_pack_kind='FREE' then greatest(0,1-coalesce((select quantity from public.blood_pack_purchase_day where character_id=c.id and purchase_date=(statement_timestamp() at time zone 'Asia/Seoul')::date),0))
                                                                   when s.daily_limit is null then null else greatest(0,s.daily_limit-coalesce(t.daily,0)) end as "dailyRemaining",

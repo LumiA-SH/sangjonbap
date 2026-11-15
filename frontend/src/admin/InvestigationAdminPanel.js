@@ -1,6 +1,7 @@
 import {useEffect,useRef,useState} from 'react';
 import {api} from '../api/client';
 import ItemPicker from './ItemPicker';
+import AdminDeleteControl from './AdminDeleteControl';
 
 const empty=()=>({
   result_text:'',
@@ -343,7 +344,19 @@ export default function InvestigationAdminPanel({onDenied,route,onNavigate}) {
             <li key={r.id}>
               ID {r.id} · {r.result_text} · 가중치 {r.weight} · {r.is_active?'활성':'비활성'}
               {r.discovery&&<span> · 최초 발견 캐릭터 {r.discovery.character_id} / {r.discovery.discovered_at}</span>}
-              <button type="button" disabled={busy} onClick={()=>editInvestigation(r)}>결과 수정</button>
+              <div className="admin-record-actions">
+                <button type="button" disabled={busy} onClick={()=>editInvestigation(r)}>결과 수정</button>
+                <AdminDeleteControl menu="investigation-results" recordId={String(r.id)} areaId={String(areaId)} disabled={busy} onDenied={onDenied}
+                  onDeleted={async()=>{
+                    if(String(id)===String(r.id)||String(route?.record)===String(r.id)){
+                      setId(null);
+                      setDraft(empty());
+                      onNavigate?.({record:null});
+                    }
+                    await load(areaId);
+                    setMessage('삭제 완료');
+                  }}/>
+              </div>
             </li>
         )}
       </ul>

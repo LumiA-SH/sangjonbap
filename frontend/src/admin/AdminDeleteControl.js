@@ -2,6 +2,7 @@ import {useEffect,useRef,useState} from 'react';
 import {api} from '../api/client';
 
 const labels={
+    items:'아이템',monsters:'마물','food-grades':'음식 등급',
     products:'상점 상품',
     foods:'음식 설정',
     recipes:'레시피',
@@ -83,7 +84,7 @@ export default function AdminDeleteControl({menu,recordId,areaId,disabled=false,
     }
 
     return (
-        <div className="admin-toolbar-actions" role="group" aria-label="관리자 콘텐츠 삭제">
+        <div className={isHub?"admin-toolbar-actions":"admin-delete-inline"} role="group" aria-label="관리자 콘텐츠 삭제">
             {isHub&&<>
                 <label>
                     삭제 대상 종류
@@ -112,7 +113,7 @@ export default function AdminDeleteControl({menu,recordId,areaId,disabled=false,
             </>}
 
             <button type="button" disabled={disabled||loading||deleting||!valid} onClick={remove}>
-                {deleting?'삭제 중…':`미참조 ${labels[kind]} 영구 삭제`}
+                {deleting?'삭제 중…':'삭제'}
             </button>
             {message&&<p role="alert">{message}</p>}
         </div>

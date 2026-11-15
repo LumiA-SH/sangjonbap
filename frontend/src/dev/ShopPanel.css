@@ -1,0 +1,739 @@
+/* ========================================
+   01. SHOP LAYOUT
+======================================== */
+
+.survival-page > section.survival-shop {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.survival-shop {
+    --shop-dark: #303034;
+    --shop-red: #650c13;
+    --shop-paper: #fffefa;
+    color: #242428;
+}
+
+.survival-shop * {
+    box-sizing: border-box;
+}
+
+/* ========================================
+   02. HEADER
+======================================== */
+
+.shop-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding: 20px 23px;
+    border: 1px solid #c9c9c9;
+    border-radius: 10px;
+    background: #fffefa;
+    box-shadow: 0 2px 5px #00000012;
+}
+
+.shop-header h2 {
+    margin: 0 0 6px;
+    padding-left: 12px;
+    border-left: 4px solid #650c13;
+    font-size: 24px;
+    font-weight: 850;
+}
+
+.shop-header p {
+    margin: 0;
+    color: #777777;
+    font-size: 12px;
+}
+
+.shop-header-right {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.shop-wallet {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    min-height: 45px;
+    padding: 9px 16px;
+    border-radius: 7px;
+    background: #303034;
+    color: #ffffff;
+}
+
+.shop-wallet small {
+    color: #cccccc;
+    font-size: 11px;
+}
+
+.shop-wallet strong {
+    color: #ffffff;
+    font-size: 20px;
+    font-weight: 850;
+    font-variant-numeric: tabular-nums;
+}
+
+.shop-refresh {
+    min-height: 39px;
+    padding: 9px 13px;
+    border: 1px solid #cccccc;
+    background: #ffffff;
+    color: #242428;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.shop-refresh:hover:not(:disabled) {
+    border-color: #650c13;
+    background: #f5f5f5;
+}
+
+.shop-notice {
+    margin: 0;
+    padding: 12px 15px;
+    border: 1px solid #dddddd;
+    border-left: 4px solid #650c13;
+    border-radius: 7px;
+    background: #fffefa;
+    color: #650c13;
+    font-size: 12px;
+}
+
+/* ========================================
+   03. PRODUCT CATALOG
+======================================== */
+
+.shop-workspace {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 330px;
+    align-items: start;
+    gap: 15px;
+    min-width: 0;
+}
+
+.shop-catalog {
+    min-width: 0;
+    padding: 20px;
+    border: 1px solid #c9c9c9;
+    border-radius: 10px;
+    background: #fffefa;
+    box-shadow: 0 2px 5px #00000012;
+}
+
+.shop-catalog-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.shop-catalog-heading h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 850;
+}
+
+.shop-catalog-heading span {
+    color: #777777;
+    font-size: 12px;
+}
+
+.shop-category-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-bottom: 15px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #dddddd;
+}
+
+.survival-shop .shop-category-list button {
+    min-height: 37px;
+    padding: 8px 13px;
+    border: 1px solid #dddddd;
+    border-radius: 6px;
+    background: #f5f5f5;
+    color: #555555;
+    font-size: 12px;
+    font-weight: 750;
+}
+
+.survival-shop .shop-category-list button:hover:not(:disabled) {
+    border-color: #650c13;
+    background: #eeeeee;
+}
+
+.survival-shop .shop-category-list button.is-active {
+    border-color: #650c13;
+    background: #650c13;
+    color: #ffffff;
+}
+
+.shop-search {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+.shop-search input {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 42px;
+    padding: 9px 13px;
+    border: 1px solid #cccccc;
+    border-radius: 7px;
+    background: #ffffff;
+    color: #242428;
+    font-size: 13px;
+}
+
+.shop-search span {
+    flex: 0 0 auto;
+    color: #777777;
+    font-size: 11px;
+}
+
+/* ========================================
+   04. PRODUCT CARDS
+======================================== */
+
+.shop-product-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.survival-shop .shop-product-card {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    padding: 0;
+    border: 1px solid #dddddd;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #242428;
+    text-align: left;
+    overflow: hidden;
+}
+
+.survival-shop .shop-product-card:hover:not(:disabled) {
+    border-color: #888888;
+    background: #ffffff;
+}
+
+.survival-shop .shop-product-card.is-selected {
+    border-color: #650c13;
+    box-shadow: 0 0 0 1px #650c13;
+}
+
+.shop-product-image-wrap {
+    position: relative;
+    width: 100%;
+}
+
+.shop-product-image {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    background: #f0f0f0;
+    overflow: hidden;
+}
+
+.shop-product-image img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.shop-product-image > span {
+    color: #aaaaaa;
+    font-size: 12px;
+}
+
+.shop-product-status {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    padding: 5px 8px;
+    border-radius: 4px;
+    background: #303034;
+    color: #ffffff;
+    font-size: 10px;
+    font-weight: 750;
+}
+
+.shop-product-body {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 7px;
+    min-width: 0;
+    padding: 14px;
+}
+
+.shop-product-body > small {
+    color: #777777;
+    font-size: 11px;
+}
+
+.shop-product-name {
+    color: #242428;
+    font-size: 15px;
+    font-weight: 850;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+
+.shop-product-body > p {
+    display: -webkit-box;
+    min-height: 36px;
+    margin: 0;
+    color: #777777;
+    font-size: 12px;
+    line-height: 1.5;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+.shop-product-bottom {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: auto;
+    padding-top: 12px;
+    border-top: 1px solid #eeeeee;
+}
+
+.shop-product-bottom > strong {
+    color: #650c13;
+    font-size: 20px;
+    font-weight: 850;
+    font-variant-numeric: tabular-nums;
+}
+
+.shop-product-bottom > strong small {
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.shop-product-bottom > span {
+    color: #777777;
+    font-size: 10px;
+}
+
+.shop-empty {
+    padding: 45px 15px;
+    border: 1px solid #dddddd;
+    border-radius: 7px;
+    background: #f5f5f5;
+    color: #777777;
+    font-size: 13px;
+    text-align: center;
+}
+
+/* ========================================
+   05. CHECKOUT PANEL
+======================================== */
+
+.shop-checkout {
+    position: sticky;
+    top: 16px;
+    min-width: 0;
+    padding: 20px;
+    border: 1px solid #303034;
+    border-radius: 10px;
+    background: #303034;
+    color: #ffffff;
+    box-shadow: 0 2px 5px #00000018;
+}
+
+.shop-checkout-heading {
+    padding-bottom: 15px;
+    border-bottom: 1px solid #555559;
+}
+
+.shop-checkout-heading h3 {
+    margin: 0 0 6px;
+    color: #ffffff;
+    font-size: 19px;
+    font-weight: 850;
+}
+
+.shop-checkout-heading > span {
+    color: #aaaaaa;
+    font-size: 11px;
+}
+
+.shop-checkout-product {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    min-width: 0;
+    padding: 18px 0;
+}
+
+.shop-product-image.is-small {
+    flex: 0 0 76px;
+    width: 76px;
+    height: 76px;
+    aspect-ratio: auto;
+    border: 1px solid #666666;
+    border-radius: 6px;
+    background: #4b4b4f;
+}
+
+.shop-product-image.is-small > span {
+    color: #cccccc;
+    font-size: 10px;
+}
+
+.shop-checkout-product > div:last-child {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.shop-checkout-product small {
+    color: #bbbbbb;
+    font-size: 11px;
+}
+
+.shop-checkout-product h4 {
+    margin: 5px 0 7px;
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: 850;
+    overflow-wrap: anywhere;
+}
+
+.shop-checkout-product strong {
+    color: #ffffff;
+    font-size: 13px;
+}
+
+.shop-checkout-description {
+    margin: 0 0 14px;
+    color: #cccccc;
+    font-size: 12px;
+    line-height: 1.7;
+    white-space: pre-wrap;
+}
+
+.shop-checkout-info {
+    margin: 0 0 13px;
+    padding: 10px 12px;
+    border: 1px solid #555559;
+    border-radius: 6px;
+    background: #3c3c40;
+    color: #eeeeee;
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.shop-stock-list {
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+    padding: 16px 0;
+    border-top: 1px solid #555559;
+    border-bottom: 1px solid #555559;
+}
+
+.shop-stock-list > div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    color: #cccccc;
+    font-size: 12px;
+}
+
+.shop-stock-list strong {
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 800;
+    text-align: right;
+}
+
+.shop-quantity {
+    margin-top: 18px;
+}
+
+.shop-quantity label {
+    display: block;
+    margin-bottom: 9px;
+    color: #eeeeee;
+    font-size: 12px;
+    font-weight: 750;
+}
+
+.shop-quantity-controls {
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr) 42px;
+    gap: 7px;
+}
+
+.survival-shop .shop-quantity-controls button {
+    min-height: 42px;
+    padding: 0;
+    border: 1px solid #666666;
+    border-radius: 6px;
+    background: #444448;
+    color: #ffffff;
+    font-size: 20px;
+}
+
+.survival-shop .shop-quantity-controls button:hover:not(:disabled) {
+    background: #555559;
+}
+
+.shop-quantity-controls input {
+    width: 100%;
+    min-width: 0;
+    min-height: 42px;
+    padding: 8px 12px;
+    border: 1px solid #cccccc;
+    border-radius: 6px;
+    background: #ffffff;
+    color: #242428;
+    font-size: 15px;
+    font-weight: 800;
+    text-align: center;
+}
+
+.shop-fixed-quantity {
+    padding: 12px;
+    border: 1px solid #666666;
+    border-radius: 6px;
+    background: #3c3c40;
+    color: #eeeeee;
+    font-size: 13px;
+}
+
+.shop-checkout-total {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 20px;
+    padding: 18px 0;
+    border-top: 1px solid #555559;
+}
+
+.shop-checkout-total > span {
+    color: #cccccc;
+    font-size: 13px;
+}
+
+.shop-checkout-total > strong {
+    color: #ffffff;
+    font-size: 25px;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+}
+
+.shop-checkout-total small {
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.survival-shop .shop-buy-button {
+    width: 100%;
+    min-height: 48px;
+    padding: 12px;
+    border: 1px solid #650c13;
+    border-radius: 7px;
+    background: #650c13;
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: 850;
+}
+
+.survival-shop .shop-buy-button:hover:not(:disabled) {
+    border-color: #80141e;
+    background: #80141e;
+}
+
+.survival-shop .shop-buy-button:disabled {
+    opacity: 0.45;
+}
+
+.shop-buy-reason {
+    margin: 10px 0 0;
+    color: #cccccc;
+    font-size: 11px;
+    line-height: 1.6;
+    text-align: center;
+}
+
+.shop-checkout-empty {
+    padding: 40px 10px;
+    color: #bbbbbb;
+    font-size: 12px;
+    text-align: center;
+}
+
+/* ========================================
+   06. PURCHASE RESULT
+======================================== */
+
+.shop-failure {
+    margin: 15px 0 0;
+    padding: 12px;
+    border-left: 3px solid #c08488;
+    background: #3c3c40;
+    color: #ffffff;
+    font-size: 12px;
+    line-height: 1.7;
+}
+
+.shop-receipt {
+    margin-top: 17px;
+    padding: 15px;
+    border: 1px solid #777777;
+    border-radius: 7px;
+    background: #3c3c40;
+}
+
+.shop-receipt h4 {
+    margin: 0 0 12px;
+    color: #ffffff;
+    font-size: 15px;
+}
+
+.shop-receipt p {
+    margin: 7px 0;
+    color: #dddddd;
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.shop-receipt details {
+    margin-top: 13px;
+    padding-top: 12px;
+    border-top: 1px solid #666666;
+}
+
+.shop-receipt summary {
+    color: #cccccc;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.shop-receipt pre {
+    max-height: 240px;
+    overflow: auto;
+    color: #eeeeee;
+    font-size: 11px;
+}
+
+.shop-footer-note {
+    margin: 0;
+    padding: 0 3px 12px;
+    color: #777777;
+    font-size: 11px;
+    line-height: 1.8;
+}
+
+/* ========================================
+   07. RESPONSIVE
+======================================== */
+
+@media (max-width: 1150px) {
+    .shop-workspace {
+        grid-template-columns: minmax(0, 1fr) 300px;
+    }
+
+    .shop-product-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 900px) {
+    .shop-workspace {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .shop-product-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .shop-checkout {
+        position: static;
+    }
+}
+
+@media (max-width: 650px) {
+    .shop-header,
+    .shop-catalog,
+    .shop-checkout {
+        padding: 16px;
+    }
+
+    .shop-header h2 {
+        font-size: 21px;
+    }
+
+    .shop-header-right {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .shop-product-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 9px;
+    }
+
+    .shop-product-body {
+        padding: 11px;
+    }
+
+    .shop-product-name {
+        font-size: 13px;
+    }
+
+    .shop-product-bottom > strong {
+        font-size: 17px;
+    }
+}
+
+@media (max-width: 430px) {
+    .shop-category-list button {
+        flex: 1 1 auto;
+    }
+
+    .shop-product-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .shop-search {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .shop-wallet {
+        flex: 1 1 auto;
+    }
+}

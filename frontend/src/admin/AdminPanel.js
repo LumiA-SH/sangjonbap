@@ -578,38 +578,6 @@ export default function AdminPanel({
         }
     }
 
-    async function deleteItem() {
-        if (!window.confirm(
-            `아이템 ${selected.name} (ID ${selected.id})을 영구 삭제합니까? 참조가 있으면 거부됩니다.`
-        )) {
-            return;
-        }
-
-        setBusy(true);
-
-        try {
-            await api(`/admin/items/${selected.id}`,{
-                method:'DELETE',
-                body:{requestKey:crypto.randomUUID()}
-            });
-
-            invalidateAdminNames();
-            setSelected(null);
-            setEditorKey(value=>value+1);
-
-            await load();
-            setMessage('삭제 완료');
-        } catch(e) {
-            setMessage(`${e.code||'DELETE_FAILED'}: ${e.message}`);
-
-            if ([401,403].includes(e.status)) {
-                denied(e.message);
-            }
-        } finally {
-            setBusy(false);
-        }
-    }
-
     function registerProduct() {
         setProductSeed({
             item_id:String(selected.id),
@@ -756,9 +724,6 @@ export default function AdminPanel({
 
                 {kind==='items'&&selected&&
                     <div className="admin-toolbar-actions">
-                        <button disabled={busy} onClick={deleteItem}>
-                            미참조 아이템 영구 삭제
-                        </button>
                         <button disabled={busy} onClick={registerProduct}>
                             이 아이템을 상점에 등록
                         </button>
@@ -821,9 +786,21 @@ export default function AdminPanel({
                                 </details>
                             </div>
 
-                            <button disabled={busy} onClick={()=>select(row)}>
-                                상세/수정
-                            </button>
+                            <div className="admin-record-actions">
+                                <button disabled={busy} onClick={()=>select(row)}>상세/수정</button>
+                                <AdminDeleteControl menu={kind} recordId={String(row.id)} disabled={busy} onDenied={denied}
+                                    onDeleted={async()=>{
+                                        invalidateAdminNames();
+                                        if(String(selected?.id)===String(row.id)||String(recordId)===String(row.id)){
+                                            setSelected(null);
+                                            setEditorKey(value=>value+1);
+                                            onNavigate?.({record:null});
+                                        }
+                                        setDeleteRevision(value=>value+1);
+                                        await load(kind,route?.after);
+                                        setMessage('삭제 완료');
+                                    }}/>
+                            </div>
                         </li>
                     ))}
                 </ul>
@@ -900,36 +877,6 @@ export default function AdminPanel({
                                 편집 취소 · 목록으로
                             </button>
                         }
-
-                        <AdminDeleteControl
-                            menu={kind}
-                            recordId={recordId}
-                            areaId={route?.area}
-                            disabled={busy}
-                            onDenied={denied}
-                            onDeleted={async ({kind:deletedKind})=>{
-                                invalidateAdminNames();
-                                setSelected(null);
-                                setEditorKey(value=>value+1);
-                                setDeleteRevision(value=>value+1);
-
-                                if (onNavigate) {
-                                    if (kind==='area-hub') {
-                                        if (deletedKind==='areas') {
-                                            onNavigate({area:null,record:null});
-                                        }
-                                    } else {
-                                        onNavigate({record:null});
-                                    }
-                                }
-
-                                if (kind==='products') {
-                                    await load(kind,route?.after);
-                                }
-
-                                setMessage('삭제 완료');
-                            }}
-                        />
 
                         {renderContent()}
                     </div>

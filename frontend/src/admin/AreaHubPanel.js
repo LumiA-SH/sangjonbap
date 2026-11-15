@@ -2,6 +2,7 @@ import {useEffect, useRef, useState} from 'react';
 import {api} from '../api/client';
 import ItemPicker from './ItemPicker';
 import ImageUploadField from './ImageUploadField';
+import AdminDeleteControl from './AdminDeleteControl';
 import './AreaHubPanel.css';
 
 const emptyResult = () => ({
@@ -173,7 +174,7 @@ function AreaBasicEditor({area, busy, onSave, onDenied}) {
     );
 }
 
-function InvestigationEditor({areaId, data, busy, onSave, onDenied}) {
+function InvestigationEditor({areaId, data, busy, onSave, onDenied, onRemove}) {
     const [editingId, setEditingId] = useState(null);
     const [draft, setDraft] = useState(null);
 
@@ -402,10 +403,14 @@ function InvestigationEditor({areaId, data, busy, onSave, onDenied}) {
                                     </small>
                                 </div>
 
-                                <button type="button" disabled={busy}
-                                        onClick={() => editing ? cancel() : startEdit(row)}>
-                                    {editing ? '닫기' : '수정'}
-                                </button>
+                                <div className="admin-record-actions">
+                                    <button type="button" disabled={busy}
+                                            onClick={() => editing ? cancel() : startEdit(row)}>
+                                        {editing ? '닫기' : '수정'}
+                                    </button>
+                                    <AdminDeleteControl menu="investigation-results" recordId={String(row.id)} areaId={String(areaId)} disabled={busy} onDenied={onDenied}
+                                        onDeleted={async()=>{if(editing)cancel();await onRemove('results');}}/>
+                                </div>
                             </div>
 
                             {editing && renderForm()}
@@ -723,7 +728,7 @@ function RecipeEditor({areaId, data, recipes, busy, onSave}) {
     );
 }
 
-function ClueEditor({areaId, data, busy, onSave}) {
+function ClueEditor({areaId, data, busy, onSave, onDenied, onRemove}) {
     const [editingId, setEditingId] = useState(null);
     const [loaded, setLoaded] = useState(null);
     const [draft, setDraft] = useState(null);
@@ -914,10 +919,14 @@ function ClueEditor({areaId, data, busy, onSave}) {
                                     </small>
                                 </div>
 
-                                <button type="button" disabled={busy || loading}
-                                        onClick={() => editing ? cancel() : startEdit(clue.id)}>
-                                    {editing ? '닫기' : '수정'}
-                                </button>
+                                <div className="admin-record-actions">
+                                    <button type="button" disabled={busy || loading}
+                                            onClick={() => editing ? cancel() : startEdit(clue.id)}>
+                                        {editing ? '닫기' : '수정'}
+                                    </button>
+                                    <AdminDeleteControl menu="clues" recordId={String(clue.id)} disabled={busy || loading} onDenied={onDenied}
+                                        onDeleted={async()=>{if(editing)cancel();await onRemove('clues');}}/>
+                                </div>
                             </div>
 
                             {editing && loading && (
@@ -1100,6 +1109,12 @@ export default function AreaHubPanel({route, onNavigate, onDenied}) {
         }
     }
 
+    async function refreshAfterDelete(section) {
+        const refreshed=await refreshArea(areaId);
+        setRevision(previous=>({...previous,[section]:previous[section]+1}));
+        setMessage(refreshed?'삭제 완료':'삭제 완료 · 목록을 새로고침해 주세요.');
+    }
+
     function selectArea(value) {
         if (onNavigate) {
             onNavigate({
@@ -1169,6 +1184,16 @@ export default function AreaHubPanel({route, onNavigate, onDenied}) {
                             <strong>{area.name}</strong>
                             <span>{area.is_open ? '공개 허용' : '비공개'}</span>
                         </div>
+                        <AdminDeleteControl menu="areas" recordId={String(areaId)} disabled={busy} onDenied={onDenied}
+                            onDeleted={async()=>{
+                                setAreas(rows=>rows.filter(row=>String(row.id)!==String(areaId)));
+                                if(onNavigate)onNavigate({area:null,record:null});
+                                else setLocalAreaId('');
+                                setArea(null);
+                                setData(null);
+                                setMonsterData(null);
+                                setMessage('지역 삭제 완료');
+                            }}/>
 
                         <div className="area-hub-summary-grid">
                             <div><small>조사 결과</small><strong>{data.results.length}개</strong></div>
@@ -1188,7 +1213,7 @@ export default function AreaHubPanel({route, onNavigate, onDenied}) {
                         <InvestigationEditor
                             key={`${areaId}:${revision.results}`}
                             areaId={areaId} data={data} busy={busy}
-                            onSave={saveSection} onDenied={onDenied}
+                            onSave={saveSection} onDenied={onDenied} onRemove={refreshAfterDelete}
                         />
 
                         <MonsterEditor
@@ -1206,7 +1231,7 @@ export default function AreaHubPanel({route, onNavigate, onDenied}) {
                         <ClueEditor
                             key={`${areaId}:${revision.clues}`}
                             areaId={areaId} data={data} busy={busy}
-                            onSave={saveSection}
+                            onSave={saveSection} onDenied={onDenied} onRemove={refreshAfterDelete}
                         />
                     </div>
                 </>

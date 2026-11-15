@@ -2,6 +2,7 @@ import {useEffect, useRef, useState} from 'react';
 import {api} from '../api/client';
 import ItemPicker from './ItemPicker';
 import ImageUploadField from './ImageUploadField';
+import AdminDeleteControl from './AdminDeleteControl';
 import './admin-list-layout.css';
 
 const emptyMonster = () => ({
@@ -232,26 +233,6 @@ export default function BattleAdminPanel({onDenied, recordId, onOpen}) {
     });
   }
 
-  async function deleteMonster() {
-    await work(async () => {
-      if (!window.confirm(`마물 ${id}을 영구 삭제합니까? 기존 전투 참조가 있으면 거부됩니다.`)) {
-        return;
-      }
-
-      await api(`/admin/monsters/${id}`, {
-        method: 'DELETE',
-        body: {requestKey: crypto.randomUUID()}
-      });
-
-      setId(null);
-      setDraft(emptyMonster());
-      setOriginal(null);
-
-      await reload();
-      setMessage('마물 삭제 완료');
-    });
-  }
-
   function newMonster() {
     setId(null);
     setDraft(emptyMonster());
@@ -359,11 +340,6 @@ export default function BattleAdminPanel({onDenied, recordId, onOpen}) {
           <div className="admin-monster-actions">
             <button disabled={busy} onClick={newMonster}>새 마물</button>
 
-            {id && (
-                <button disabled={busy} onClick={deleteMonster}>
-                  미참조 마물 영구 삭제
-                </button>
-            )}
           </div>
 
           <ul className="admin-two-column-list admin-monster-list">
@@ -379,9 +355,20 @@ export default function BattleAdminPanel({onDenied, recordId, onOpen}) {
                     </small>
                   </div>
 
-                  <button disabled={busy} onClick={() => openMonster(r)}>
-                    상세/수정
-                  </button>
+                  <div className="admin-record-actions">
+                    <button disabled={busy} onClick={() => openMonster(r)}>상세/수정</button>
+                    <AdminDeleteControl menu="monsters" recordId={String(r.id)} disabled={busy} onDenied={onDenied}
+                      onDeleted={async()=>{
+                        if(String(id)===String(r.id)||String(recordId)===String(r.id)){
+                          setId(null);
+                          setDraft(emptyMonster());
+                          setOriginal(null);
+                          onOpen?.(null);
+                        }
+                        await reload();
+                        setMessage('삭제 완료');
+                      }}/>
+                  </div>
                 </li>
             ))}
           </ul>

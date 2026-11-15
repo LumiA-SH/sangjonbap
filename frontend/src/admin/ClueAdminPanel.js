@@ -1,5 +1,6 @@
 import {useEffect, useRef, useState} from 'react';
 import {api} from '../api/client';
+import AdminDeleteControl from './AdminDeleteControl';
 import './admin-list-layout.css';
 
 const empty = {
@@ -184,9 +185,20 @@ export default function ClueAdminPanel({onDenied, recordId, onOpen}) {
              </small>
             </div>
 
-            <button disabled={busy} onClick={() => choose(String(r.id))}>
-             단서 상세
-            </button>
+             <div className="admin-record-actions">
+              <button disabled={busy} onClick={() => choose(String(r.id))}>단서 상세</button>
+              <AdminDeleteControl menu="clues" recordId={String(r.id)} disabled={busy} onDenied={onDenied}
+                onDeleted={async()=>{
+                  if(String(loaded?.record?.id)===String(r.id)||String(recordId)===String(r.id)){
+                    setLoaded(null);
+                    setDraft(null);
+                    setReason('');
+                    onOpen?.(null);
+                  }
+                  await list();
+                  setMessage('삭제 완료');
+                }}/>
+             </div>
            </li>
        ))}
       </ul>
