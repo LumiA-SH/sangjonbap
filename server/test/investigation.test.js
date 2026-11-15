@@ -50,8 +50,14 @@ const dailyGateResult = dailyGateFixture(source); if (dailyGateResult) return da
                 assert.match(sql, /for update of u,c$/); assert.deepEqual(params, ['7']);
                 return rows(state.character ? [clone(state.character)] : []);
             }
+            if (sql.startsWith('select ar.recipe_id')) return rows([]);
+            if (sql.startsWith('select investigation_rate, discovered_count, total_count')) {
+                const total=state.results.filter(r=>r.is_unique).length;
+                const found=state.results.filter(r=>r.is_unique&&state.discoveries.includes(r.id)).length;
+                return rows([{investigation_rate:total?100*found/total:0,discovered_count:found,total_count:total}]);
+            }
             if (sql.startsWith('select * from public.investigation_result')) {
-                assert.match(sql, /where area_id=\$1 and is_active and \(not is_failure or failure_selectable\) order by id for share$/);
+                assert.match(sql, /where area_id=\$1 and is_active order by id for share$/);
                 return rows(clone(state.results));
             }
             if (sql.startsWith('update public.game_character')) {
@@ -154,8 +160,8 @@ test('ACTIVE battle prevents investigation before rewards', async () => {
 
 test('NEAR_DEATH and DEAD may list areas but cannot investigate', async () => {
     for (const status of ['NEAR_DEATH', 'DEAD']) {
-        const repo = createInvestigationRepository({query: async () => rows([{status, areas: [{id: '1'}]}])});
-        assert.deepEqual(await repo.getInvestigationAreas('7'), [{id: '1'}]);
+        const repo = createInvestigationRepository({query: async () => rows([{status, global_rate:0, areas: [{id: '1'}]}])});
+        assert.deepEqual(await repo.getInvestigationAreas('7'), {areas:[{id: '1'}],globalInvestigationRate:0});
         const f = fixture({character: {status, hp: 100, blood: 0}});
         await assert.rejects(f.repository.investigate('7', '1', key), e => e.code === 'CHARACTER_' + status);
     }
@@ -173,7 +179,7 @@ test('normal investigation deducts exactly one AP, returns/logs rewards and lock
 characterId: '10', category: 'INVESTIGATION', actionType: 'INVESTIGATE',
         targetType: 'AREA', targetId: '1', requestKey: key,
         detail: {            
-dailyTransactionDay: '2026-11-08', area_id: '1', result_id: '2', is_failure: false, rewards: result.rewards, clue_id: null,
+dailyTransactionDay: '2026-11-08', area_id: '1', result_id: '2', rewards: result.rewards, clue_id: null,
             first_discovery: false, investigation_rate_before: 0, investigation_rate_after: 0, ap_before: 3, ap_after: 2        
 }    
 });
@@ -204,16 +210,16 @@ test('unique discovery increments global progress once; repeat still pays reward
     const first = await f.repository.investigate('7', '1', key);
     const second = await f.repository.investigate('7', '1', key2);
     assert.equal(first.firstDiscovery, true); assert.equal(second.firstDiscovery, false);
-    assert.equal(first.area.investigation_rate, 15); assert.equal(second.area.investigation_rate, 15);
+    assert.equal(first.area.investigation_rate, 100); assert.equal(second.area.investigation_rate, 100);
     assert.equal(second.ap, 1); assert.equal(second.rewards[0].inventoryQuantity, 4);
     assert.equal(first.clue.title, '단서'); assert.deepEqual(f.state().discoveries, ['2']);
-    assert.equal(f.calls.filter(call => call.sql.startsWith('update public.area')).length, 1);
+    assert.equal(f.calls.filter(call => call.sql.startsWith('update public.area')).length, 0);
 });
 
 test('unique previously discovered by any character never increases progress', async () => {
     const f = fixture({results: [unique], discoveries: ['2']});
     const result = await f.repository.investigate('7', '1', key);
-    assert.equal(result.firstDiscovery, false); assert.equal(result.area.investigation_rate, 0);
+    assert.equal(result.firstDiscovery, false); assert.equal(result.area.investigation_rate, 100);
 });
 
 test('progress capped at 100', async () => {
@@ -283,10 +289,10 @@ async query(sql, params) {
 const dailyGateResult = dailyGateFixture(sql); if (dailyGateResult) return dailyGateResult;
             assert.match(sql, /u.is_active and c.is_active/); assert.match(sql, /a.is_open/);
             assert.match(sql, /a.unlock_at<=statement_timestamp\(\)/); assert.match(sql, /a.id::text/);
-            assert.deepEqual(params, ['7']); return rows([{character_id: '10', status: 'ALIVE', areas}]);
+            assert.deepEqual(params, ['7']); return rows([{character_id: '10', status: 'ALIVE', global_rate:15, areas}]);
         }    
 });
-    assert.deepEqual(await repository.getInvestigationAreas('7'), areas);
+    assert.deepEqual(await repository.getInvestigationAreas('7'), {areas,globalInvestigationRate:15});
 });
 
 test('service validates body, UUID and bigint area id without calling repository', async () => {
@@ -302,7 +308,7 @@ test('service validates body, UUID and bigint area id without calling repository
 test('HTTP routes require auth, preserve envelope and accept only server-owned user identity', async t => {
     const repository = createMemoryRepository();
     const calls = [];
-    repository.getInvestigationAreas = async userId => {calls.push(userId); return [{id: '1'}];};
+    repository.getInvestigationAreas = async userId => {calls.push(userId); return {areas:[{id:'1'}],globalInvestigationRate:0};};
     repository.getInvestigationApCost = async () => 3;
     repository.investigate = async (...args) => {calls.push(args); return {result: {id: '2'}, rewards: [], clue: null, firstDiscovery: false, area: {id: '1', investigation_rate: 0}, ap: 9};};
     const server = createApp({origin: 'http://localhost:3000', loginKey: 'test-only-passphrase', userId: '1'}, repository).listen(0, '127.0.0.1');
@@ -315,7 +321,7 @@ test('HTTP routes require auth, preserve envelope and accept only server-owned u
     const token = (await login.json()).data.token;
     const headers = {Authorization: `Bearer ${token}`, 'Content-Type': 'application/json'};
     const list = await fetch(base + '/investigation/areas', {headers});
-    assert.deepEqual((await list.json()).data, {areas: [{id: '1'}], investigationApCost: 3});
+    assert.deepEqual((await list.json()).data, {areas: [{id: '1'}], globalInvestigationRate:0, investigationApCost: 3});
     const response = await fetch(base + '/investigation/1', {method: 'POST', headers, body: JSON.stringify({requestKey: key})});
     const result = await response.json();
     assert.equal(response.status, 200); assert.equal(result.ok, true); assert.ok(result.requestId); assert.equal(result.data.ap, 9);

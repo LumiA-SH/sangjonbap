@@ -265,6 +265,7 @@ export default function BattlePanel({inventory = [], busy, run, refresh, revisio
                       <div className="battle-forecast">
                         <span>다음 행동 예고</span>
                         <strong>{battle.declaration?.name || '행동 정보 없음'}</strong>
+                        {battle.declaration?.description && <p>{battle.declaration.description}</p>}
                         {battle.declaration?.action_type && <small>{battle.declaration.action_type}</small>}
                       </div>
                   ) : (

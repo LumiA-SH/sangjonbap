@@ -18,6 +18,7 @@ import RecordsPanel from './dev/RecordsPanel';
 import BattlePanel from './dev/BattlePanel';
 import {HomeHeaderDecor} from './HomeDecor';
 import DicePanel from './dev/DicePanel';
+import './AccountMenu.css';
 
 const FALLBACK_IMAGE = publicAsset('test.png');
 const publicTabs = ['home', 'world', 'system', 'schedule', 'roster'];
@@ -189,6 +190,7 @@ export default function App() {
   const view = route.tab;
   const setView = tab => go({admin: false, tab});
   const [menuOpen, setMenuOpen] = useState(false);
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [loggedIn, setLoggedIn] = useState(false);
   const [provider, setProvider] = useState(null);
   const [authError, setAuthError] = useState(null);
@@ -215,6 +217,27 @@ export default function App() {
 
   const running = useRef(false);
   const adminWasOpen = useRef(false);
+  const accountMenuRef = useRef(null);
+
+  useEffect(() => {
+    if (!accountMenuOpen) return;
+
+    function handlePointerDown(event) {
+      if (accountMenuRef.current && !accountMenuRef.current.contains(event.target)) setAccountMenuOpen(false);
+    }
+
+    function handleKeyDown(event) {
+      if (event.key === 'Escape') setAccountMenuOpen(false);
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [accountMenuOpen]);
 
   async function refreshAfterAdmin(){
     try{
@@ -390,6 +413,7 @@ export default function App() {
   }
 
   async function logout() {
+    setAccountMenuOpen(false);
     try {
       await api('/auth/logout', {method: 'POST'});
     } finally {
@@ -454,6 +478,7 @@ export default function App() {
   };
 
   const navigate = next => {
+    setAccountMenuOpen(false);
     setView(next);
     setMenuOpen(false);
     window.scrollTo(0, 0);
@@ -520,7 +545,25 @@ export default function App() {
               </button>
 
               <span className="survival-top-caption">SURVIVAL COOKING SYSTEM</span>
-              <span className="survival-account">{character?.name || user?.username || 'SURVIVOR'}</span>
+              {loggedIn ? (
+                  <div className="survival-account-menu" ref={accountMenuRef}>
+                    <button type="button" className="survival-account-trigger" aria-expanded={accountMenuOpen} aria-controls="survival-account-dropdown" onClick={() => setAccountMenuOpen(open => !open)}>
+                      <span className="survival-account">{character?.name || user?.username || 'SURVIVOR'}</span>
+                      <span className={`survival-account-chevron${accountMenuOpen ? ' is-open' : ''}`} aria-hidden="true">▾</span>
+                    </button>
+                    {accountMenuOpen && (
+                        <div id="survival-account-dropdown" className="survival-account-dropdown" aria-label="계정 메뉴">
+                          <div className="survival-account-profile">
+                            <strong>{character?.name || user?.username || 'SURVIVOR'}</strong>
+                            <small>{user?.username || '로그인됨'}</small>
+                          </div>
+                          {canAdmin && <button type="button" disabled={busy} onClick={() => {setAccountMenuOpen(false); setAdminOpen(true);}}>관리자 영역</button>}
+                          <button type="button" disabled={busy} onClick={() => {setAccountMenuOpen(false); run(refreshAll);}}>전체 상태 새로고침</button>
+                          <button type="button" className="survival-account-logout" disabled={busy} onClick={() => {setAccountMenuOpen(false); run(logout);}}>로그아웃</button>
+                        </div>
+                    )}
+                  </div>
+              ) : <span className="survival-account">SURVIVOR</span>}
             </header>
 
             <div className="survival-warning" aria-hidden="true">
@@ -640,20 +683,6 @@ export default function App() {
                         <p>운영진 공지사항 연동 예정</p>
                       </div>
                     </DashboardCard>
-                  </div>
-              )}
-
-              {loggedIn && (
-                  <div className="survival-auth" style={{display: view === 'home' ? 'block' : 'none'}}>
-                    <section aria-label="로그인 계정 관리">
-                      <h2>계정</h2>
-                      <div className="actions">
-                        <span>로그인됨</span>
-                        {canAdmin && <button type="button" disabled={busy} onClick={() => setAdminOpen(true)}>관리자 영역</button>}
-                        <button type="button" disabled={busy} onClick={() => run(refreshAll)}>전체 상태 새로고침</button>
-                        <button type="button" disabled={busy} onClick={() => run(logout)}>로그아웃</button>
-                      </div>
-                    </section>
                   </div>
               )}
 

@@ -26,7 +26,7 @@ async function records(client,kind,id,after='0') {
     const foodName=kind==='foods'
         ? ",(select i.name from public.item i where i.id=p.item_id) as name,(select i.image_url from public.item i where i.id=p.item_id) as image_url"
         : '';
-    const progressSelect=kind==='areas'?',ip.investigation_rate as calculated_investigation_rate':'';
+    const progressSelect=kind==='areas'?',ip.investigation_rate as calculated_investigation_rate,((p.is_open or p.auto_unlock) and (p.unlock_at is null or p.unlock_at<=statement_timestamp())) as is_accessible':'';
     const progressJoin=kind==='areas'?' left join public.investigation_progress ip on ip.area_id=p.id':'';
 
     const rows=(await client.query(
@@ -148,6 +148,7 @@ export function createAdminMasterRepository(pool) {
 
                 const merged={...defaults,...before,...patch};
                 validateMasterState(kind,merged);
+                if (kind==='areas' && merged.auto_unlock && !merged.unlock_at) fail('INVALID_ADMIN_INPUT','예약 공개 시각을 지정하세요.',400);
 
                 if (kind==='gachas' && merged.start_at && merged.end_at) {
                     const period=(await c.query(

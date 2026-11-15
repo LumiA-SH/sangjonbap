@@ -31,8 +31,9 @@ export function validateMonster(body) {
     }
 
     for (const a of body.actions) {
+        if (a.description!=null && (typeof a.description!=='string'||a.description.length>2000)) invalid('행동 설명은 최대 2000자입니다.');
         if (a.condition_type!=null||a.condition_value!=null) fail('MONSTER_CONDITION_HOLD','조건부 행동은 상세 판정 명세 확인 후 수정할 수 있습니다.');
-        if (Object.keys(a).some(k=>!['name','action_type','probability','multiplier','is_active','condition_type','condition_value','sort_order'].includes(k))||
+        if (Object.keys(a).some(k=>!['name','description','action_type','probability','multiplier','is_active','condition_type','condition_value','sort_order'].includes(k))||
             typeof a.name!=='string'||!a.name.trim()||a.name.length>100||typeof a.is_active!=='boolean'||
             !['ATTACK','SPECIAL_ATTACK','FLEE'].includes(a.action_type)||!decimal2(a.probability)||a.probability<0||a.probability>100||
             !decimal2(a.multiplier)||a.multiplier<=0||a.multiplier>9999.99||!integer(a.sort_order)) {
@@ -200,8 +201,8 @@ export function createAdminBattleRepository(pool) {
                 }
 
                 for (const a of body.actions) {
-                    await c.query(`insert into public.monster_action(monster_id,name,action_type,probability,multiplier,is_active,sort_order)
-                                   values($1,$2,$3,$4,$5,$6,$7)`,[row.id,a.name,a.action_type,a.probability,a.multiplier,a.is_active,a.sort_order]);
+                    await c.query(`insert into public.monster_action(monster_id,name,action_type,probability,multiplier,is_active,sort_order,description)
+                                   values($1,$2,$3,$4,$5,$6,$7,$8)`,[row.id,a.name,a.action_type,a.probability,a.multiplier,a.is_active,a.sort_order,a.description??null]);
                 }
 
                 for (const d of body.drops) {

@@ -400,6 +400,7 @@ export default function AdminPanel({
     const selectionRequest=useRef(0);
     const listRequest=useRef(0);
     const resetPending=useRef(false);
+    const resetRequestKey=useRef(null);
     const accessLost=useRef(onAccessLost);
     accessLost.current=onAccessLost;
 
@@ -453,10 +454,12 @@ export default function AdminPanel({
         setMessage('');
 
         try {
+            resetRequestKey.current ||= crypto.randomUUID();
             const result=await api('/admin/test-daily-reset',{
                 method:'POST',
-                body:{requestKey:crypto.randomUUID()}
+                body:{requestKey:resetRequestKey.current}
             });
+            resetRequestKey.current=null;
 
             setMessage(
                 `자정 초기화 완료 (${result.day}) · ` +
@@ -465,6 +468,7 @@ export default function AdminPanel({
                 `무료 혈액팩 구매 횟수 초기화 ${result.freePackCountersCleared}건`
             );
         } catch(e) {
+            if (e.code==='DUPLICATE_REQUEST') resetRequestKey.current=null;
             setMessage(`${e.code||'RESET_FAILED'}: ${e.message}`);
 
             if ([401,403].includes(e.status)&&e.code!=='TEST_DAILY_RESET_DISABLED') {

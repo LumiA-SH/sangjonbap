@@ -25,6 +25,9 @@ function cursor(req, allowed = ['after']) {
 
 // Called only after existing authentication + ADMIN middleware.
 export function mountExtendedAdminRoutes(router, repo) {
+    router.post('/test-daily-reset', async (req,res) => {
+        ok(res, await repo.testDailyReset(req.auth.user.id,req.body));
+    });
     router.get('/content/:kind', async (req, res) => {
         ok(res, await repo.getAdminContent(req.params.kind));
     });

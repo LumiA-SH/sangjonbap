@@ -20,7 +20,7 @@ function areaView(area, progress) {
     description: area.description,
     image_url: area.image_url,
     encounter_rate: Number(area.encounter_rate),
-    is_open: area.is_open,
+    is_open: true, // Returned only after the server has accepted area access.
     unlock_at: area.unlock_at,
     investigation_rate: progress.rate
   };
@@ -47,13 +47,13 @@ export function createInvestigationRepository(pool, {random = randomUnit, battle
                                                  'description',a.description,
                                                  'image_url',a.image_url,
                                                  'encounter_rate',a.encounter_rate,
-                                                 'is_open',a.is_open,
+                                                 'is_open',true,
                                                  'unlock_at',a.unlock_at,
                                                  'investigation_rate',p.investigation_rate
                                              ) order by a.sort_order,a.id)
                             from public.area a
                                    join public.investigation_progress p on p.area_id=a.id
-                            where a.is_open
+                            where (a.is_open or a.auto_unlock)
                               and (a.unlock_at is null or a.unlock_at<=statement_timestamp())),
                            '[]'::jsonb) as areas,
 
@@ -133,7 +133,7 @@ export function createInvestigationRepository(pool, {random = randomUnit, battle
 
         const opened = await client.query(
             'select ($1::boolean and ($2::timestamptz is null or $2::timestamptz<=clock_timestamp())) as accessible',
-            [area.is_open, area.unlock_at]
+            [area.is_open || area.auto_unlock, area.unlock_at]
         );
 
         if (!opened.rows[0].accessible) throw new AppError(409, 'AREA_CLOSED', '아직 조사할 수 없는 지역입니다.');

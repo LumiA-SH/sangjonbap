@@ -13,7 +13,7 @@ test('doubled initial stats validate B/A/S sums and integer limits without rewri
 });
 test('blood pack uses explicit effect, daily limit separate from lifetime and KST midnight', () => {
     assert.equal(isBloodPack({name: '혈액팩', effect_type: null}), false);
-    assert.doesNotThrow(() => validateBloodPack({name: 'anything', is_active: true, effect_type: 'BLOOD_PACK', effect_value: 30, usable: true, use_target: 'SELF', transferable: true}));
+    assert.doesNotThrow(() => validateBloodPack({name: 'anything', category:'CONSUMABLE', blood_pack_kind:'STANDARD', battle_usable:true, is_active: true, effect_type: 'BLOOD_PACK', effect_value: 30, usable: true, use_target: 'SELF', transferable: true}));
     assert.throws(() => validateBloodPack({effect_type: 'BLOOD_PACK', effect_value: 31}));
     const patch = validateAdminInput('products', {item_id: '1', price: 0, purchase_limit: null, daily_limit: 1, requestKey: randomUUID()}, true).patch;
     assert.equal(patch.purchase_limit, null); assert.equal(patch.daily_limit, 1);

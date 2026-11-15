@@ -105,3 +105,13 @@ test('item detail sections preserve editing and keep deletion in the heading',as
  expect(api).toHaveBeenCalledWith('/admin/items/71',expect.objectContaining({method:'PATCH',body:expect.objectContaining({name:'변경 아이템',category:'MATERIAL'})}));
  expect(div.querySelector('.admin-editor-footer [role=status]')).not.toBeNull();
 });
+import {toKstInput,fromKstInput} from '../admin/kstDateTime';
+test('area date input uses KST independent of browser timezone',async()=>{
+ expect(toKstInput('2026-11-15T15:00:00Z')).toBe('2026-11-16T00:00:00');
+ expect(fromKstInput('2026-11-16T00:00')).toBe('2026-11-16T00:00:00+09:00');
+ expect(fromKstInput('')).toBeNull();
+ api.mockResolvedValue({records:[]});
+ await act(async()=>root.render(<MasterEditor kind="areas" record={null} onSaved={jest.fn()} onDenied={jest.fn()} onBusy={jest.fn()}/>));
+ expect(div.querySelector('input[type="datetime-local"]')).not.toBeNull();
+ expect(div.textContent).toContain('지정 시각에 예약 공개');
+});

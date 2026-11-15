@@ -5,7 +5,7 @@ import {randomUUID} from 'node:crypto';
 import {createBattleRepository} from '../src/modules/battle/repository.js';
 
 function fixture({failLog = false, expired = false, monsterHp = 1, random = () => .9} = {}) {
-    const drop = {item_id: '9', drop_rate: 20, is_ingredient: true, min_quantity: 2, max_quantity: 3};
+    const drop = {item_id: '9', drop_rate: 100, is_ingredient: true, ingredient_role: 'BASE', min_quantity: 1, max_quantity: 1};
     let state = {        
 character: {id: '1', hp: 10, max_hp: 100, blood: 20, max_blood: 100, ap: 10, max_ap: 10, currency: 5, atk: 100, def: 1, agi: 100, status: 'ALIVE', death_count: 0},
         battle: {            
@@ -18,6 +18,7 @@ id: '3', character_id: '1', battle_status: 'ACTIVE', turn_no: 1, monster_hp: mon
 release() {}, async query(raw, p = []) {            
 const dailyGateResult = dailyGateFixture(raw); if (dailyGateResult) return dailyGateResult; const sql = raw.replace(/\s+/g, ' ').trim(); calls.push(sql);
             if (sql === 'begin') {snapshot = structuredClone(state); return rows([]);} if (sql === 'rollback') {state = snapshot; return rows([]);} if (sql === 'commit') return rows([]);
+            if (sql.startsWith('select ar.recipe_id')) return rows([]);
             if (sql.startsWith('select c.*')) return rows([{...state.character}]);
             if (sql.startsWith('select id from public.action_log')) return rows(state.logs.filter(l => l.key === p[0]));
             if (sql.startsWith('select * from public.battle')) return rows([structuredClone(state.battle)]);
@@ -39,7 +40,7 @@ const dailyGateResult = dailyGateFixture(raw); if (dailyGateResult) return daily
 test('simultaneous death victory atomically grants coin and guaranteed snapshot ingredient; reload preserves outcome', async () => {
     const f = fixture(), key = randomUUID(); const result = await f.repo.commandBattle('u', '3', {requestKey: key, turnNo: 1, action: 'ATTACK'});
     assert.equal(result.battle.battle_status, 'VICTORY'); assert.equal(result.character.status, 'DEAD'); assert.equal(result.character.death_count, 1);
-    assert.equal(result.currencyReward, 2); assert.equal(result.character.currency, 7); assert.equal(result.rewards[0].guaranteed, true); assert.equal(result.rewards[0].quantity, 3); assert.equal(f.state().inventory, 3);
+    assert.equal(result.currencyReward, 2); assert.equal(result.character.currency, 7); assert.equal(result.rewards[0].guaranteed, true); assert.equal(result.rewards[0].quantity, 1); assert.equal(f.state().inventory, 1);
     const reload = await f.repo.getBattle('u', null, {latest: true}); assert.equal(reload.currencyReward, 2); assert.deepEqual(reload.rewards, result.rewards);
     const saved = structuredClone(f.state()); await assert.rejects(f.repo.commandBattle('u', '3', {requestKey: key, turnNo: 1, action: 'ATTACK'}), e => e.code === 'DUPLICATE_REQUEST');
     await assert.rejects(f.repo.commandBattle('u', '3', {requestKey: randomUUID(), turnNo: 1, action: 'ATTACK'}), e => e.code === 'BATTLE_FINISHED'); assert.deepEqual(f.state(), saved);

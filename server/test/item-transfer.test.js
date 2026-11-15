@@ -111,7 +111,7 @@ test('serialized retries and competing transfers cannot spend the same last item
 });
 
 test('blood-pack endpoint retains explicit validation and historical log type', async () => {
-    const f = fixture({item: {effect_type: 'BLOOD_PACK', effect_value: 10, usable: true, use_target: 'SELF'}});
+    const f = fixture({item: {category:'CONSUMABLE',blood_pack_kind:'FREE',battle_usable:true,effect_type: 'BLOOD_PACK', effect_value: 10, usable: true, use_target: 'SELF'}});
     await createBloodPackRepository(f.pool).transferBloodPack('1', '10', '7', 1, randomUUID());
     assert.equal(f.state().logs[0].action, 'BLOOD_PACK_TRANSFER');
     assert.equal(f.state().logs[1].action, 'BLOOD_PACK_RECEIVE');

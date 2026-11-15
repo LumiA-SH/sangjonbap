@@ -120,7 +120,8 @@ export function createShopRepository(pool) {
                 }
 
                 const daily=Number((await client.query(
-                    "select coalesce(sum(quantity),0) quantity from public.shop_purchase where product_id=$1 and character_id=$2 and coalesce(purchase_date,(created_at at time zone 'Asia/Seoul')::date)=$3::date",
+                    "select coalesce(sum(quantity),0) quantity from public.shop_purchase where product_id=$1 and character_id=$2 and coalesce(purchase_date,(created_at at time zone 'Asia/Seoul')::date)=$3::date" +
+                    (freePack ? " and created_at>coalesce((select max(created_at) from public.action_log where action_type='ADMIN_TEST_DAILY_RESET'),'-infinity'::timestamptz)" : ''),
                     [productId,before.id,day]
                 )).rows[0].quantity);
 

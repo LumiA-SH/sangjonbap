@@ -5,7 +5,7 @@ import {validateMasterInput} from '../src/modules/admin/master-service.js';
 import {randomUUID} from 'node:crypto';
 
 test('recipe grades have confirmed prices; missing/unknown grade has no fallback', () => {
-    assert.deepEqual(['COMMON', 'RARE', 'SPECIAL'].map(recipePrice), [1, 2, 3]);
+    assert.deepEqual(['COMMON', 'RARE', 'SPECIAL'].map(recipePrice), [2, 3, 4]);
     for (const value of [null, undefined, 'LEGENDARY']) assert.throws(() => recipePrice(value), {code: 'RECIPE_GRADE_HOLD'});
     assert.equal(validateMasterInput('recipes', {discovery_grade: 'RARE', requestKey: randomUUID()}, false).patch.discovery_grade, 'RARE');
     assert.throws(() => validateMasterInput('recipes', {discovery_grade: 'OTHER', requestKey: randomUUID()}, false), {code: 'INVALID_ADMIN_INPUT'});

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {victoryCurrency, guaranteedIngredient, requireIngredientDrops} from '../src/modules/battle/rewards.js';
+import {victoryCurrency, guaranteedIngredient, additionalIngredient, requireIngredientDrops} from '../src/modules/battle/rewards.js';
 import {planBatch} from '../src/modules/cooking/batch.js';
 import {validateBalanceInput} from '../src/modules/admin/settings-repository.js';
 import {validateMasterInput} from '../src/modules/admin/master-service.js';
@@ -9,14 +9,17 @@ test('victory coin distribution uses exact 50 percent boundary', () => {
     for (const [roll, expected] of [[0, 1], [.499999, 1], [.5, 2], [.999999, 2]]) assert.equal(victoryCurrency(() => roll), expected);
     assert.throws(() => victoryCurrency(() => 1));
 });
-test('ingredient guarantee uses original relative rates and inclusive quantity bounds', () => {
-    const drops = [{item_id: '1', is_ingredient: true, drop_rate: 20, min_quantity: 2, max_quantity: 4}, {item_id: '2', is_ingredient: true, drop_rate: 60, min_quantity: 1, max_quantity: 1}, {item_id: '3', is_ingredient: false, drop_rate: 100}];
-    for (const [roll, id, quantity] of [[0, '1', 4], [.249999, '1', 4], [.25, '2', 1], [.9999, '2', 1]]) {
-        const draws = [roll, .999999]; const result = guaranteedIngredient(drops, () => draws.shift());
-        assert.equal(result.drop.item_id, id); assert.equal(result.quantity, quantity);
-    }
-    for (const invalid of [[], [{item_id: '1', is_ingredient: true, drop_rate: 0}]]) assert.throws(() => requireIngredientDrops(invalid), e => e.code === 'MONSTER_INGREDIENT_REQUIRED');
+test('base ingredient is exactly one at 100 percent; weighted bonus may miss', () => {
+    const drops=[{item_id:'1',is_ingredient:true,ingredient_role:'BASE',drop_rate:100,min_quantity:1,max_quantity:1},
+        {item_id:'2',is_ingredient:true,ingredient_role:'BONUS',drop_rate:20,min_quantity:1,max_quantity:1}];
+    assert.equal(guaranteedIngredient(drops).drop.item_id,'1');
+    assert.equal(guaranteedIngredient(drops).quantity,1);
+    assert.equal(additionalIngredient(drops,()=>.1999).drop.item_id,'2');
+    assert.equal(additionalIngredient(drops,()=>.2),null);
+    assert.throws(()=>requireIngredientDrops([]),{code:'MONSTER_INGREDIENT_REQUIRED'});
+    assert.throws(()=>requireIngredientDrops([{...drops[0],min_quantity:2}]),{code:'MONSTER_BASE_INGREDIENT_INVALID'});
 });
+
 test('admin recipe settings affect next batch, while default 80 percent / 3 remains supported', () => {
     const base = {result_item_id: '2', failure_item_id: '3', success_rate: 80, result_quantity: 3};
     const ingredients = [{item_id: '1', quantity: 2}];

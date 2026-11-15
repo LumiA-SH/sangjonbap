@@ -1,6 +1,7 @@
 /* global BigInt */
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {api} from '../api/client';
+import {toKstInput, fromKstInput} from './kstDateTime';
 import ItemPicker from './ItemPicker';
 import GachaStockEditor from './GachaStockEditor';
 import ImageUploadField from './ImageUploadField';
@@ -15,6 +16,7 @@ const defaults = {
     sort_order: 0,
     encounter_rate: 40,
     is_open: false,
+    auto_unlock: false,
     unlock_at: null
   },
   'food-grades': {
@@ -114,7 +116,8 @@ labels.result_quantity = '성공 음식 수량';
 
 Object.assign(labels, {
   is_open: '공개 허용',
-  unlock_at: '공개 시각 (시간대 포함 ISO, 비우면 즉시)'
+  auto_unlock: '지정 시각에 예약 공개',
+  unlock_at: '공개 시각 (KST, 비우면 즉시)'
 });
 
 Object.assign(labels, {
@@ -523,6 +526,9 @@ export function MasterEditor({kind, record, onSaved, onDenied, onBusy}) {
                             <option value="RARE">희귀 레시피</option>
                             <option value="SPECIAL">특별 레시피</option>
                           </select>
+                      ) : k === 'unlock_at' ? (
+                          <input type="datetime-local" step="1" disabled={busy} value={toKstInput(draft[k])}
+                                 onChange={e => change(k, fromKstInput(e.target.value))}/>
                       ) : k === 'rp_effect_texts' ? (
                           <textarea disabled={busy} value={(draft[k] || []).join('\n')}
                                     onChange={e => change(k, e.target.value ? e.target.value.split('\n') : [])}/>
@@ -600,7 +606,7 @@ export function MasterEditor({kind, record, onSaved, onDenied, onBusy}) {
           {section('완성 음식 · 실패 음식',['result_item_id','failure_item_id'])}
         </> : kind==='areas' ? <>
           {section('구역 기본 정보',['name','description','image_url','sort_order'])}
-          {section('공개 · 조우 설정',['is_open','unlock_at','encounter_rate'])}
+          {section('공개 · 조우 설정',['is_open','auto_unlock','unlock_at','encounter_rate'])}
         </> : section('기본 정보',Object.keys(defaults[kind]))}
 
         {child && (

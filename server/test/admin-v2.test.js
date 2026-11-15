@@ -95,7 +95,7 @@ test('all phase 2 routes authenticate and require ADMIN; roles revoked immediate
         role = 'ADMIN';
         for (const path of paths) assert.equal((await fetch(`${base}/admin/${path}`, {headers: {Authorization: `Bearer ${token}`}})).status, 200);
         role = 'USER';
-        for (const [path, method] of [['characters/1', 'PATCH'], ['characters/1/inventory', 'PATCH'], ['areas/1/results', 'POST'], ['areas/1/results/2', 'PATCH'], ['balance', 'PATCH'], ['items/1', 'DELETE'], ['monsters/1', 'DELETE']]) assert.equal((await fetch(`${base}/admin/${path}`, {method, headers: {Authorization: `Bearer ${token}`, 'Content-Type': 'application/json'}, body: JSON.stringify({requestKey: randomUUID()})})).status, 403);
+        for (const [path, method] of [['test-daily-reset', 'POST'], ['characters/1', 'PATCH'], ['characters/1/inventory', 'PATCH'], ['areas/1/results', 'POST'], ['areas/1/results/2', 'PATCH'], ['balance', 'PATCH'], ['items/1', 'DELETE'], ['monsters/1', 'DELETE']]) assert.equal((await fetch(`${base}/admin/${path}`, {method, headers: {Authorization: `Bearer ${token}`, 'Content-Type': 'application/json'}, body: JSON.stringify({requestKey: randomUUID()})})).status, 403);
         assert.equal((await fetch(`${base}/admin/users/2/role`, {method: 'PATCH', headers: {Authorization: `Bearer ${token}`, Origin: config.origin, 'Content-Type': 'application/json'}, body: JSON.stringify({role: 'ADMIN', requestKey: randomUUID()})})).status, 403);
     } finally {await new Promise(r => server.close(r));}
 });

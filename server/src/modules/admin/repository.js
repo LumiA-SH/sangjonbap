@@ -1,3 +1,4 @@
+import {createTestDailyReset} from './test-daily-reset.js';
 import {createAdminCompletionRepository} from './completion-repository.js';
 import {beginGameTransaction, commitGameTransaction, rollbackGameTransaction} from '../../shared/daily-gate.js';
 import {AppError} from '../../shared/http.js';
@@ -21,6 +22,7 @@ const fail = (code, message, status = 409) => {
 
 export function createAdminRepository(pool) {
     return {
+        testDailyReset:createTestDailyReset(pool),
         async getAdminDashboard(actor) {
             const result=await pool.query(`select
               (select count(*)::int from public.item where is_active) items,

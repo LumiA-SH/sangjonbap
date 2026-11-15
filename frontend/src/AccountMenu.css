@@ -1,0 +1,149 @@
+/* ========================================
+   01. ACCOUNT MENU
+======================================== */
+
+.survival-account-menu {
+    position: relative;
+    z-index: 80;
+    flex: 0 1 auto;
+    min-width: 0;
+    margin-left: auto;
+}
+
+.survival-topbar .survival-account-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    max-width: 240px;
+    min-height: 38px;
+    padding: 7px 10px;
+    border: 1px solid transparent;
+    border-radius: 7px;
+    background: transparent;
+    color: #242428;
+    cursor: pointer;
+}
+
+.survival-topbar .survival-account-trigger:hover:not(:disabled),
+.survival-topbar .survival-account-trigger[aria-expanded="true"] {
+    border-color: #d0d0d0;
+    background: #e9e9e9;
+}
+
+.survival-account-trigger .survival-account {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.survival-account-chevron {
+    flex: 0 0 auto;
+    color: #777777;
+    font-size: 13px;
+    transition: transform 0.15s ease;
+}
+
+.survival-account-chevron.is-open {
+    transform: rotate(180deg);
+}
+
+/* ========================================
+   02. DROPDOWN
+======================================== */
+
+.survival-account-dropdown {
+    position: absolute;
+    z-index: 100;
+    top: calc(100% + 8px);
+    right: 0;
+    width: 230px;
+    max-width: calc(100vw - 24px);
+    padding: 8px;
+    border: 1px solid #c9c9c9;
+    border-radius: 9px;
+    background: #fffefa;
+    box-shadow: 0 8px 24px #00000025;
+    color: #242428;
+}
+
+.survival-account-profile {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 12px 10px 14px;
+    margin-bottom: 7px;
+    border-bottom: 1px solid #dddddd;
+}
+
+.survival-account-profile strong {
+    color: #242428;
+    font-size: 14px;
+    font-weight: 850;
+    overflow-wrap: anywhere;
+}
+
+.survival-account-profile small {
+    color: #777777;
+    font-size: 11px;
+    overflow-wrap: anywhere;
+}
+
+/* ========================================
+   03. MENU BUTTONS
+======================================== */
+
+.survival-account-menu .survival-account-dropdown button {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-height: 40px;
+    padding: 10px 12px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: #303034;
+    font-size: 12px;
+    font-weight: 750;
+    text-align: left;
+}
+
+.survival-account-menu .survival-account-dropdown button:hover:not(:disabled) {
+    background: #f0f0f0;
+    color: #650c13;
+}
+
+.survival-account-menu .survival-account-dropdown .survival-account-logout {
+    margin-top: 7px;
+    border-top: 1px solid #dddddd;
+    border-radius: 0 0 6px 6px;
+    color: #650c13;
+}
+
+.survival-account-menu .survival-account-dropdown .survival-account-logout:hover:not(:disabled) {
+    background: #f5eeee;
+    color: #650c13;
+}
+
+/* ========================================
+   04. RESPONSIVE
+======================================== */
+
+@media (max-width: 600px) {
+    .survival-topbar .survival-account-trigger {
+        max-width: 150px;
+        padding: 7px 6px;
+        font-size: 12px;
+    }
+
+    .survival-account-dropdown {
+        width: 215px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .survival-account-chevron {
+        transition: none;
+    }
+}

@@ -4,6 +4,7 @@ import ItemPicker from './ItemPicker';
 import ImageUploadField from './ImageUploadField';
 import AdminDeleteControl from './AdminDeleteControl';
 import './AreaHubPanel.css';
+import {toKstInput, fromKstInput} from './kstDateTime';
 
 const emptyResult = () => ({
     result_text: '',
@@ -73,6 +74,7 @@ function AreaBasicEditor({area, busy, onSave, onDenied}) {
         sort_order: Number(area.sort_order ?? 0),
         encounter_rate: Number(area.encounter_rate ?? 0),
         is_open: !!area.is_open,
+        auto_unlock: !!area.auto_unlock,
         unlock_at: area.unlock_at ?? null
     }));
 
@@ -152,10 +154,10 @@ function AreaBasicEditor({area, busy, onSave, onDenied}) {
                     </label>
 
                     <label>
-                        공개 시작 시각
-                        <input disabled={busy} value={draft.unlock_at || ''}
-                               placeholder="2026-11-15T09:00:00+09:00"
-                               onChange={e => change('unlock_at', e.target.value || null)}/>
+                        공개 시작 시각 (KST)
+                        <input type="datetime-local" step="1" disabled={busy} value={toKstInput(draft.unlock_at)}
+
+                               onChange={e => change('unlock_at', fromKstInput(e.target.value))}/>
                     </label>
                 </div>
 
@@ -166,6 +168,12 @@ function AreaBasicEditor({area, busy, onSave, onDenied}) {
                     구역 공개 허용
                 </label>
 
+                <label className="area-hub-checkbox">
+                    <input type="checkbox" disabled={busy} checked={draft.auto_unlock}
+                           onChange={e => change('auto_unlock', e.target.checked)}/>
+                    지정 시각에 예약 공개
+                </label>
+                <p>재잠금하려면 공개 허용과 예약 공개를 모두 해제하세요. 예약 시각 이전에는 노출되지 않습니다.</p>
                 <div className="area-hub-buttons">
                     <button disabled={busy || uploading}>구역 기본 설정 저장</button>
                 </div>
@@ -1191,7 +1199,7 @@ export default function AreaHubPanel({route, onNavigate, onDenied}) {
                     <div className="area-hub-overview">
                         <div>
                             <strong>{area.name}</strong>
-                            <span>{area.is_open ? '공개 허용' : '비공개'}</span>
+                            <span>{area.is_accessible ? '공개 중' : area.auto_unlock ? '예약 공개 대기' : area.is_open ? '공개 허용' : '비공개'}</span>
                         </div>
                         <AdminDeleteControl menu="areas" recordId={String(areaId)} disabled={busy} onDenied={onDenied}
                             onDeleted={async()=>{

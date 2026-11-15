@@ -41,6 +41,7 @@ const cleanMonster = m => ({
   })),
   actions: m.actions.map(a => ({
     name: a.name,
+    description: a.description ?? null,
     action_type: a.action_type,
     probability: Number(a.probability),
     multiplier: Number(a.multiplier),
@@ -455,6 +456,11 @@ export default function BattleAdminPanel({onDenied, recordId, onOpen}) {
                                onChange={e => rowChange('actions', i, 'name', e.target.value)}/>
                       </label>
 
+                      <label>
+                        행동 설명
+                        <textarea maxLength={2000} value={a.description || ''} disabled={busy}
+                                  onChange={e => rowChange('actions', i, 'description', e.target.value || null)}/>
+                      </label>
                       <label>
                         행동 종류
                         <select value={a.action_type} disabled={busy}

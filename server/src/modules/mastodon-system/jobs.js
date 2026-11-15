@@ -20,7 +20,7 @@ export async function enqueueOpenAreas(pool){
   await c.query('begin');
   const policy=(await c.query("select config_value from public.system_config where config_key='operating_announcements'")).rows[0];
   if(!policy?.config_value?.events?.area_unlock?.enabled){await c.query('commit');return 0;}
-  const rows=(await c.query(`select a.id,a.name from public.area a where a.is_open
+  const rows=(await c.query(`select a.id,a.name from public.area a where (a.is_open or a.auto_unlock)
    and (a.unlock_at is null or a.unlock_at<=clock_timestamp())
    and not exists(select 1 from public.mastodon_event e where e.event_type='area_unlock' and e.target_type='AREA' and e.target_id=a.id)
    order by a.id limit 20 for update of a skip locked`)).rows;
