@@ -295,7 +295,6 @@ export default function App() {
 
                 if (data.user.character_id) {
                   await refreshAll('mastodon');
-                  if (!window.location.hash) go({admin: false, tab: 'character'});
                 }
               }
             } catch (error) {
