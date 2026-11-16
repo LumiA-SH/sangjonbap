@@ -2,10 +2,16 @@
    01. AREA HUB - BASE
 ======================================== */
 
+.admin-panel .area-hub.admin-record-workspace {
+    display: grid;
+    grid-template-columns: minmax(210px, 280px) minmax(0, 1fr);
+    align-items: start;
+    gap: 20px;
+    width: 100%;
+    min-width: 0;
+}
+
 .area-hub {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
     width: 100%;
     min-width: 0;
 }
@@ -76,6 +82,35 @@
     flex: 0 0 auto;
 }
 
+.admin-panel .area-hub .admin-area-menu button {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    padding: 14px 12px;
+    border: 0;
+    border-bottom: 1px solid #dedee1;
+    border-radius: 0;
+    background: transparent;
+    color: inherit;
+    text-align: left;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    box-sizing: border-box;
+}
+
+.admin-panel .area-hub .admin-area-menu button[aria-current="true"] {
+    border-left: 3px solid var(--admin-red, #690c17);
+    background: #faf0f1;
+}
+
+.area-hub .admin-area-menu small {
+    display: block;
+    font-size: 12px;
+    font-weight: 400;
+    margin-top: 6px;
+}
+
 .area-hub-error,
 .area-hub-message {
     width: 100%;
@@ -100,27 +135,50 @@
    02. AREA OVERVIEW
 ======================================== */
 
-.area-hub-overview {
-    width: 100%;
-    padding: 16px 18px;
-    border: 1px solid #dedee1;
-    border-radius: 9px;
-    background: #ffffff;
-}
-
-.area-hub-overview > div:first-child {
+.admin-panel .area-hub .area-hub-overview {
     display: flex;
     align-items: center;
     justify-content: space-between;
     flex-wrap: wrap;
-    gap: 12px;
-    margin-bottom: 14px;
+    gap: 16px;
+    width: 100%;
+    min-width: 0;
+    padding: 18px 0;
+    border: 0;
+    border-bottom: 1px solid #dedee1;
+    border-radius: 0;
+    background: transparent;
 }
 
-.area-hub-overview > div:first-child strong {
+.admin-panel .area-hub .area-hub-overview > div:first-child {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 5px;
+    min-width: 0;
+    margin: 0;
+}
+
+.area-hub-overview h2 {
+    margin: 0;
     color: #242428;
-    font-size: 20px;
+    font-size: 21px;
     font-weight: 850;
+}
+
+.area-hub-overview small {
+    display: block;
+    color: #74747a;
+}
+
+.admin-panel .area-hub .area-hub-overview > .admin-delete-inline {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
 }
 
 .area-hub-overview > div:first-child span {
@@ -129,6 +187,33 @@
     border-radius: 5px;
     color: #650c13;
     font-size: 12px;
+    font-weight: 700;
+}
+
+/* Tab navigation in the currently selected area. */
+
+.admin-panel .area-hub-tabs {
+    display: flex;
+    gap: 20px;
+    overflow-x: auto;
+    border-bottom: 1px solid #dedee1;
+    margin: 0 0 18px;
+    padding: 0;
+}
+
+.admin-panel .area-hub-tabs button {
+    background: transparent;
+    color: inherit;
+    border: 0;
+    border-bottom: 3px solid transparent;
+    border-radius: 0;
+    padding: 12px 2px;
+    white-space: nowrap;
+}
+
+.admin-panel .area-hub-tabs button[aria-pressed="true"] {
+    color: var(--admin-red, #690c17);
+    border-bottom-color: currentColor;
     font-weight: 700;
 }
 
@@ -167,36 +252,27 @@
 /* ========================================
    03. SECTION LAYOUT
 
-   1. 기본 설정       전체
-   2. 조사 결과       전체
-   3. 마물 출현       좌측
-   4. 레시피 발견     우측
-   5. 단서 관리       전체
+   현재 선택한 탭의 상세 섹션 하나만 표시
 ======================================== */
 
 .area-hub-sections {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr);
     align-items: start;
     gap: 16px;
     width: 100%;
     min-width: 0;
 }
 
-.area-hub-sections > .area-hub-section:nth-child(1),
-.area-hub-sections > .area-hub-section:nth-child(2),
-.area-hub-sections > .area-hub-section:nth-child(5) {
-    grid-column: 1 / -1;
-}
-
-.area-hub-section {
+.admin-panel .area-hub .area-hub-section {
     width: 100%;
     min-width: 0;
     margin: 0;
-    padding: 18px 20px;
-    border: 1px solid #d8d8db;
-    border-radius: 9px;
-    background: #ffffff;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
 }
 
 .area-hub-section-head {
@@ -245,7 +321,7 @@
 
 .admin-panel .area-hub .area-hub-form {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr);
     align-items: start;
     justify-items: stretch;
     gap: 14px 18px;
@@ -389,7 +465,7 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    justify-content: flex-start;
+    justify-content: flex-end;
     gap: 10px;
     width: 100%;
     margin: 6px 0 0;
@@ -418,7 +494,7 @@
 
 .area-hub-list {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr);
     align-items: start;
     gap: 10px;
     width: 100%;
@@ -474,9 +550,38 @@
     line-height: 1.5;
 }
 
-.area-hub-list-top > button {
+.area-hub-list-top .admin-record-actions {
+    display: flex;
+    flex: 0 0 auto;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-left: auto;
+}
+
+.area-hub-list-top .admin-record-actions > button {
     flex: 0 0 auto;
     margin: 0;
+}
+
+.area-hub-list-top .admin-record-actions .admin-delete-inline {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+}
+
+.area-hub-list-top .admin-record-actions .admin-delete-inline > button {
+    flex: 0 0 auto;
+    margin: 0;
+}
+
+.area-hub-list-top .admin-record-actions .admin-delete-inline p[role="alert"] {
+    max-width: 220px;
+    margin: 0;
+    white-space: normal;
 }
 
 .admin-panel .area-hub .area-hub-inline-form {
@@ -497,6 +602,62 @@
     color: #85858a;
     font-size: 12px;
     text-align: center;
+}
+
+/* 조사 결과 표의 관리 버튼과 결과 추가 버튼. */
+
+.area-result-group {
+    padding: 16px 0;
+    border-bottom: 1px solid #dedee1;
+}
+
+.area-result-scroll {
+    overflow-x: auto;
+    margin: 12px 0;
+}
+
+.area-result-scroll table {
+    width: 100%;
+    min-width: 580px;
+    table-layout: fixed;
+}
+
+.area-result-scroll th:first-child {
+    width: 32%;
+}
+
+.area-result-scroll td {
+    vertical-align: top;
+    overflow-wrap: anywhere;
+}
+
+.area-result-scroll td:first-child > button {
+    white-space: normal;
+    text-align: left;
+    width: 100%;
+}
+
+.area-result-scroll small {
+    display: block;
+}
+
+.admin-panel .area-hub .area-result-scroll th:last-child,
+.admin-panel .area-hub .area-result-scroll td:last-child:not([colspan]) {
+    text-align: right;
+}
+
+.admin-panel .area-hub .area-result-scroll td:last-child .admin-delete-inline {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    margin: 0;
+}
+
+.admin-panel .area-hub .area-result-group > button {
+    display: block;
+    width: fit-content;
+    margin: 12px 0 0 auto;
 }
 
 /* ========================================
@@ -521,6 +682,13 @@
     color: #650c13;
     font-size: 13px;
     font-weight: 800;
+}
+
+.admin-panel .area-hub .area-hub-fieldset > button {
+    align-self: flex-end;
+    justify-self: end;
+    width: auto;
+    margin: 0;
 }
 
 .area-hub-reward-row {
@@ -580,7 +748,7 @@
 
 .area-hub-monster-item {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(100px, 135px) auto;
+    grid-template-columns: minmax(0, 2fr) minmax(110px, 1fr) auto;
     align-items: center;
     gap: 12px;
     width: 100%;
@@ -596,6 +764,7 @@
 }
 
 .area-hub-monster-item > button {
+    justify-self: end;
     margin: 0;
 }
 
@@ -641,35 +810,26 @@
    10. RECIPE AREA
 ======================================== */
 
-.area-hub-sections > .area-hub-section:nth-child(4) .area-hub-list {
-    grid-template-columns: minmax(0, 1fr);
-}
-
-.area-hub-sections > .area-hub-section:nth-child(4) .area-hub-fieldset {
+.area-hub .area-recipe-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) auto;
+    align-items: end;
+    gap: 12px;
     padding: 13px;
 }
 
-.area-hub-sections > .area-hub-section:nth-child(4) .area-hub-form-grid {
+.area-hub .area-recipe-row > legend {
+    font-size: 13px;
+}
+
+.area-hub .area-recipe-row .area-hub-form-grid {
     gap: 10px;
+    margin: 0;
 }
 
 /* ========================================
    11. RESPONSIVE - SMALL DESKTOP
 ======================================== */
-
-@media (max-width: 1450px) {
-    .area-hub-sections {
-        grid-template-columns: minmax(0, 1fr);
-    }
-
-    .area-hub-sections > .area-hub-section {
-        grid-column: 1 / -1;
-    }
-
-    .area-hub-sections > .area-hub-section:nth-child(4) .area-hub-list {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-}
 
 @media (max-width: 1100px) {
     .area-hub-reward-row {
@@ -682,6 +842,7 @@
 
     .area-hub-monster-item > button {
         grid-column: 1 / -1;
+        justify-self: end;
         width: fit-content;
     }
 }
@@ -691,10 +852,6 @@
 ======================================== */
 
 @media (max-width: 700px) {
-    .area-hub {
-        gap: 12px;
-    }
-
     .area-hub-heading,
     .area-hub-selector {
         flex-direction: column;
@@ -721,20 +878,15 @@
         padding: 10px;
     }
 
-    .admin-panel .area-hub .area-hub-form,
-    .area-hub-form-grid,
-    .area-hub-list,
+    .admin-panel .area-hub .area-hub-form-grid,
     .area-hub-reward-row,
     .area-hub-monster-item {
         grid-template-columns: minmax(0, 1fr);
     }
 
-    .area-hub-sections > .area-hub-section:nth-child(4) .area-hub-list {
-        grid-template-columns: minmax(0, 1fr);
-    }
-
     .area-hub-monster-item > button {
         grid-column: auto;
+        justify-self: stretch;
         width: 100%;
     }
 
@@ -763,10 +915,39 @@
     .area-hub-buttons > button {
         flex: 1 1 auto;
     }
+
+    .area-hub-list-top {
+        flex-wrap: wrap;
+    }
+
+    .area-hub-list-top .admin-record-actions {
+        width: 100%;
+        margin-left: 0;
+    }
+
+    .admin-panel .area-hub .area-hub-fieldset > button {
+        align-self: stretch;
+        justify-self: stretch;
+        width: 100%;
+    }
 }
-.area-hub-feedback { position:sticky; bottom:12px; z-index:2; background:var(--admin-surface,#fff); border-radius:8px; }
-.area-hub-feedback:has(p) { padding:12px; border:1px solid #ddd; }
-.area-hub-buttons [aria-pressed="true"] { background:var(--admin-red,#690c17); color:#fff; }
+.area-hub-feedback {
+    position: sticky;
+    bottom: 12px;
+    z-index: 2;
+    border-radius: 8px;
+    background: var(--admin-surface, #ffffff);
+}
+
+.area-hub-feedback:has(p) {
+    padding: 12px;
+    border: 1px solid #dddddd;
+}
+
+.area-hub-buttons [aria-pressed="true"] {
+    background: var(--admin-red, #690c17);
+    color: #ffffff;
+}
 
 /* ========================================
    AREA DISCOVERY - CONTENT
@@ -1115,195 +1296,26 @@
     }
 }
 
-.area-hub-sections {
-    min-width: 0;
-}
-
-.area-hub nav.area-hub-buttons {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-}
-
 @media (max-width: 700px) {
     .area-discovery-details {
         grid-template-columns: 1fr;
     }
 }
 
-.area-result-group {
-    padding: 16px 0;
-    border-bottom: 1px solid #dedee1;
-}
-
-.area-result-scroll {
-    overflow-x: auto;
-    margin: 12px 0;
-}
-
-.area-result-scroll table {
-    width: 100%;
-    min-width: 580px;
-    table-layout: fixed;
-}
-
-.area-result-scroll th:first-child {
-    width: 32%;
-}
-
-.area-result-scroll td {
-    vertical-align: top;
-    overflow-wrap: anywhere;
-}
-
-.area-result-scroll td:first-child > button {
-    white-space: normal;
-    text-align: left;
-    width: 100%;
-}
-
-.area-result-scroll small {
-    display: block;
-}
-
-.area-hub-monster-item {
-    display: grid;
-    grid-template-columns: minmax(0, 2fr) minmax(100px, 1fr) auto;
-    align-items: center;
-}
-
-.area-hub-form-grid {
-    align-items: start;
-}
-
-@media (max-width: 700px) {
-    .area-hub-monster-item {
-        grid-template-columns: 1fr;
-    }
-}
-
-.area-recipe-row {
-    display: grid;
-    grid-template-columns: minmax(140px, 2fr) minmax(200px, 2fr) auto;
-    gap: 12px;
-    align-items: end;
-}
-
-.area-recipe-row > legend {
-    font-size: 13px;
-}
-
-.area-recipe-row .area-hub-form-grid {
-    margin: 0;
-}
 
 @media (max-width: 800px) {
-    .area-recipe-row {
-        grid-template-columns: 1fr;
+    .area-hub .area-recipe-row {
+        grid-template-columns: minmax(0, 1fr);
     }
 }
 
-/* Reference layout: list beside detail, compact tabs and discovery rows. */
-
-.admin-panel .area-hub.admin-record-workspace {
-    display: grid;
-    grid-template-columns: minmax(210px, 280px) minmax(0, 1fr);
-    align-items: start;
-}
-
-.admin-panel .area-hub .area-hub-overview {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    padding: 18px 0;
-    background: transparent;
-    border: 0;
-    border-bottom: 1px solid #dedee1;
-    border-radius: 0;
-}
-
-.area-hub-overview h2 {
-    margin: 5px 0;
-    font-size: 21px;
-}
-
-.area-hub-overview small {
-    display: block;
-    color: #74747a;
-}
-
-.admin-panel .area-hub-tabs {
-    display: flex;
-    gap: 20px;
-    overflow-x: auto;
-    border-bottom: 1px solid #dedee1;
-    margin: 0 0 18px;
-    padding: 0;
-}
-
-.admin-panel .area-hub-tabs button {
-    background: transparent;
-    color: inherit;
-    border: 0;
-    border-bottom: 3px solid transparent;
-    border-radius: 0;
-    padding: 12px 2px;
-    white-space: nowrap;
-}
-
-.admin-panel .area-hub-tabs button[aria-pressed="true"] {
-    color: var(--admin-red, #690c17);
-    border-bottom-color: currentColor;
-    font-weight: 700;
-}
-
-.admin-panel .area-hub .area-hub-section {
-    border: 0;
-    box-shadow: none;
-    padding: 0;
-    background: transparent;
-}
 
 @media (max-width: 900px) {
     .admin-panel .area-hub.admin-record-workspace {
         grid-template-columns: minmax(0, 1fr);
     }
 
-    .area-hub-tabs {
+    .admin-panel .area-hub-tabs {
         gap: 14px;
     }
-}
-
-.admin-panel .area-hub .admin-area-menu button {
-    display: block;
-    width: 100%;
-    min-width: 0;
-    margin: 0;
-    padding: 14px 12px;
-    border: 0;
-    border-bottom: 1px solid #dedee1;
-    border-radius: 0;
-    background: transparent;
-    color: inherit;
-    text-align: left;
-    white-space: normal;
-    overflow-wrap: anywhere;
-    box-sizing: border-box;
-}
-
-.admin-panel .area-hub .admin-area-menu button[aria-current="true"] {
-    border-left: 3px solid var(--admin-red, #690c17);
-    background: #faf0f1;
-}
-
-.area-hub .admin-area-menu small {
-    display: block;
-    font-size: 12px;
-    font-weight: 400;
-    margin-top: 6px;
-}
-
-.admin-panel .area-hub .area-hub-form,
-.admin-panel .area-hub .area-hub-form-grid {
-    grid-template-columns: minmax(0, 1fr);
 }
