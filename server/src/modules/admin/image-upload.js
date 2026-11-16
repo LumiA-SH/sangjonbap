@@ -11,7 +11,7 @@ const extensions={
     'image/gif':'gif'
 };
 
-const categories=['items','areas','monsters','recipes'];
+const categories=['items','areas','monsters','recipes','events'];
 
 function environment(name) {
     if (typeof Deno!=='undefined') return Deno.env.get(name);

@@ -7,6 +7,7 @@ import {validateBloodPack} from '../inventory/blood-pack.js';
 import {createAdminMasterRepository} from './master-repository.js';
 import {createAdminRoleRepository} from './role-repository.js';
 import {createAdminBattleRepository} from './battle-repository.js';
+import {createAdminRaidRepository} from './raid-repository.js';
 import {createAdminSettingsRepository} from './settings-repository.js';
 import {createAdminDeleteRepository} from './delete-repository.js';
 import {createAdminCharacterOperations} from './character-operations.js';
@@ -44,6 +45,7 @@ export function createAdminRepository(pool) {
         ...createAdminInvestigationOperations(pool),
         ...createAdminAreaMonsterOperations(pool),
         ...createAdminBattleRepository(pool),
+        ...createAdminRaidRepository(pool),
         ...createAdminMasterRepository(pool),
         ...createAdminRoleRepository(pool),
 

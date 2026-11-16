@@ -1,3 +1,4 @@
+import EventAdminPanel from './EventAdminPanel';
 import {displayLabel} from '../features/displayLabels';
 import {itemCategoryLabel} from '../features/itemCategory';
 import AdminDashboard from './AdminDashboard';
@@ -16,6 +17,7 @@ import MasterPanel from './MasterPanel';
 import RolePanel from './RolePanel';
 import RecordsPanel from '../dev/RecordsPanel';
 import BattleAdminPanel from './BattleAdminPanel';
+import RaidHelperPanel from './RaidHelperPanel';
 import ItemPicker from './ItemPicker';
 import BalancePanel from './BalancePanel';
 import CharacterOperationsPanel from './CharacterOperationsPanel';
@@ -599,6 +601,7 @@ export default function AdminPanel({onBack,onExit=onBack,onLogout,onAccessLost,r
             return <AdminDashboard onNavigate={setKind} onDenied={denied}/>;
         }
 
+        if(kind==='events') return <EventAdminPanel onDenied={denied} recordId={route?.record} onOpen={record=>onNavigate({menu:'events',record})}/>;
         if(kind==='notices') return <ContentAdminPanel key={kind} kind="notice" onDenied={denied}/>;
 
         if(kind.startsWith('guide-')) {
@@ -630,6 +633,7 @@ export default function AdminPanel({onBack,onExit=onBack,onLogout,onAccessLost,r
         if(kind==='balance') return <BalancePanel onDenied={denied}/>;
         if(kind==='logs') return <RecordsPanel admin onDenied={denied}/>;
         if(kind==='battle') return <BattleAdminPanel onDenied={denied} recordId={recordId} onOpen={onNavigate?openRecord:undefined}/>;
+        if(kind==='raid-helper') return <RaidHelperPanel onDenied={denied}/>;
         if(kind==='users') return <RolePanel onDenied={denied}/>;
 
         if(['foods','food-grades','recipes','gachas','areas'].includes(kind)) {

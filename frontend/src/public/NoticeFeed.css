@@ -1,0 +1,166 @@
+/* ========================================
+   01. NOTICE LIST
+======================================== */
+
+.survival-notice-feed {
+    width: 100%;
+    min-width: 0;
+}
+
+.survival-notice-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.survival-notice-item {
+    margin: 0;
+    padding: 0;
+    border-bottom: 1px solid #e4e4e6;
+    list-style: none;
+}
+
+.survival-notice-item:last-child {
+    border-bottom: 0;
+}
+
+.survival-notice-open {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    width: 100%;
+    min-height: 52px;
+    margin: 0;
+    padding: 13px 10px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: #242428;
+    text-align: left;
+    cursor: pointer;
+}
+
+.survival-notice-open:hover:not(:disabled) {
+    background: #f8f1f2;
+    color: #650c13;
+}
+
+.survival-notice-item-title {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 13px;
+    font-weight: 650;
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+}
+
+.survival-notice-arrow {
+    flex: 0 0 auto;
+    color: #88888c;
+    font-size: 20px;
+    line-height: 1;
+}
+
+.survival-notice-status {
+    margin: 0;
+    padding: 24px 12px;
+    color: #77777b;
+    font-size: 13px;
+    text-align: center;
+}
+
+/* ========================================
+   02. HOME PREVIEW
+======================================== */
+
+.survival-notice-feed.is-preview .survival-notice-open {
+    min-height: 44px;
+    padding: 10px 8px;
+}
+
+.survival-notice-feed.is-preview .survival-notice-item-title {
+    font-size: 12px;
+}
+
+/* ========================================
+   03. NOTICE DETAIL
+======================================== */
+
+.survival-notice-detail {
+    width: 100%;
+    min-width: 0;
+    margin-top: 20px;
+}
+
+.survival-notice-detail-header {
+    padding: 0 0 20px;
+    border-bottom: 1px solid #dedee1;
+}
+
+.survival-notice-category {
+    display: inline-block;
+    margin-bottom: 10px;
+    color: #650c13;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+}
+
+.survival-notice-detail-header h3 {
+    margin: 0;
+    color: #242428;
+    font-size: 22px;
+    font-weight: 800;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+
+.survival-notice-detail-body {
+    min-height: 160px;
+    padding: 26px 4px;
+    color: #303034;
+    font-size: 14px;
+    line-height: 1.9;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.survival-notice-detail-actions {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 18px;
+    border-top: 1px solid #dedee1;
+}
+
+.survival-notice-detail-actions button {
+    min-height: 40px;
+    padding: 10px 18px;
+    border-radius: 6px;
+    background: #650c13;
+    color: #ffffff;
+    font-size: 13px;
+}
+
+/* ========================================
+   04. RESPONSIVE
+======================================== */
+
+@media (max-width: 600px) {
+    .survival-notice-open {
+        min-height: 48px;
+        padding: 12px 6px;
+    }
+
+    .survival-notice-detail-header h3 {
+        font-size: 19px;
+    }
+
+    .survival-notice-detail-body {
+        padding: 20px 2px;
+        font-size: 13px;
+    }
+}

@@ -1,3 +1,4 @@
+import EventFeed from './public/EventFeed';
 import RequestLoading from './api/RequestLoading';
 import NoticeFeed from './public/NoticeFeed';
 import SystemFeed,{feedTitles} from './public/SystemFeed';
@@ -662,18 +663,11 @@ export default function App() {
                     </DashboardCard>
 
                     <DashboardCard title="공지사항" subtitle="NOTICE" action={<button type="button" className="survival-card-link" onClick={() => navigate('feed-notice')}>더보기 ›</button>} className="survival-notice">
-                      <NoticeFeed preview active={view==='home'}/>
+                      <NoticeFeed preview active={view==='home'} onOpen={id => go({admin: false, tab: 'feed-notice', record: String(id)})}/>
                     </DashboardCard>
 
                     <DashboardCard title="이벤트" subtitle="EVENT" action={<button type="button" className="survival-card-link" onClick={()=>navigate('feed-event')}>더보기 ›</button>} className="survival-event">
-                      <div className="survival-event-banner">
-                        <GameImage alt="이벤트 배너 임시 이미지" className="survival-event-image"/>
-                        <div className="survival-event-overlay">
-                          <span>EVENT</span>
-                          <strong>이벤트 안내</strong>
-                          <small>운영진이 게시한 이벤트 소식</small>
-                        </div>
-                      </div>
+                      <EventFeed banner active={view==='home'} onOpen={record=>go({admin:false,tab:'feed-event',record})}/>
                     </DashboardCard>
 
                     <DashboardCard title="최근 기록" subtitle="ACTIVITY LOG" action={<button type="button" className="survival-card-link" onClick={() => navigate('feed-activity')}>더보기 ›</button>} className="survival-activity">
@@ -691,7 +685,34 @@ export default function App() {
               )}
 
               {(busy || message) && <p className="dev-message" role="status" aria-live="polite">{busy ? '처리 중…' : message}</p>}
-              {view.startsWith('feed-') && <section className="survival-card"><h2>{feedTitles[view.slice(5)]}</h2><button type="button" onClick={()=>navigate('home')}>홈으로 돌아가기</button>{view==='feed-notice'?<NoticeFeed/>:view==='feed-event'?<p>등록된 이벤트가 없습니다.</p>:<SystemFeed key={view} kind="activity" active={loggedIn}/>}</section>}
+
+              {view.startsWith('feed-') && (
+                  <section className="survival-card">
+                    <h2>{feedTitles[view.slice(5)]}</h2>
+
+                    {view === 'feed-notice' ? (
+                        <>
+                          {route.record == null && (
+                              <button type="button" onClick={() => navigate('home')}>홈으로 돌아가기</button>
+                          )}
+
+                          <NoticeFeed
+                              selectedId={route.record}
+                              onOpen={id => go({admin: false, tab: 'feed-notice', record: String(id)})}
+                              onBack={() => go({admin: false, tab: 'feed-notice', record: null})}
+                          />
+                        </>
+                    ) : (
+                        <>
+                          <button type="button" onClick={() => navigate('home')}>홈으로 돌아가기</button>
+                          {view === 'feed-event'
+                              ? <p>등록된 이벤트가 없습니다.</p>
+                              : <SystemFeed key={view} kind="activity" active={loggedIn}/>}
+                        </>
+                    )}
+                  </section>
+              )}
+
               {['world', 'system', 'schedule'].includes(view) && <GuidePage key={view} kind={view}/>}
               {view === 'roster' && <CharacterDirectory recordId={route.record} onOpen={record => go({admin: false, tab: 'roster', record})} onBack={() => go({admin: false, tab: 'roster'})} canReadDetails={loggedIn && !!user?.character_id}/>}
               {loggedIn && !user?.character_id && <CharacterCreationPanel/>}

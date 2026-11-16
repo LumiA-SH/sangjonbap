@@ -1,3 +1,4 @@
+import {createEventRepository} from './modules/public-content/events.js';
 import {createSystemFeedRepository} from './modules/public-content/system-feed.js';
 import {createPublicContentRepository} from './modules/public-content/repository.js';
 import {createInteractionRepository} from './modules/character/interactions.js';
@@ -27,6 +28,7 @@ export function createGameRepository(pool,{systemFeedEnv={}}={}) {
     return {
         ...createOAuthRepository(pool),
         ...createPublicContentRepository(pool),
+        ...createEventRepository(pool,{env:systemFeedEnv}),
         ...createSystemFeedRepository(pool,{env:systemFeedEnv}),
         recoverDailyReset:createDailyRecovery(pool),
         ...createTrainingRepository(pool),

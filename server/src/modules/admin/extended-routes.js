@@ -25,6 +25,15 @@ function cursor(req, allowed = ['after']) {
 
 // Called only after existing authentication + ADMIN middleware.
 export function mountExtendedAdminRoutes(router, repo) {
+    router.get('/raid-helper', async (req,res) => ok(res, await repo.getAdminRaid()));
+    router.post('/raid-helper/setup', async (req,res) => ok(res, await repo.setupAdminRaid(req.auth.user.id, req.body)));
+    router.post('/raid-helper/preview', async (req,res) => ok(res, await repo.previewAdminRaid(req.body)));
+    router.post('/raid-helper/apply', async (req,res) => ok(res, await repo.applyAdminRaid(req.auth.user.id, req.body)));
+
+    router.get('/events',async(req,res)=>ok(res,await repo.getAdminEvents()));
+    router.post('/events',async(req,res)=>ok(res,await repo.saveAdminEvent(req.auth.user.id,null,req.body)));
+    router.patch('/events/:id',async(req,res)=>{id(req.params.id);ok(res,await repo.saveAdminEvent(req.auth.user.id,req.params.id,req.body));});
+    router.delete('/events/:id',async(req,res)=>{id(req.params.id);ok(res,await repo.saveAdminEvent(req.auth.user.id,req.params.id,req.body,true));});
     router.post('/test-daily-reset', async (req,res) => {
         ok(res, await repo.testDailyReset(req.auth.user.id,req.body));
     });

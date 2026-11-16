@@ -8,6 +8,7 @@ export const gameTabs = [
 export const adminMenus = [
  ['dashboard', '운영 대시보드'],
  ['notices', '공지사항 관리'],
+ ['events', '이벤트 관리'],
  ['guide-world', '세계관 · 안내'],
  ['guide-system', '시스템 안내 관리'],
  ['guide-schedule', '러닝 일정 관리'],
@@ -26,6 +27,7 @@ export const adminMenus = [
  ['balance', '공통 밸런스'],
  ['policies', '운영 정책'],
  ['battle', '마물'],
+ ['raid-helper', '레이드 보조'],
  ['users', '관리자 권한'],
  ['diagnostics', '데이터 진단'],
  ['logs', '전체 행동 로그']
@@ -35,7 +37,7 @@ export const adminMenus = [
 export const adminMenuGroups = [
  {title:'대시보드',description:'운영 현황과 최근 기록',menus:['dashboard']},
  {title:'데이터',description:'아이템 · 음식 · 레시피 · 마물 · 단서 · 구역',menus:['items','foods','recipes','battle','clues','areas','area-hub']},
- {title:'운영',description:'캐릭터 · 상점 · 가챠 · 창고 · 공통 설정',menus:['characters','products','gachas','storage','balance','guide-world','notices','logs','diagnostics']},
+ {title:'운영',description:'캐릭터 · 상점 · 가챠 · 창고 · 공통 설정',menus:['characters','products','gachas','storage','balance','guide-world','notices','events','logs','diagnostics','raid-helper']},
  {title:'권한 관리',description:'운영진 계정과 권한',menus:['users']}
 ];
 
@@ -69,7 +71,7 @@ export function readLocation() {
       ? path.split('/')[1]
       : 'home',
   menu: 'dashboard',
-  record: path === 'game/roster' &&
+  record: ['game/roster','game/feed-event'].includes(path) &&
   /^[1-9][0-9]*$/.test(params.get('record') || '')
       ? params.get('record')
       : null
@@ -94,7 +96,7 @@ export function useNavigation() {
  function go(next, replace = false) {
   const hash = next.admin
       ? `#admin/${next.menu || 'dashboard'}?return=${next.tab}${next.area ? '&area=' + next.area : ''}${next.after ? '&after=' + next.after : ''}${next.record ? '&record=' + next.record : ''}`
-      : `#game/${next.tab}${next.tab === 'roster' && next.record ? '?record=' + next.record : ''}`;
+      : `#game/${next.tab}${['roster','feed-event'].includes(next.tab) && next.record ? '?record=' + next.record : ''}`;
 
   const depth = replace
       ? (window.history.state?.adminDepth || 0)

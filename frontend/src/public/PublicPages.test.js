@@ -1,3 +1,5 @@
+import EventFeed from './EventFeed';
+import EventAdminPanel from '../admin/EventAdminPanel';
 import {subscribeSystemFeed} from './systemFeedUpdates';
 jest.mock('./systemFeedUpdates',()=>({subscribeSystemFeed:jest.fn(()=>()=>{})}));
 import BattleAdminPanel from '../admin/BattleAdminPanel';
@@ -483,4 +485,40 @@ test('connection configuration errors keep their real message and do not endless
  api.mockRejectedValue(Object.assign(Error('최근 기록 실시간 연결 설정을 확인하세요.'),{code:'SYSTEM_FEED_REALTIME_UNAVAILABLE',status:503}));
  const stop=actual.subscribeSystemFeed({onChange:jest.fn(),onError:error,Socket:jest.fn()});
  try{await act(async()=>{});expect(error.mock.calls[0][0].code).toBe('SYSTEM_FEED_REALTIME_UNAVAILABLE');await act(async()=>jest.advanceTimersByTime(60000));expect(api).toHaveBeenCalledTimes(1);stop.retry();await act(async()=>{});expect(api).toHaveBeenCalledTimes(2);}finally{stop();jest.useRealTimers();}
+});
+
+test('event banner opens detail, list cards open detail, detail returns to list',async()=>{
+ const row={id:'1',title:'공개 행사',body:'첫 줄\n둘째 줄',imageUrl:null,createdAt:'2026-11-16T00:00:00Z',startAt:null,endAt:null};
+ const open=jest.fn(),back=jest.fn();api.mockResolvedValue({record:row,records:[row]});
+ await act(async()=>root.render(<EventFeed banner onOpen={open}/>));await act(async()=>Simulate.click(div.querySelector('.event-banner-link')));expect(open).toHaveBeenCalledWith('1');
+ await act(async()=>root.render(<EventFeed onOpen={open}/>));await act(async()=>Simulate.click(div.querySelector('.public-event-card')));expect(open).toHaveBeenCalledTimes(2);
+ await act(async()=>root.render(<EventFeed recordId="1" onBack={back}/>));expect(div.textContent).toContain('첫 줄');await act(async()=>Simulate.click(div.querySelector('button')));expect(back).toHaveBeenCalled();
+ window.location.hash='#game/feed-event?record=1';expect(readLocation().record).toBe('1');window.location.hash='';
+});
+test('event admin uploads files and saves independently of notices',async()=>{
+ api.mockResolvedValue({records:[],version:'v1'});const open=jest.fn();
+ await act(async()=>root.render(<EventAdminPanel recordId="new" onOpen={open}/>));
+ expect(div.querySelector('input[type=file]')).not.toBeNull();expect(div.querySelector('input[type=url]')).toBeNull();
+ const title=div.querySelector('input[maxlength="100"]'),body=div.querySelector('textarea');
+ await act(async()=>{Simulate.change(title,{target:{value:'이벤트 제목'}});Simulate.change(body,{target:{value:'본문'}});});
+ window.confirm.mockReturnValue(true);api.mockResolvedValue({records:[],version:'v2',record:{id:'1'}});
+ await act(async()=>Simulate.submit(div.querySelector('form')));
+ expect(api).toHaveBeenLastCalledWith('/admin/events',expect.objectContaining({method:'POST',body:expect.objectContaining({expectedVersion:'v1',record:expect.objectContaining({title:'이벤트 제목',body:'본문'})})}));
+ expect(open).toHaveBeenCalledWith('1');
+});
+
+test('event file upload previews, replaces and removes the image without an external URL field',async()=>{
+ const previous=global.fetch,change=jest.fn();global.fetch=jest.fn(async()=>({ok:true}));
+ try{
+  api.mockResolvedValue({uploadUrl:'https://example.invalid/signed',imageUrl:'https://example.invalid/event.png'});
+  await act(async()=>root.render(<ImageUploadField kind="events" value={null} onChange={change}/>));
+  await act(async()=>Simulate.change(div.querySelector('input[type=file]'),{target:{files:[new File(['image'],'event.png',{type:'image/png'})],value:''}}));
+  expect(api).toHaveBeenCalledWith('/admin/images/sign-upload',expect.objectContaining({body:expect.objectContaining({kind:'events',contentType:'image/png'})}));
+  expect(global.fetch).toHaveBeenCalledWith('https://example.invalid/signed',expect.objectContaining({method:'PUT'}));
+  expect(change).toHaveBeenCalledWith('https://example.invalid/event.png');
+  await act(async()=>root.render(<ImageUploadField kind="events" value="https://example.invalid/event.png" onChange={change}/>));
+  expect(div.querySelector('img').src).toContain('event.png');
+  await act(async()=>root.render(<ImageUploadField kind="events" value="https://example.invalid/replaced.png" onChange={change}/>));
+  expect(div.querySelector('img').src).toContain('replaced.png');await act(async()=>Simulate.click(button('이미지 제거')));expect(change).toHaveBeenLastCalledWith(null);
+ }finally{global.fetch=previous;}
 });

@@ -1,3 +1,4 @@
+import {createEventRepository,validateEvent,eventVisible} from '../src/modules/public-content/events.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -14,10 +15,10 @@ test('content date validation and KST exact boundaries', () => {
     assert.throws(() => validateContent('schedule', {title: 'a', body: '', published: true, startAt: end, endAt: start, items: []})); assert.throws(() => validateContent('world', {title: 'a', body: 'x', published: true, admin: true}));
 });
 test('guest public routes are read-only, independent of auth and recovery', async t => {
-    const repo = createMemoryRepository(); let reset = 0, writes = 0; repo.recoverDailyReset = async () => reset++; repo.getPublicContent = async () => ({content: null}); repo.listVisitorCharacters = async () => []; repo.getVisitorCharacter = async () => ({id: '1', name: 'a', status: 'DEAD'}); repo.saveAdminContent = async () => writes++;
+    const repo = createMemoryRepository(); let reset = 0, writes = 0; repo.recoverDailyReset = async () => reset++; repo.getPublicContent = async () => ({content: null}); repo.listVisitorCharacters = async () => []; repo.getVisitorCharacter = async () => ({id: '1', name: 'a', status: 'DEAD'}); repo.saveAdminContent = async () => writes++; repo.getPublicEvents=async id=>id?{record:{id}}:{records:[],featured:null};
     const server = createApp({provider: 'dev', nodeEnv: 'development', origin: 'http://localhost:3000'}, repo).listen(0, '127.0.0.1'); await new Promise(r => server.once('listening', r)); t.after(() => new Promise(r => server.close(r))); const url = 'http://127.0.0.1:' + server.address().port + '/api';
-    for (const path of ['/public/guides/world', '/public/guides/system', '/public/guides/schedule', '/public/characters', '/public/characters/1']) assert.equal((await fetch(url + path)).status, 200);
-    assert.equal((await fetch(url + '/public/characters?after=-1')).status, 400); assert.equal((await fetch(url + '/public/characters/1', {method: 'PATCH'})).status, 404); assert.equal((await fetch(url + '/characters/1/public')).status, 401); assert.equal((await fetch(url + '/admin/content/world', {method: 'PATCH'})).status, 401); assert.equal(reset, 0); assert.equal(writes, 0);
+    for (const path of ['/public/guides/world', '/public/guides/system', '/public/guides/schedule', '/public/characters', '/public/characters/1','/public/events','/public/events/featured','/public/events/1']) assert.equal((await fetch(url + path)).status, 200);
+    assert.equal((await fetch(url + '/public/characters?after=-1')).status, 400); assert.equal((await fetch(url + '/public/characters/1', {method: 'PATCH'})).status, 404); assert.equal((await fetch(url + '/characters/1/public')).status, 401); assert.equal((await fetch(url + '/admin/content/world', {method: 'PATCH'})).status, 401); assert.equal((await fetch(url+'/admin/events')).status,401); assert.equal((await fetch(url+'/admin/events',{method:'POST'})).status,401); assert.equal(reset, 0); assert.equal(writes, 0);
 });
 test('P3 public content PostgreSQL integration', {skip: !process.env.ISOLATED_PG_CONFIG}, async t => {
     const raw = createIsolatedPool(), schema = 'p3_' + key().replaceAll('-', ''); let fault = false; const sql = q => q.replaceAll('public.', schema + '.');
@@ -27,6 +28,32 @@ test('P3 public content PostgreSQL integration', {skip: !process.env.ISOLATED_PG
         await raw.query('create schema ' + schema); for (const {tablename} of (await raw.query("select tablename from pg_tables where schemaname='public'")).rows) await raw.query('create table ' + schema + '.' + tablename + '(like public.' + tablename + ' including all)'); await pool.query('insert into public.daily_reset_state(singleton) values(true)'); await raw.query('insert into ' + schema + '.system_config select * from public.system_config');
         const account = async (role, status = 'ALIVE') => {const c = (await pool.query("insert into public.game_character(name,hunter_grade,has_ability,ability_grade,atk,def,agi,hp,blood,status) values($1,'B',true,'E',20,20,20,$2,$3,$4) returning *", ['러너 ' + key(), status === 'DEAD' ? 0 : 100, status === 'NEAR_DEATH' ? 0 : 100, status])).rows[0]; const u = (await pool.query("insert into public.auth_user(role,mastodon_instance,mastodon_account_id,character_id) values($1,'private.instance',$2,$3) returning *", [role, key(), c.id])).rows[0]; return {c, u};}; const admin = await account('ADMIN'), runner = await account('USER'), dead = await account('USER', 'DEAD'), near = await account('USER', 'NEAR_DEATH');
         const save = async (kind, v) => content.saveAdminContent(admin.u.id, kind, {content: v, expectedVersion: (await content.getAdminContent(kind)).version, requestKey: key()});
+        await t.test('events CRUD, visibility, singleton banner, audit rollback and concurrency preserve notices',async()=>{
+            const migration=fs.readFileSync(new URL('../../supabase/migrations/20261116083624_public_events.sql',import.meta.url),'utf8');
+            await pool.query(migration);
+            const events=createEventRepository(pool,{env:{SUPABASE_URL:'https://example.supabase.co'}});
+            const record={title:'이벤트',body:'본문\n둘째 줄',imageUrl:null,startAt:null,endAt:null,active:true,featured:true};
+            const initial=await events.getAdminEvents();
+            const request={record,expectedVersion:initial.version,requestKey:key()};
+            await assert.rejects(events.saveAdminEvent(runner.u.id,null,request),{code:'ADMIN_REQUIRED'});
+            const results=await Promise.allSettled([1,2].map(()=>events.saveAdminEvent(admin.u.id,null,{...request,requestKey:key()})));
+            assert.equal(results.filter(x=>x.status==='fulfilled').length,1);
+            let saved=await events.getAdminEvents(),id=saved.records[0].id;
+            assert.equal((await events.getPublicEvents()).featured.id,id);
+            await assert.rejects(events.saveAdminEvent(admin.u.id,null,{record,expectedVersion:saved.version,requestKey:key()}),{code:'EVENT_FEATURED_CONFLICT'});
+            await pool.query(migration);assert.deepEqual(await events.getAdminEvents(),saved);
+            fault=true;await assert.rejects(events.saveAdminEvent(admin.u.id,id,{record:{...record,title:'실패'},expectedVersion:saved.version,requestKey:key()}),/audit failure/);fault=false;
+            assert.deepEqual(await events.getAdminEvents(),saved);
+            saved=await events.saveAdminEvent(admin.u.id,id,{record:{...record,active:false},expectedVersion:saved.version,requestKey:key()});
+            assert.deepEqual((await events.getPublicEvents()).records,[]);await assert.rejects(events.getPublicEvents(id),{code:'EVENT_NOT_FOUND'});
+            saved=await events.saveAdminEvent(admin.u.id,id,{record:{...record,startAt:'2099-01-01T00:00:00+09:00'},expectedVersion:saved.version,requestKey:key()});
+            assert.equal((await events.getPublicEvents()).featured,null);
+            saved=await events.saveAdminEvent(admin.u.id,id,{record:{...record,endAt:'2001-01-01T00:00:00+09:00'},expectedVersion:saved.version,requestKey:key()});
+            assert.deepEqual((await events.getPublicEvents()).records,[]);
+            await events.saveAdminEvent(admin.u.id,id,{expectedVersion:saved.version,requestKey:key()},true);
+            assert.deepEqual((await events.getAdminEvents()).records,[]);
+            assert.equal((await pool.query("select count(*)::int n from public.action_log where action_type like 'EVENT_%'")).rows[0].n,5);
+        });
         await t.test('migration idempotence preserves existing content and game start state', async () => {
             const text = fs.readFileSync(new URL('../../supabase/migrations/20261110100000_public_guides.sql', import.meta.url), 'utf8'); await save('world', {title: '기존', body: '기존 본문', published: false}); const before = await content.getAdminContent('world'); await pool.query(text); assert.deepEqual(await content.getAdminContent('world'), before); assert.deepEqual((await pool.query('select start_date,last_completed_date from public.daily_reset_state')).rows, [{start_date: null, last_completed_date: null}]);
         });
@@ -67,4 +94,15 @@ test('public content validation does not depend on a Node global Buffer in Edge'
     const saved = globalThis.Buffer;
     try {delete globalThis.Buffer; assert.deepEqual(validateContent('world', {title: '', body: '', published: false}), {title: '', body: '', published: false}); assert.deepEqual(validateContent('system', {items: []}), {items: []});}
     finally {globalThis.Buffer = saved;}
+});
+
+test('event dates, required text, safe image uploads and KST boundaries',()=>{
+ const row={title:'행사',body:'내용',imageUrl:null,startAt:'2026-11-16T00:00:00+09:00',endAt:'2026-11-17T00:00:00+09:00',active:true,featured:true};
+ assert.deepEqual(validateEvent(row),row);
+ const start=Date.parse(row.startAt),end=Date.parse(row.endAt);
+ assert.equal(eventVisible(row,start-1),false);assert.equal(eventVisible(row,start),true);assert.equal(eventVisible(row,end),false);
+ for(const patch of [{title:''},{body:''},{active:'true'},{endAt:'2026-11-15T00:00:00+09:00'},{imageUrl:'javascript:alert(1)'},{url:'https://example.com'}])assert.throws(()=>validateEvent({...row,...patch}));
+ const imageUrl='https://example.supabase.co/storage/v1/object/public/survival-images/events/1234-abcd.png';
+ assert.equal(validateEvent({...row,imageUrl},'https://example.supabase.co').imageUrl,imageUrl);
+ assert.throws(()=>validateEvent({...row,imageUrl},'https://other.supabase.co'));
 });
