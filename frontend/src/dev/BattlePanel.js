@@ -88,7 +88,7 @@ function actorLabel(value) {
   return {CHARACTER: '캐릭터', PLAYER: '캐릭터', MONSTER: '마물', SYSTEM: '시스템'}[value] || value;
 }
 
-export default function BattlePanel({inventory = [], busy, run, refresh, revision = 0}) {
+export default function BattlePanel({inventory = [], busy, run, refresh, revision = 0, visible = true}) {
   const [imageFailed, setImageFailed] = useState(false);
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
@@ -117,10 +117,13 @@ export default function BattlePanel({inventory = [], busy, run, refresh, revisio
   }
 
   useEffect(() => {
-    load();
-    return () => {request.current = null;};
+    if (visible && !sending.current) load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [revision]);
+  }, [revision, visible]);
+
+  useEffect(() => {
+    return () => {request.current = null;};
+  }, [visible]);
 
   useEffect(() => {
     setImageFailed(false);

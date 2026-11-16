@@ -46,11 +46,9 @@ export default function GuidePage({kind}) {
 
   load();
 
-  const timer = kind === 'schedule' ? setInterval(load, 60000) : null;
 
   return () => {
    live = false;
-   if (timer) clearInterval(timer);
   };
  }, [kind, attempt]);
 
@@ -91,7 +89,7 @@ export default function GuidePage({kind}) {
 
            {kind === 'schedule' && (
                <p>
-                서버 확인 시각: {kst(data.serverNow)} · 상태는 1분마다 서버에서 다시 확인합니다.
+                서버 확인 시각: {kst(data.serverNow)} · 화면을 열거나 일정 새로고침을 누르면 상태를 확인합니다.
                 <button onClick={() => setAttempt(n => n + 1)}>일정 새로고침</button>
                </p>
            )}

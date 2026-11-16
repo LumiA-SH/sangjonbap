@@ -1,3 +1,4 @@
+import BattlePanel from '../dev/BattlePanel';
 import EventFeed from './EventFeed';
 import EventAdminPanel from '../admin/EventAdminPanel';
 import {subscribeSystemFeed} from './systemFeedUpdates';
@@ -521,4 +522,31 @@ test('event file upload previews, replaces and removes the image without an exte
   await act(async()=>root.render(<ImageUploadField kind="events" value="https://example.invalid/replaced.png" onChange={change}/>));
   expect(div.querySelector('img').src).toContain('replaced.png');await act(async()=>Simulate.click(button('이미지 제거')));expect(change).toHaveBeenLastCalledWith(null);
  }finally{global.fetch=previous;}
+});
+
+test('schedule only reloads on entry or explicit refresh, never polls', async () => {
+ jest.useFakeTimers();
+ try {
+  api.mockResolvedValue({serverNow:'2026-11-16T00:00:00Z',content:{title:'일정',body:'',startAt:null,endAt:null,state:'UPCOMING',items:[]}});
+  await act(async () => root.render(<GuidePage kind="schedule"/>));
+  expect(api).toHaveBeenCalledTimes(1);
+  await act(async () => jest.advanceTimersByTime(30 * 60000));
+  expect(api).toHaveBeenCalledTimes(1);
+  expect(div.textContent).not.toContain('1분마다');
+  await act(async () => Simulate.click(button('일정 새로고침')));
+  expect(api).toHaveBeenCalledTimes(2);
+ } finally {jest.useRealTimers();}
+});
+
+test('hidden battle skips initial and revision reads, entering battle fetches current state', async () => {
+ api.mockResolvedValue({battle:null});
+ const props={inventory:[],run:async f=>f(),refresh:async()=>{},busy:false};
+ await act(async()=>root.render(<BattlePanel {...props} visible={false} revision={0}/>));
+ await act(async()=>root.render(<BattlePanel {...props} visible={false} revision={1}/>));
+ expect(api).not.toHaveBeenCalled();
+ await act(async()=>root.render(<BattlePanel {...props} visible revision={1}/>));
+ expect(api).toHaveBeenCalledTimes(1);
+ expect(api).toHaveBeenCalledWith('/battles/latest');
+ await act(async()=>root.render(<BattlePanel {...props} visible revision={2}/>));
+ expect(api).toHaveBeenCalledTimes(2);
 });

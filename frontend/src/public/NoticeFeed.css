@@ -1,5 +1,5 @@
 /* ========================================
-   01. NOTICE LIST
+   01. NOTICE COMMON
 ======================================== */
 
 .survival-notice-feed {
@@ -7,16 +7,30 @@
     min-width: 0;
 }
 
+.survival-notice-status {
+    margin: 0;
+    padding: 24px 12px;
+    color: #77777b;
+    font-size: 13px;
+    text-align: center;
+}
+
+/* ========================================
+   02. NOTICE LIST
+======================================== */
+
 .survival-notice-list {
     display: flex;
     flex-direction: column;
     gap: 0;
+    width: 100%;
     margin: 0;
     padding: 0;
     list-style: none;
 }
 
 .survival-notice-item {
+    width: 100%;
     margin: 0;
     padding: 0;
     border-bottom: 1px solid #e4e4e6;
@@ -35,7 +49,7 @@
     width: 100%;
     min-height: 52px;
     margin: 0;
-    padding: 13px 10px;
+    padding: 13px 12px;
     border: 0;
     border-radius: 0;
     background: transparent;
@@ -49,9 +63,15 @@
     color: #650c13;
 }
 
+.survival-notice-open:focus-visible {
+    outline: 2px solid #650c13;
+    outline-offset: -2px;
+}
+
 .survival-notice-item-title {
     flex: 1 1 auto;
     min-width: 0;
+    color: inherit;
     font-size: 13px;
     font-weight: 650;
     line-height: 1.6;
@@ -62,20 +82,25 @@
     flex: 0 0 auto;
     color: #88888c;
     font-size: 20px;
+    font-weight: 400;
     line-height: 1;
 }
 
-.survival-notice-status {
-    margin: 0;
-    padding: 24px 12px;
-    color: #77777b;
-    font-size: 13px;
-    text-align: center;
+/* ========================================
+   03. HOME NOTICE PREVIEW
+======================================== */
+
+.survival-notice-feed.is-preview .survival-notice-list {
+    border: 0;
 }
 
-/* ========================================
-   02. HOME PREVIEW
-======================================== */
+.survival-notice-feed.is-preview .survival-notice-item {
+    border-bottom: 1px solid #ebebed;
+}
+
+.survival-notice-feed.is-preview .survival-notice-item:last-child {
+    border-bottom: 0;
+}
 
 .survival-notice-feed.is-preview .survival-notice-open {
     min-height: 44px;
@@ -87,7 +112,95 @@
 }
 
 /* ========================================
-   03. NOTICE DETAIL
+   04. NOTICE PAGE
+======================================== */
+
+.survival-notice-page {
+    width: 100%;
+    min-width: 0;
+    padding: 26px 30px;
+}
+
+.survival-notice-page-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 24px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid #dedee1;
+}
+
+.survival-notice-page-heading > div {
+    min-width: 0;
+}
+
+.survival-notice-page-heading span {
+    display: block;
+    margin-bottom: 5px;
+    color: #650c13;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+}
+
+.survival-notice-page-heading h2 {
+    margin: 0;
+    color: #242428;
+    font-size: 23px;
+    font-weight: 850;
+    line-height: 1.4;
+}
+
+.survival-notice-page-back {
+    flex: 0 0 auto;
+    min-height: 38px;
+    margin: 0;
+    padding: 9px 16px;
+    border: 1px solid #d2d2d5;
+    border-radius: 6px;
+    background: #ffffff;
+    color: #343438;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.survival-notice-page-back:hover:not(:disabled) {
+    border-color: #650c13;
+    background: #faf0f1;
+    color: #650c13;
+}
+
+/* ========================================
+   05. FULL NOTICE LIST
+======================================== */
+
+.survival-notice-page .survival-notice-list {
+    border-top: 1px solid #e3e3e5;
+}
+
+.survival-notice-page .survival-notice-item {
+    border-bottom: 1px solid #e3e3e5;
+}
+
+.survival-notice-page .survival-notice-open {
+    min-height: 64px;
+    padding: 18px 16px;
+}
+
+.survival-notice-page .survival-notice-item-title {
+    font-size: 14px;
+    font-weight: 650;
+}
+
+.survival-notice-page .survival-notice-arrow {
+    color: #77777b;
+    font-size: 22px;
+}
+
+/* ========================================
+   06. NOTICE DETAIL
 ======================================== */
 
 .survival-notice-detail {
@@ -131,35 +244,95 @@
 
 .survival-notice-detail-actions {
     display: flex;
+    align-items: center;
     justify-content: flex-end;
+    gap: 10px;
     padding-top: 18px;
     border-top: 1px solid #dedee1;
 }
 
 .survival-notice-detail-actions button {
     min-height: 40px;
+    margin: 0;
     padding: 10px 18px;
+    border: 1px solid #650c13;
     border-radius: 6px;
     background: #650c13;
     color: #ffffff;
     font-size: 13px;
+    font-weight: 700;
+}
+
+.survival-notice-detail-actions button:hover:not(:disabled) {
+    border-color: #80141e;
+    background: #80141e;
+    color: #ffffff;
 }
 
 /* ========================================
-   04. RESPONSIVE
+   07. NOTICE DETAIL PAGE
+======================================== */
+
+.survival-notice-page .survival-notice-detail {
+    margin-top: 0;
+}
+
+.survival-notice-page .survival-notice-detail-header {
+    padding: 12px 4px 22px;
+}
+
+.survival-notice-page .survival-notice-detail-header h3 {
+    font-size: 24px;
+}
+
+.survival-notice-page .survival-notice-detail-body {
+    min-height: 200px;
+    padding: 30px 4px;
+    font-size: 14px;
+    line-height: 1.9;
+}
+
+/* ========================================
+   08. RESPONSIVE
 ======================================== */
 
 @media (max-width: 600px) {
+    .survival-notice-page {
+        padding: 18px;
+    }
+
+    .survival-notice-page-heading {
+        gap: 12px;
+        margin-bottom: 18px;
+        padding-bottom: 14px;
+    }
+
+    .survival-notice-page-heading h2 {
+        font-size: 20px;
+    }
+
+    .survival-notice-page-back {
+        padding: 8px 12px;
+        font-size: 11px;
+    }
+
     .survival-notice-open {
         min-height: 48px;
-        padding: 12px 6px;
+        padding: 12px 8px;
     }
 
-    .survival-notice-detail-header h3 {
-        font-size: 19px;
+    .survival-notice-page .survival-notice-open {
+        min-height: 54px;
+        padding: 14px 8px;
     }
 
-    .survival-notice-detail-body {
+    .survival-notice-detail-header h3,
+    .survival-notice-page .survival-notice-detail-header h3 {
+        font-size: 20px;
+    }
+
+    .survival-notice-detail-body,
+    .survival-notice-page .survival-notice-detail-body {
         padding: 20px 2px;
         font-size: 13px;
     }

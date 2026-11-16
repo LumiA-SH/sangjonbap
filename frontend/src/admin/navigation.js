@@ -1,7 +1,7 @@
 import {useEffect, useState} from 'react';
 
 export const gameTabs = [
- 'feed-activity','feed-notice','feed-event','home', 'world', 'system', 'schedule', 'roster', 'character',
+ 'feed-activity', 'feed-notice', 'feed-event', 'home', 'world', 'system', 'schedule', 'roster', 'character',
  'investigation', 'battle', 'cooking', 'inventory', 'shop', 'records', 'gacha'
 ];
 
@@ -35,10 +35,10 @@ export const adminMenus = [
 
 // Presentation groups only: existing route IDs and authorization stay unchanged.
 export const adminMenuGroups = [
- {title:'대시보드',description:'운영 현황과 최근 기록',menus:['dashboard']},
- {title:'데이터',description:'아이템 · 음식 · 레시피 · 마물 · 단서 · 구역',menus:['items','foods','recipes','battle','clues','areas','area-hub']},
- {title:'운영',description:'캐릭터 · 상점 · 가챠 · 창고 · 공통 설정',menus:['characters','products','gachas','storage','balance','guide-world','notices','events','logs','diagnostics','raid-helper']},
- {title:'권한 관리',description:'운영진 계정과 권한',menus:['users']}
+ {title: '대시보드', description: '운영 현황과 최근 기록', menus: ['dashboard']},
+ {title: '데이터', description: '아이템 · 음식 · 레시피 · 마물 · 단서 · 구역', menus: ['items', 'foods', 'recipes', 'battle', 'clues', 'areas', 'area-hub']},
+ {title: '운영', description: '캐릭터 · 상점 · 가챠 · 창고 · 공통 설정', menus: ['characters', 'products', 'gachas', 'storage', 'balance', 'guide-world', 'notices', 'events', 'logs', 'diagnostics', 'raid-helper']},
+ {title: '권한 관리', description: '운영진 계정과 권한', menus: ['users']}
 ];
 
 export function readLocation() {
@@ -71,7 +71,7 @@ export function readLocation() {
       ? path.split('/')[1]
       : 'home',
   menu: 'dashboard',
-  record: ['game/roster','game/feed-event'].includes(path) &&
+  record: ['game/roster', 'game/feed-notice', 'game/feed-event'].includes(path) &&
   /^[1-9][0-9]*$/.test(params.get('record') || '')
       ? params.get('record')
       : null
@@ -96,7 +96,7 @@ export function useNavigation() {
  function go(next, replace = false) {
   const hash = next.admin
       ? `#admin/${next.menu || 'dashboard'}?return=${next.tab}${next.area ? '&area=' + next.area : ''}${next.after ? '&after=' + next.after : ''}${next.record ? '&record=' + next.record : ''}`
-      : `#game/${next.tab}${['roster','feed-event'].includes(next.tab) && next.record ? '?record=' + next.record : ''}`;
+      : `#game/${next.tab}${['roster', 'feed-notice', 'feed-event'].includes(next.tab) && next.record ? '?record=' + next.record : ''}`;
 
   const depth = replace
       ? (window.history.state?.adminDepth || 0)

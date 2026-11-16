@@ -476,25 +476,36 @@ export default function AdminPanel({onBack,onExit=onBack,onLogout,onAccessLost,r
     useEffect(()=>{
         let live=true;
 
-        const verify=()=>api('/admin/access')
-            .then(data=>{
-                if(live) {
-                    if(data.role!=='ADMIN') throw new Error('관리자 권한이 필요합니다.');
-                    setAuthentication(data.authentication||'DEV');
-                    setAllowed(true);
-                }
-            })
-            .catch(e=>{
-                if(live) denied(`${e.code||'ACCESS_FAILED'}: ${e.message}`);
-            });
+        let checking = false;
+        let lastCheck = 0;
 
+        const verify = async (background = false) => {
+            if (checking) return;
+            if (background && (document.hidden || Date.now() - lastCheck < 60000)) return;
+
+            checking = true;
+            lastCheck = Date.now();
+            try {
+                const data = await api('/admin/access', {background});
+                if (!live) return;
+                if (data.role !== 'ADMIN') throw new Error('관리자 권한이 필요합니다.');
+                setAuthentication(data.authentication || 'DEV');
+                setAllowed(true);
+            } catch (e) {
+                if (live) denied((e.code || 'ACCESS_FAILED') + ': ' + e.message);
+            } finally {
+                checking = false;
+            }
+        };
+
+        const recheck = () => verify(true);
         verify();
-        window.addEventListener('focus',verify);
-        const timer=window.setInterval(verify,30000);
+        window.addEventListener('focus', recheck);
+        const timer = window.setInterval(recheck, 5 * 60000);
 
-        return ()=>{
-            live=false;
-            window.removeEventListener('focus',verify);
+        return () => {
+            live = false;
+            window.removeEventListener('focus', recheck);
             window.clearInterval(timer);
         };
 

@@ -208,7 +208,7 @@ export default function App() {
   const [storage, setStorage] = useState([]);
   const [areas, setAreas] = useState([]);
   const [globalInvestigationRate, setGlobalInvestigationRate] = useState(null);
-  const [, setLogs] = useState([]);
+
   const [products, setProducts] = useState([]);
   const [cooking, setCooking] = useState(null);
   const [gachas, setGachas] = useState([]);
@@ -274,6 +274,7 @@ export default function App() {
       return;
     }
 
+    if (adminOpen) return;
     let live = true;
 
     const read = () => api('/public/anemia').then(r => {
@@ -289,7 +290,7 @@ export default function App() {
       live = false;
 
     };
-  }, [loggedIn, user?.character_id, revision]);
+  }, [loggedIn, user?.character_id, adminOpen]);
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(new Date()), 1000);
@@ -361,12 +362,12 @@ export default function App() {
     }
   }
 
-  async function refreshAll(authProvider = provider) {
+  async function refreshAll() {
     const requests = [
       ['gachas', '/gacha/catalog', data => setGachas(data.gachas)],
       ['cooking', '/cooking/catalog', setCooking],
       ['products', '/shop/products', data => setProducts(data.products)],
-      ['logs', '/dev/action-logs', data => setLogs(data.logs)],
+
       ['character', '/characters/me', data => setCharacter(data.character)],
       ['inventory', '/inventory/me', data => setInventory(data.items)],
       ['storage', '/inventory/storage', data => setStorage(data.items)],
@@ -375,7 +376,7 @@ export default function App() {
         setGlobalInvestigationRate(data.globalInvestigationRate);
         setInvestigationApCost(data.investigationApCost);
       }]
-    ].filter(([name]) => name !== 'logs' || authProvider !== 'mastodon');
+    ];
 
     const results = await Promise.allSettled(requests.map(([, path]) => api(path)));
     const nextErrors = {};
@@ -428,7 +429,7 @@ export default function App() {
       setStorage([]);
       setAreas([]);
       setGlobalInvestigationRate(null);
-      setLogs([]);
+
       setProducts([]);
       setCooking(null);
       setGachas([]);
@@ -687,30 +688,33 @@ export default function App() {
               {(busy || message) && <p className="dev-message" role="status" aria-live="polite">{busy ? '처리 중…' : message}</p>}
 
               {view.startsWith('feed-') && (
-                  <section className="survival-card">
-                    <h2>{feedTitles[view.slice(5)]}</h2>
+                  view === 'feed-notice' ? (
+                      <section className="survival-card survival-notice-page">
+                        <header className="survival-notice-page-heading">
+                          <div>
+                            <span>NOTICE</span>
+                            <h2>{route.record ? '공지사항 상세' : '공지사항'}</h2>
+                          </div>
 
-                    {view === 'feed-notice' ? (
-                        <>
-                          {route.record == null && (
-                              <button type="button" onClick={() => navigate('home')}>홈으로 돌아가기</button>
-                          )}
+                          <button type="button" className="survival-notice-page-back" onClick={() => route.record ? go({admin: false, tab: 'feed-notice', record: null}) : navigate('home')}>
+                            {route.record ? '목록으로' : '홈으로'}
+                          </button>
+                        </header>
 
-                          <NoticeFeed
-                              selectedId={route.record}
-                              onOpen={id => go({admin: false, tab: 'feed-notice', record: String(id)})}
-                              onBack={() => go({admin: false, tab: 'feed-notice', record: null})}
-                          />
-                        </>
-                    ) : (
-                        <>
-                          <button type="button" onClick={() => navigate('home')}>홈으로 돌아가기</button>
-                          {view === 'feed-event'
-                              ? <p>등록된 이벤트가 없습니다.</p>
-                              : <SystemFeed key={view} kind="activity" active={loggedIn}/>}
-                        </>
-                    )}
-                  </section>
+                        <NoticeFeed
+                            selectedId={route.record}
+                            onOpen={id => go({admin: false, tab: 'feed-notice', record: String(id)})}
+                        />
+                      </section>
+                  ) : (
+                      <section className="survival-card">
+                        <h2>{feedTitles[view.slice(5)]}</h2>
+                        <button type="button" onClick={() => navigate('home')}>홈으로 돌아가기</button>
+                        {view === 'feed-event'
+                            ? <p>등록된 이벤트가 없습니다.</p>
+                            : <SystemFeed key={view} kind="activity" active={loggedIn}/>}
+                      </section>
+                  )
               )}
 
               {['world', 'system', 'schedule'].includes(view) && <GuidePage key={view} kind={view}/>}
@@ -734,7 +738,7 @@ export default function App() {
                     </div>
 
                     <div className="survival-page" style={display('battle')}>
-                      <BattlePanel inventory={inventory} busy={busy} run={run} refresh={refreshAll} revision={revision}/>
+                      <BattlePanel visible={view === 'battle'} inventory={inventory} busy={busy} run={run} refresh={refreshAll} revision={revision}/>
                     </div>
 
                     <div className="survival-page" style={display('records')}>

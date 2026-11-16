@@ -88,3 +88,224 @@
 .raid-helper-preview p {
     margin: 0;
 }
+
+/* ========================================
+   참가자 관리
+======================================== */
+
+.raid-helper-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.raid-helper-heading h3 {
+    margin-bottom: 0;
+}
+
+.raid-helper-heading span {
+    font-size: 13px;
+    color: #777;
+}
+
+.raid-helper-description {
+    margin: 12px 0 18px;
+    line-height: 1.6;
+}
+
+.raid-helper-participant-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.raid-helper-empty {
+    grid-column: 1 / -1;
+    padding: 20px;
+    border: 1px dashed #d7d3d0;
+    border-radius: 8px;
+    text-align: center;
+    color: #777;
+}
+
+.raid-helper-participant {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+    padding: 12px;
+    border: 1px solid #d7d3d0;
+    border-radius: 8px;
+    background: #fff;
+}
+
+.raid-helper-participant-select {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    width: 100%;
+    padding: 12px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: #f5f3f1;
+    color: #292427;
+    text-align: left;
+    cursor: pointer;
+}
+
+.raid-helper-participant-select:hover {
+    border-color: #bdacae;
+}
+
+.raid-helper-participant-select.selected {
+    border-color: #650c13;
+    background: #f8edef;
+}
+
+.raid-helper-participant-select strong {
+    font-size: 15px;
+}
+
+.raid-helper-participant-select span {
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.raid-helper-participant-select small {
+    color: #756c70;
+}
+
+.raid-helper-participant-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.raid-helper-participant-actions button {
+    padding: 6px 12px;
+    font-size: 12px;
+}
+
+/* ========================================
+   참가자 등록 및 수정
+======================================== */
+
+.raid-helper-participant-form {
+    margin-top: 20px;
+    padding: 18px;
+    border: 1px solid #d7d3d0;
+    border-radius: 8px;
+    background: #f8f7f5;
+}
+
+.raid-helper-participant-form h4 {
+    margin: 0 0 16px;
+}
+
+.raid-helper-participant-fields {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.raid-helper-participant-fields label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+.raid-helper-participant-fields input:not([type="checkbox"]),
+.raid-helper-participant-fields select {
+    width: 100%;
+}
+
+.raid-helper-name-field {
+    grid-column: 1 / -1;
+}
+
+.raid-helper-participant-fields .raid-helper-ability-check {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    align-self: end;
+    gap: 8px;
+    min-height: 40px;
+}
+
+.raid-helper-ability-check input {
+    width: auto;
+    margin: 0;
+}
+
+.raid-helper-form-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 18px;
+}
+
+/* ========================================
+   선택된 참가자
+======================================== */
+
+.raid-helper-selected {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding: 15px;
+    border: 1px solid #d7d3d0;
+    border-radius: 8px;
+    background: #f8f7f5;
+}
+
+.raid-helper-selected > div {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.raid-helper-selected strong {
+    font-size: 17px;
+    color: #650c13;
+}
+
+.raid-helper-selected span {
+    font-size: 13px;
+}
+
+.raid-helper-selected small {
+    color: #777;
+}
+
+.raid-helper-selected p {
+    margin: 0;
+}
+
+/* ========================================
+   반응형
+======================================== */
+
+@media (max-width: 640px) {
+    .raid-helper-card {
+        padding: 15px;
+    }
+
+    .raid-helper-participant-list {
+        grid-template-columns: 1fr;
+    }
+
+    .raid-helper-participant-fields {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .raid-helper-name-field {
+        grid-column: 1 / -1;
+    }
+}
