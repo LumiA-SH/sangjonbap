@@ -1,3 +1,4 @@
+import {enqueueSystemEvent} from '../mastodon-system/outbox.js';
 import {writeActionLog} from '../../shared/game.js';
 import {validateMasterInput,validateMasterState} from './master-service.js';
 import {adminTransaction,requireAdminRow,checkDuplicate,fail} from './transaction.js';
@@ -245,6 +246,9 @@ export function createAdminMasterRepository(pool) {
                     if(Object.hasOwn(patch,field))await c.query(`update public.item set ${field}=$2 where id=$1`,[savedId,patch[field]]);
                 }
                 const after=(await records(c,kind,savedId))[0];
+                if(kind==='areas'&&after.is_accessible){
+                    await enqueueSystemEvent(c,{type:'area_unlock',key:String(savedId),targetType:'AREA',targetId:savedId,values:{area:after.name}});
+                }
 
                 await writeActionLog(c,{
                     adminUserId:userId,

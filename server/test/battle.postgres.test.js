@@ -83,6 +83,13 @@ name: 'DEV isolated monster', description: null, image_url: null, max_hp: 100, a
             areas: [{area_id: area.id, weight: 1}], drops: [{item_id: item.id, drop_rate: 100, min_quantity: 1, max_quantity: 1, is_ingredient: true, ingredient_role:'BASE'}]
 };
         let monster = await masters.saveAdminMonster(admin.id, null, {...monsterBody, requestKey: randomUUID()});
+        await t.test('monster accepts ingredients only and rejects forged non-material ingredients', async () => {
+            const original=await masters.getAdminMonster(monster.id);
+            for(const drop of [{...monsterBody.drops[0],is_ingredient:false,ingredient_role:null},{...monsterBody.drops[0],item_id:pack.id}]) {
+                await assert.rejects(async()=>masters.saveAdminMonster(admin.id,monster.id,{...monsterBody,drops:[drop],requestKey:randomUUID()}),e=>e.code==='INVALID_ADMIN_INPUT');
+                assert.deepEqual(await masters.getAdminMonster(monster.id),original);
+            }
+        });
         const investigation = createInvestigationRepository(pool, {random: () => 0, battleRepository: repo});
         const start = async () => {
             await pool.query("update public.battle set battle_status='DEFEAT' where character_id=$1 and battle_status='ACTIVE'", [character.id]);

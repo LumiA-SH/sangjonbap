@@ -35,7 +35,11 @@ export function diceRoutes(repository, sessions) {
             throw new AppError(501, 'DICE_UNAVAILABLE', '주사위 기능을 사용할 수 없습니다.');
         }
 
-        ok(res, {roll: await repository.rollDice(req.auth.user.id, body.requestKey.toLowerCase())});
+        const requestKey=body.requestKey.toLowerCase();
+        const roll=await repository.rollDice(req.auth.user.id,requestKey);
+        // rollDice has committed and released its transaction before the independent sender starts.
+        if(roll.postStatus==='PENDING')repository.scheduleDicePost?.(requestKey);
+        ok(res,{roll});
     });
 
     return router;

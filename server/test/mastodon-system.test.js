@@ -86,3 +86,49 @@ test('batch stops on 429, uncertain delivery or HOLD; keeps prior successes',asy
 test('slow delivery cannot start another request after batch time budget',async()=>{
  let time=0,calls=0;const result=await runSystemPostBatch(async()=>{calls++;time+=30000;return {state:'SENT'};},{sleep:async ms=>{time+=ms;},now:()=>time});assert.equal(calls,1);assert.equal(result.sent,1);
 });
+
+
+import {createDicePostJob,createDicePostWakeup} from '../src/modules/mastodon-system/jobs.js';
+test('dice wakes the existing sender immediately and only waits when the claim is busy',async()=>{
+ const waits=[],keys=[];let sends=0;
+ const pool={query:async(sql,params)=>{keys.push(params[0]);return {rows:[{status:'PENDING',delivery_enabled:true,lease_token:null}]};}};
+ const send=async()=>++sends===1?{state:'IDLE'}:{state:'SENT'};
+ const result=await createDicePostJob(pool,{MASTODON_SYSTEM_POSTING_ENABLED:'true'},{send,sleep:async ms=>waits.push(ms)})('request-key');
+ assert.equal(result.state,'SENT');assert.equal(sends,2);assert.deepEqual(waits,[5100]);assert.equal(new Set(keys).size,1);
+ for(const failure of ['RATE_LIMITED','DELIVERY_UNCERTAIN']){sends=0;waits.length=0;const result=await createDicePostJob(pool,{MASTODON_SYSTEM_POSTING_ENABLED:'true'},{send:async()=>{sends++;return {state:'FAILED',reason:failure};},sleep:async ms=>waits.push(ms)})('request-key');assert.equal(result.reason,failure);assert.equal(sends,1);assert.equal(waits.length,0);}
+});
+test('dice wakeup preserves HOLD and skips completed or leased events',async()=>{
+ const fail=()=>assert.fail('must not send');assert.equal((await createDicePostJob({query:fail},{},{send:fail})('key')).state,'HOLD');
+ for(const row of [null,{status:'SENT'},{status:'FAILED'},{status:'PENDING',delivery_enabled:false},{status:'PENDING',delivery_enabled:true,lease_token:'busy'}])assert.equal((await createDicePostJob({query:async()=>({rows:row?[row]:[]})},{MASTODON_SYSTEM_POSTING_ENABLED:'true'},{send:fail})('key')).state,'IDLE');
+});
+test('background dice wakeup does not await delivery, deduplicates and isolates failure',async()=>{
+ const tasks=[];let release,calls=0;
+ const wake=createDicePostWakeup(()=>{calls++;return new Promise(resolve=>{release=resolve;});},p=>tasks.push(p));
+ assert.equal(wake('key'),undefined);wake('key');await Promise.resolve();assert.equal(tasks.length,1);assert.equal(calls,1);release({state:'SENT'});await tasks[0];
+ createDicePostWakeup(async()=>{throw Error('private failure');},p=>tasks.push(p))('other');await tasks[1];
+ createDicePostWakeup(()=>assert.fail('no runtime'),undefined)('not-started');
+});
+
+
+import {flushSystemPostWakeups,systemPostKey,templateVariables} from '../src/modules/mastodon-system/outbox.js';
+import {beginGameTransaction,commitGameTransaction,rollbackGameTransaction} from '../src/shared/daily-gate.js';
+test('all supported event wakeups run only after commit; rollback, duplicate and disabled policies never wake',async()=>{
+ for(const type of events){
+  let enabled=true,inserted=true,committed=false,failCommit=false;const wakes=[];
+  const client={wakeSystemPosts:keys=>{assert.equal(committed,true);wakes.push(...keys);},async query(sql){
+   if(sql==='begin')committed=false;
+   if(sql==='commit'){if(failCommit)throw Error('commit failed');committed=true;}
+   if(sql.includes('system_config'))return {rows:[{config_value:{events:{[type]:{enabled,visibility:'private',retryEnabled:false}}}}]};
+   if(sql.startsWith('insert into public.mastodon_event'))return {rowCount:inserted?1:0,rows:[]};
+   if(sql.includes('daily_reset_state'))return {rows:[{start_date:null,last_completed_date:null}]};
+   return {rows:[{day:'2026-11-16'}]};
+  }};
+  const values=Object.fromEntries(templateVariables[type].map(key=>[key,'값']));
+  const event={type,key:'committed-event',values};
+  await beginGameTransaction(client);await enqueueSystemEvent(client,event);assert.equal(wakes.length,0);await commitGameTransaction(client);assert.deepEqual(wakes,[systemPostKey(type,event.key)]);flushSystemPostWakeups(client);assert.equal(wakes.length,1);
+  await beginGameTransaction(client);await enqueueSystemEvent(client,{...event,key:'rollback'});await rollbackGameTransaction(client);flushSystemPostWakeups(client);assert.equal(wakes.length,1);
+  await beginGameTransaction(client);await enqueueSystemEvent(client,{...event,key:'failed-commit'});failCommit=true;await assert.rejects(commitGameTransaction(client));await rollbackGameTransaction(client);failCommit=false;flushSystemPostWakeups(client);assert.equal(wakes.length,1);
+  inserted=false;await beginGameTransaction(client);await enqueueSystemEvent(client,event);await commitGameTransaction(client);assert.equal(wakes.length,1);
+  enabled=false;inserted=true;await beginGameTransaction(client);await enqueueSystemEvent(client,event);await commitGameTransaction(client);assert.equal(wakes.length,1);
+ }
+});

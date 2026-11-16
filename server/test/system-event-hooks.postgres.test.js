@@ -1,3 +1,5 @@
+import {createAdminMasterRepository} from '../src/modules/admin/master-repository.js';
+import {withSystemPostWakeup} from '../src/modules/mastodon-system/jobs.js';
 import {createBattleRepository} from '../src/modules/battle/repository.js';
 import {sendSystemPost} from '../src/modules/mastodon-system/sender.js';
 import {createSystemOutbox} from '../src/modules/mastodon-system/outbox.js';
@@ -21,7 +23,8 @@ test('real game event hooks commit and rollback together', {skip: !process.env.I
     const raw = createIsolatedPool(), schema = 'event_hooks_' + randomUUID().replaceAll('-', ''); let failOutbox = false;
     const rewrite = q => q.replaceAll('public.', schema + '.');
     const query = (c, q, p) => {if (failOutbox && q.includes('insert into public.mastodon_event')) throw Error('outbox fault'); return c.query(rewrite(q), p);};
-    const pool = {query: (q, p) => query(raw, q, p), async connect() {const c = await raw.connect(); return {query: (q, p) => query(c, q, p), release: () => c.release()};} };
+    const basePool = {query: (q, p) => query(raw, q, p), async connect() {const c = await raw.connect(); return {query: (q, p) => query(c, q, p), release: () => c.release()};} };
+    const wakeups=[];const pool=withSystemPostWakeup(basePool,keys=>wakeups.push(...keys));
     await raw.query(`create schema ${schema}`);
     try {
         const tables = (await raw.query("select tablename from pg_tables where schemaname='public'")).rows;
@@ -50,8 +53,9 @@ test('real game event hooks commit and rollback together', {skip: !process.env.I
         await pool.query('insert into public.gacha_reward(gacha_id,item_id,quantity,weight,max_stock,remaining_stock) values($1,$2,1,1,4,4)', [g.id, item.id]);
         const gacha = createGachaRepository(pool), key = randomUUID(); await gacha.drawGacha(a.u.id, g.id, key); assert.equal(await count('gacha'), 1);
         await assert.rejects(gacha.drawGacha(a.u.id, g.id, key)); assert.equal(await count('gacha'), 1);
+        const wakeBeforeFailure=wakeups.length;
         const before = (await pool.query('select currency from public.game_character where id=$1', [a.c.id])).rows[0]; failOutbox = true;
-        await assert.rejects(gacha.drawGacha(a.u.id, g.id, randomUUID()), /outbox fault/); failOutbox = false;
+        await assert.rejects(gacha.drawGacha(a.u.id, g.id, randomUUID()), /outbox fault/); failOutbox = false;assert.equal(wakeups.length,wakeBeforeFailure);
         assert.deepEqual((await pool.query('select currency from public.game_character where id=$1', [a.c.id])).rows[0], before); assert.equal(await count('gacha'), 1);
         const food = (await pool.query("insert into public.item(name,category) values('실패 음식','FOOD') returning *")).rows[0];
         await pool.query("insert into public.food_config(item_id,is_failure,rp_effect_text,rp_effect_texts) values($1,true,'기존 문구',ARRAY['선택된 RP','다른 RP'])", [food.id]);
@@ -95,5 +99,12 @@ test('real game event hooks commit and rollback together', {skip: !process.env.I
         const beforeFailure=(await pool.query('select currency,ap,hp from public.game_character where id=$1',[a.c.id])).rows[0];let requests=0;
         const result=await sendSystemPost(createSystemOutbox(pool),{MASTODON_SYSTEM_POSTING_ENABLED:'true',MASTODON_SYSTEM_ACCESS_TOKEN:'fixture',MASTODON_SYSTEM_ACCOUNT_ID:'123'},{fetcher:async()=>++requests===1?new Response('{"id":"123","username":"System"}'):new Response('',{status:500})});
         assert.equal(result.state,'FAILED');assert.deepEqual((await pool.query('select currency,ap,hp from public.game_character where id=$1',[a.c.id])).rows[0],beforeFailure);
+        const masters=createAdminMasterRepository(pool),areaBefore=await count('area_unlock');
+        const opened=await masters.saveAdminMaster(a.u.id,'areas',null,{name:'즉시 공개',is_open:true,encounter_rate:0},randomUUID());assert.equal(await count('area_unlock'),areaBefore+1);
+        await masters.saveAdminMaster(a.u.id,'areas',opened.id,{description:'편집'},randomUUID());assert.equal(await count('area_unlock'),areaBefore+1);
+        await masters.saveAdminMaster(a.u.id,'areas',null,{name:'예약 공개',is_open:true,unlock_at:new Date(Date.now()+86400000).toISOString(),encounter_rate:0},randomUUID());assert.equal(await count('area_unlock'),areaBefore+1);
+        const notified=(await pool.query('select event_type from public.mastodon_event where dedupe_key=any($1::text[])',[wakeups])).rows.map(r=>r.event_type);
+        for(const type of ['revive','gacha','failure_food','dice','monster_discovery','area_unlock'])assert.ok(notified.includes(type),'missing committed wake: '+type);
+        assert.equal(new Set(wakeups).size,wakeups.length);
     } finally {await raw.query(`drop schema ${schema} cascade`); await raw.end();}
 });

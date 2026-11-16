@@ -269,10 +269,10 @@ export default function BattleAdminPanel({onDenied, recordId, onOpen}) {
         return {
           ...r,
           ingredient_role: role,
-          is_ingredient: role !== null,
+          is_ingredient: true,
           drop_rate: role === 'BASE' ? 100 : r.drop_rate,
-          min_quantity: role !== null ? 1 : r.min_quantity,
-          max_quantity: role !== null ? 1 : r.max_quantity
+          min_quantity: 1,
+          max_quantity: 1
         };
       })
     }));
@@ -300,8 +300,8 @@ export default function BattleAdminPanel({onDenied, recordId, onOpen}) {
         drop_rate: 100,
         min_quantity: 1,
         max_quantity: 1,
-        is_ingredient: false,
-        ingredient_role: null
+        is_ingredient: true,
+        ingredient_role: draft.drops.some(d => d.ingredient_role === 'BASE') ? 'BONUS' : 'BASE'
       }
     ]);
   }
@@ -500,7 +500,7 @@ export default function BattleAdminPanel({onDenied, recordId, onOpen}) {
                 <p>활성 확률 합계: {actionProbability}%</p><button type="button" onClick={()=>setActionsOpen(false)}>편집 완료</button><p>마물 저장을 눌러야 변경 사항이 반영됩니다.</p></dialog>
 
                 </section><section className="admin-editor-section"><h4>마물 보상</h4>
-                <p>기본 식재료는 1개 확정 지급합니다. 추가 식재료는 확률 합계 100% 이내에서 최대 1개만 지급하며, 일반 아이템은 별도로 추첨합니다.</p>
+                <p>기본 식재료는 1개 확정 지급합니다. 추가 식재료는 확률 합계 100% 이내에서 최대 1개만 지급합니다. 마물 보상에는 재료만 등록할 수 있습니다.</p>
 
                 {draft.drops.map((d, i) => (
                     <fieldset key={i}>
@@ -508,19 +508,20 @@ export default function BattleAdminPanel({onDenied, recordId, onOpen}) {
 
                       <label>
                         보상 구분
-                        <select disabled={busy} value={d.ingredient_role ?? 'ITEM'}
+                        <select disabled={busy} value={d.ingredient_role ?? ''}
                                 onChange={e => changeDropRole(
                                     i,
-                                    e.target.value === 'ITEM' ? null : e.target.value
+                                    e.target.value
                                 )}>
-                          <option value="ITEM">일반 아이템</option>
+                          {!d.ingredient_role && <option value="" disabled>식재료 구분을 선택하세요</option>}
                           <option value="BASE">기본 식재료 (1개 확정)</option>
                           <option value="BONUS">추가 식재료 (확률 지급)</option>
                         </select>
                       </label>
 
                       <ItemPicker
-                          label={d.ingredient_role ? '식재료' : '드롭 아이템'}
+                          label="식재료"
+                          type="material"
                           value={d.item_id}
                           disabled={busy}
                           onDenied={onDenied}
@@ -539,14 +540,7 @@ export default function BattleAdminPanel({onDenied, recordId, onOpen}) {
                           )
                       )}
 
-                      {d.ingredient_role === null ? (
-                          <>
-                            {number('최소 수량', d.min_quantity, v => rowChange('drops', i, 'min_quantity', v))}
-                            {number('최대 수량', d.max_quantity, v => rowChange('drops', i, 'max_quantity', v))}
-                          </>
-                      ) : d.ingredient_role === 'BONUS' && (
-                          <p>지급 수량: 1개</p>
-                      )}
+                      {d.ingredient_role === 'BONUS' && <p>지급 수량: 1개</p>}
 
                       <button type="button" disabled={busy}
                               onClick={() => remove('drops', i)}>

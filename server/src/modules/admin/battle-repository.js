@@ -66,7 +66,7 @@ export function validateMonster(body) {
         }
 
         const role=d.ingredient_role??null;
-        if (role!==null&&!['BASE','BONUS'].includes(role)) invalid('식재료 구분은 기본/추가/일반 아이템 중 하나여야 합니다.');
+        if (!['BASE','BONUS'].includes(role)) invalid('마물 보상은 기본/추가 식재료만 등록할 수 있습니다.');
         if (d.is_ingredient!==(role!==null)) invalid('식재료 구분과 드롭 설정이 일치하지 않습니다.');
 
         if (role!==null&&(d.min_quantity!==1||d.max_quantity!==1)) invalid('식재료는 정확히 1개만 지급할 수 있습니다.');
@@ -180,9 +180,9 @@ export function createAdminBattleRepository(pool) {
 
                 const sorted=body.drops.sort((a,b)=>BigInt(a.item_id)<BigInt(b.item_id)?-1:BigInt(a.item_id)>BigInt(b.item_id)?1:0);
                 for (const d of sorted) {
-                    const item=(await c.query('select id,category from public.item where id=$1 for share',[d.item_id])).rows[0];
+                    const item=(await c.query('select id,category,exists(select 1 from public.food_config f where f.item_id=$1) as is_food from public.item where id=$1 for share',[d.item_id])).rows[0];
                     if (!item) fail('ITEM_NOT_FOUND','아이템이 없습니다.',404);
-                    if (d.ingredient_role!=null && item.category!=='MATERIAL') invalid('식재료는 재료(MATERIAL) 아이템에서 선택하세요.');
+                    if (item.category!=='MATERIAL'||item.is_food) invalid('식재료는 재료(MATERIAL) 아이템에서 선택하세요.');
                 }
 
                 const values=fields.map(k=>body[k]??null);

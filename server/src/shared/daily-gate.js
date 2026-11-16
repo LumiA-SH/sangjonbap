@@ -1,3 +1,4 @@
+import {discardSystemPostWakeups,flushSystemPostWakeups} from '../modules/mastodon-system/outbox.js';
 import {AppError} from './http.js';
 import {nextPendingDate} from '../modules/daily/date.js';
 
@@ -7,12 +8,13 @@ export function gameTransactionDay(client) { return days.get(client) || null; }
 
 export async function rollbackGameTransaction(client) {
     try { await client.query('rollback'); }
-    finally { days.delete(client); }
+    finally { days.delete(client);discardSystemPostWakeups(client); }
 }
 
 // This is the first lock in a game transaction. Recovery takes the same singleton
 // FOR UPDATE, before any character/battle locks. Readers never upgrade this lock.
 export async function beginGameTransaction(client) {
+    discardSystemPostWakeups(client);
     days.delete(client);
     await client.query('begin');
     await client.query("set local lock_timeout = '5s'");
@@ -37,4 +39,5 @@ export async function commitGameTransaction(client) {
     // Recovery cannot pass this transaction's shared lock until commit/rollback.
     await client.query('commit');
     days.delete(client);
+    flushSystemPostWakeups(client);
 }

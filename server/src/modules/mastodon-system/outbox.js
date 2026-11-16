@@ -14,6 +14,14 @@ export function messageFor(type,values,template=defaults[type]) {
   return safeText(message);
 }
 
+export const systemPostKey=(type,key)=>createHash('sha256').update(type+':'+key).digest('hex');
+const committedPosts=new WeakMap();
+export function discardSystemPostWakeups(client){committedPosts.delete(client);}
+export function flushSystemPostWakeups(client){
+ const keys=committedPosts.get(client);committedPosts.delete(client);
+ if(keys?.size)try{client.wakeSystemPosts?.([...keys]);}catch{/* A wakeup failure must not change a committed game result. Cron recovers the queue. */}
+}
+
 // Must receive the caller's game transaction, never a separate pool connection.
 // Disabled/unconfigured policies create no events. Snapshot text and visibility.
 export async function enqueueSystemEvent(client,{type,key,characterId=null,targetType=null,targetId=null,values}) {
@@ -25,14 +33,18 @@ export async function enqueueSystemEvent(client,{type,key,characterId=null,targe
   const message=messageFor(type,values,policy.template||undefined);
   const retry=policy.retryEnabled===true;
   if(retry&&(!Number.isInteger(policy.maxAttempts)||policy.maxAttempts<1||!Number.isInteger(policy.retryMinutes)||policy.retryMinutes<1))throw Error('INVALID_POST_RETRY');
-  const dedupe=createHash('sha256').update(type+':'+key).digest('hex');
-  await client.query(`insert into public.mastodon_event(event_type,character_id,message,dedupe_key,visibility,delivery_enabled,auto_retry,max_attempts,retry_delay_seconds,target_type,target_id)
-    values($1,$2,$3,$4,$5,true,$6,$7,$8,$9,$10) on conflict(dedupe_key) do nothing`,
+  const dedupe=systemPostKey(type,key);
+  const inserted=await client.query(`insert into public.mastodon_event(event_type,character_id,message,dedupe_key,visibility,delivery_enabled,auto_retry,max_attempts,retry_delay_seconds,target_type,target_id)
+    values($1,$2,$3,$4,$5,true,$6,$7,$8,$9,$10) on conflict(dedupe_key) do nothing returning dedupe_key`,
     [type,characterId,message,dedupe,policy.visibility,retry,retry?Math.min(3,policy.maxAttempts):1,retry?Math.min(604800,Math.max(300,policy.retryMinutes*60)):300,targetType,targetId]);
+  if(inserted.rowCount&&typeof client.wakeSystemPosts==='function'){
+   if(!committedPosts.has(client))committedPosts.set(client,new Set());
+   committedPosts.get(client).add(dedupe);
+  }
   return true;
 }
 
-export function createSystemOutbox(pool) {
+export function createSystemOutbox(pool,{dedupeKey=null}={}) {
   return {
     async claim(){
       const c=await pool.connect();
@@ -50,8 +62,9 @@ export function createSystemOutbox(pool) {
         const result=await c.query(`select * from public.mastodon_event where delivery_enabled and status in ('PENDING','FAILED')
           and exists(select 1 from public.system_config policy where policy.config_key='operating_announcements'
             and policy.config_value->'events'->mastodon_event.event_type->>'enabled'='true')
+          and ($1::text is null or dedupe_key=$1)
           and retry_count<max_attempts and lease_token is null and (next_attempt_at is null or next_attempt_at<=clock_timestamp())
-          order by created_at,id for update skip locked limit 1`);
+          order by created_at,id for update skip locked limit 1`,[dedupeKey]);
         const row=result.rows[0];
         if(row){row.lease_token=randomUUID();await c.query(`update public.mastodon_event set lease_token=$2,lease_until=clock_timestamp()+interval '60 seconds',
           attempt_at=clock_timestamp(),retry_count=retry_count+1 where id=$1`,[row.id,row.lease_token]);}

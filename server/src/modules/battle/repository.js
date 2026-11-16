@@ -100,9 +100,11 @@ export function createBattleRepository(pool,{random=randomUnit}={}) {
         const declaration=chooseMonsterAction(actions,random);
 
         const drops=(await client.query(
-            `select * from public.monster_drop
-             where monster_id=$1 and recipe_id is null
-             order by item_id,id`,
+            `select d.* from public.monster_drop d join public.item i on i.id=d.item_id
+             where d.monster_id=$1 and d.recipe_id is null
+               and d.is_ingredient and d.ingredient_role in ('BASE','BONUS') and i.category='MATERIAL'
+               and not exists(select 1 from public.food_config f where f.item_id=d.item_id)
+             order by d.item_id,d.id`,
             [monster.id]
         )).rows;
 
@@ -290,7 +292,7 @@ export function createBattleRepository(pool,{random=randomUnit}={}) {
 
                 for (const itemKey of itemIds) {
                     items.set(itemKey,(await client.query(
-                        'select * from public.item where id=$1 for update',
+                        'select *,exists(select 1 from public.food_config f where f.item_id=$1) as is_food from public.item where id=$1 for update',
                         [itemKey]
                     )).rows[0]);
                 }
@@ -355,43 +357,10 @@ export function createBattleRepository(pool,{random=randomUnit}={}) {
 
                     if (discoveredRecipe) rewards.push(discoveredRecipe);
 
-                    for (const drop of battle.snapshot.drops) {
-                        if (drop.recipe_id!=null||
-                            drop.ingredient_role!=null||
-                            drop.is_ingredient) {
-                            continue;
-                        }
-
-                        if (sampleUnit(random)*100>=Number(drop.drop_rate)) {
-                            continue;
-                        }
-
-                        const item=items.get(String(drop.item_id));
-
-                        if (!item) {
-                            fail('BATTLE_REWARD_UNAVAILABLE','스냅샷 보상 아이템이 없습니다.');
-                        }
-
-                        const quantity=drop.min_quantity+
-                            Math.floor(sampleUnit(random)*
-                                (drop.max_quantity-drop.min_quantity+1));
-
-                        await changeInventoryQuantity(
-                            client,before.id,item.id,quantity
-                        );
-
-                        rewards.push({
-                            itemId:item.id,
-                            name:item.name,
-                            quantity,
-                            isIngredient:false
-                        });
-                    }
-
                     const base=guaranteedIngredient(battle.snapshot.drops);
                     const baseItem=items.get(String(base.drop.item_id));
 
-                    if (!baseItem) {
+                    if (!baseItem || baseItem.category!=='MATERIAL' || baseItem.is_food) {
                         fail('BATTLE_REWARD_UNAVAILABLE','기본 식재료가 없습니다.');
                     }
 
@@ -415,7 +384,7 @@ export function createBattleRepository(pool,{random=randomUnit}={}) {
                     if (bonus) {
                         const bonusItem=items.get(String(bonus.drop.item_id));
 
-                        if (!bonusItem) {
+                        if (!bonusItem || bonusItem.category!=='MATERIAL' || bonusItem.is_food) {
                             fail('BATTLE_REWARD_UNAVAILABLE','추가 식재료가 없습니다.');
                         }
 

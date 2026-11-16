@@ -155,7 +155,8 @@ test('dice routes preserve test participation, session identity and Origin check
  let user={id:'306',role:'ADMIN',is_active:true,character_id:'9'},calls=0;
  runtime.repository.getOAuthSession=async()=>user;
  runtime.repository.getLatestDice=async id=>{assert.equal(id,user.id);return null;};
- runtime.repository.rollDice=async(id,key)=>{assert.equal(id,user.id);calls++;return {result:50};};
+ let wakes=0;runtime.repository.scheduleDicePost=()=>{wakes++;};
+ runtime.repository.rollDice=async(id,key)=>{assert.equal(id,user.id);calls++;return {result:50,postStatus:'PENDING'};};
  const server=runtime.app.listen(0,'127.0.0.1');await new Promise(r=>server.once('listening',r));t.after(()=>new Promise(r=>server.close(r)));
  const base='http://127.0.0.1:'+server.address().port;
  const headers={'x-sangjonbap-proxy':env.EDGE_PROXY_SECRET,Origin:env.FRONTEND_ORIGIN,Cookie:'__Host-sangjonbap-session='+'b'.repeat(64),'Content-Type':'application/json'};
@@ -169,5 +170,5 @@ test('dice routes preserve test participation, session identity and Origin check
  user={...user,role:'USER'};assert.equal((await call('/api/dice/roll',post)).status,403);
  user={...user,game_test_enabled:true};assert.equal((await call('/api/dice/roll',post)).status,200);
  user={...user,character_id:null};assert.equal((await call('/api/dice/roll',post)).status,403);
- assert.equal(calls,2);
+ assert.equal(calls,2);assert.equal(wakes,2);
 });

@@ -23,7 +23,7 @@ const dailyGateResult = dailyGateFixture(raw); if (dailyGateResult) return daily
             if (sql.startsWith('select id from public.action_log')) return rows(state.logs.filter(l => l.key === p[0]));
             if (sql.startsWith('select * from public.battle')) return rows([structuredClone(state.battle)]);
             if (sql.startsWith('update public.battle set battle_status')) {if (!expired) return rows([]); state.battle = {...state.battle, battle_status: 'DEFEAT', end_reason: 'TIMEOUT'}; return rows([state.battle]);}
-            if (sql.startsWith('select * from public.item')) return rows([{id: '9', name: '식재료', is_active: true}]);
+            if (sql.startsWith('select *,exists(select 1 from public.food_config')) return rows([{id: '9', name: '식재료', category: 'MATERIAL', is_active: true}]);
             if (sql.startsWith('update public.game_character')) {['hp', 'blood', 'ap', 'currency', 'status', 'death_count'].forEach((k, i) => state.character[k] = p[i]); return rows([{...state.character}]);}
             if (sql.startsWith('select id,quantity from public.inventory')) return rows(state.inventory ? [{id: '2', quantity: state.inventory}] : []);
             if (sql.startsWith('insert into public.inventory')) {state.inventory = p[2]; return rows([]);} if (sql.startsWith('update public.inventory')) {state.inventory = p[0]; return rows([]);}
@@ -58,4 +58,10 @@ test('defeat, flee and timeout grant no victory rewards', async () => {
 });
 test('stale turn rejects before any settlement', async () => {
     const f = fixture(), saved = structuredClone(f.state()); await assert.rejects(f.repo.commandBattle('u', '3', {requestKey: randomUUID(), turnNo: 2, action: 'ATTACK'}), e => e.code === 'STALE_BATTLE_TURN'); assert.deepEqual(f.state(), saved);
+});
+
+test('legacy ordinary item drops never grant items on victory', async () => {
+ const f=fixture(); f.state().battle.snapshot.drops.push({item_id:'10',drop_rate:100,min_quantity:5,max_quantity:5,is_ingredient:false,ingredient_role:null});
+ const r=await f.repo.commandBattle('u','3',{requestKey:randomUUID(),turnNo:1,action:'ATTACK'});
+ assert.equal(r.rewards.length,1);assert.equal(r.rewards[0].isIngredient,true);assert.equal(f.state().inventory,1);
 });

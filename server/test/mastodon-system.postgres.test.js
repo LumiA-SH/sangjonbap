@@ -59,3 +59,19 @@ test('feed signal commits only sent transitions, preserves game data and rejects
   assert.equal((await query('select count(*)::integer as n from public.mastodon_event')).rows[0].n,1);
  }finally{await raw.query('drop schema if exists '+schema+' cascade');await raw.end();}
 });
+
+
+test('immediate dice claim selects only its event and shares the Cron throttle and lease', {skip:!process.env.ISOLATED_PG_CONFIG}, async()=>{
+ const raw=createIsolatedPool(),schema='dice_delivery_'+randomUUID().replaceAll('-',''),rewrite=q=>q.replaceAll('public.',schema+'.');
+ const pool={query:(q,p)=>raw.query(rewrite(q),p),async connect(){const c=await raw.connect();return {query:(q,p)=>c.query(rewrite(q),p),release:()=>c.release()};}};
+ try{
+  await raw.query('create schema '+schema);await raw.query('create table '+schema+'.mastodon_event(like public.mastodon_event including all);create table '+schema+'.system_config(like public.system_config including all)');
+  await pool.query(fs.readFileSync(new URL('../../supabase/migrations/20261115110543_mastodon_delivery.sql',import.meta.url),'utf8'));
+  const policy={enabled:true,visibility:'private',retryEnabled:false};await pool.query("insert into public.system_config(config_key,config_value) values('operating_announcements',$1)",[JSON.stringify({events:{death:policy,dice:policy}})]);
+  await enqueueSystemEvent(pool,{type:'death',key:'older',values:{character:'fixture'}});await enqueueSystemEvent(pool,{type:'dice',key:'current',values:{character:'fixture',result:'42'}});
+  const key=(await pool.query("select dedupe_key from public.mastodon_event where event_type='dice'")).rows[0].dedupe_key;
+  const targeted=createSystemOutbox(pool,{dedupeKey:key}),general=createSystemOutbox(pool);
+  const row=await targeted.claim();assert.equal(row.event_type,'dice');assert.equal(await general.claim(),null);assert.equal(await targeted.claim(),null);
+  await targeted.finish(row,{remoteId:'987'});await pool.query("update public.mastodon_event set attempt_at=clock_timestamp()-interval '10 seconds'");assert.equal(await targeted.claim(),null);assert.equal((await general.claim()).event_type,'death');
+ }finally{await raw.query('drop schema if exists '+schema+' cascade');await raw.end();}
+});
