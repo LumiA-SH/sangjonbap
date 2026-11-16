@@ -109,7 +109,7 @@ test('food detail name is first and save preserves linked item and RP',async()=>
 test('item detail sections preserve editing and keep deletion in the heading',async()=>{
  const record={id:'71',name:'긴 이름 아이템',category:'MATERIAL'};api.mockResolvedValue({record});
  await act(async()=>root.render(<Editor kind="items" record={record} onSaved={jest.fn()} onDenied={jest.fn()} deleteControl={<button type="button">삭제</button>}/>));
- expect([...div.querySelectorAll('.admin-editor-section h4')].map(x=>x.textContent)).toEqual(['아이템 기본 정보','사용 · 이동 설정','아이템 효과']);
+ expect([...div.querySelectorAll('.admin-editor-section h4')].map(x=>x.textContent)).toEqual(['아이템 기본 정보','사용 및 운영 설정']);
  expect(div.querySelector('.admin-editor-heading button').textContent).toBe('삭제');
  const name=div.querySelector('.admin-editor-section input');expect(name.value).toBe('긴 이름 아이템');
  await act(async()=>Simulate.change(name,{target:{value:'변경 아이템'}}));await act(async()=>Simulate.submit(div.querySelector('form')));
@@ -243,11 +243,14 @@ test('food creation needs only food fields and legacy RP has one editable field'
  api.mockImplementation(async(path,options)=>options?{record:{item_id:'91'}}:{records:[],nextAfter:null});
  await act(async()=>root.render(<MasterEditor kind="foods" record={{name:'실패 음식',is_failure:true,rp_effect_text:'기존 문구'}} onSaved={jest.fn()} onDenied={jest.fn()} onBusy={jest.fn()}/>));
  expect(div.textContent).not.toContain('연결 아이템 선택');
- expect(div.querySelectorAll('textarea')).toHaveLength(1);
- expect(div.querySelector('textarea').value).toBe('기존 문구');
+ const rp=[...div.querySelectorAll('label')].find(l=>l.textContent.includes('RP')&&l.querySelector('textarea'));
+ expect(rp.querySelector('textarea').value).toBe('기존 문구');
+ expect(div.querySelectorAll('textarea')).toHaveLength(2);
+ const description=[...div.querySelectorAll('label')].find(l=>l.textContent.trim()==='설명');
+ await act(async()=>Simulate.change(description.querySelector('textarea'),{target:{value:'음식 설명'}}));
  await act(async()=>Simulate.submit(div.querySelector('form')));
  const body=api.mock.calls.find(([,o])=>o?.method)[1].body;
- expect(body.item_id).toBeUndefined();expect(body.rp_effect_texts).toEqual(['기존 문구']);expect(body.rp_effect_text).toBeNull();
+ expect(body.item_id).toBeUndefined();expect(body.rp_effect_texts).toEqual(['기존 문구']);expect(body.rp_effect_text).toBeNull();expect(body.description).toBe('음식 설명');
 });
 
 test('clue editor permits no area and separates manual publication from discovery',async()=>{
@@ -380,4 +383,29 @@ test('gacha table saves configured quantity and fixed weight with stock kept sep
  await act(async()=>Simulate.submit(div.querySelector('form')));
  const call=api.mock.calls.find(([,options])=>options?.method==='PATCH');
  expect(call[1].body.rewards[0]).toMatchObject({quantity:3,weight:7,max_stock:5,remaining_stock:3});expect(saved).toHaveBeenCalled();
+});
+
+test('reference item picker opens a dialog and closes after choosing without submitting the parent',async()=>{
+ const change=jest.fn();api.mockResolvedValue({records:[{id:'9',name:'재료',category:'MATERIAL',is_active:true}]});
+ await act(async()=>root.render(<ItemPicker onChange={change}/>));
+ expect(div.querySelector('dialog').hasAttribute('open')).toBe(false);
+ await act(async()=>div.querySelector('.admin-picker-trigger').click());
+ expect(div.querySelector('dialog').hasAttribute('open')).toBe(true);
+ await act(async()=>[...div.querySelectorAll('dialog button')].find(b=>b.textContent.trim()==='선택').click());
+ expect(change).toHaveBeenCalledWith('9',expect.objectContaining({name:'재료'}));
+ expect(div.querySelector('dialog').hasAttribute('open')).toBe(false);
+ expect(api.mock.calls.some(([,o])=>o?.method)).toBe(false);
+});
+
+test('monster action dialog edits draft without saving until monster save',async()=>{
+ api.mockResolvedValue({records:[],settings:{}});
+ await act(async()=>root.render(<BattleAdminPanel recordId="new" onOpen={jest.fn()} onDenied={jest.fn()}/>));
+ await act(async()=>[...div.querySelectorAll('button')].find(b=>b.textContent.startsWith('전투 행동 관리')).click());
+ expect(div.querySelector('dialog').hasAttribute('open')).toBe(true);
+ await act(async()=>[...div.querySelectorAll('dialog button')].find(b=>b.textContent==='행동 추가').click());
+ expect(div.querySelectorAll('dialog fieldset')).toHaveLength(2);
+ await act(async()=>[...div.querySelectorAll('dialog button')].find(b=>b.textContent==='편집 완료').click());
+ expect(div.querySelector('dialog').hasAttribute('open')).toBe(false);
+ expect(div.querySelector('.admin-action-summary').textContent).toBeTruthy();
+ expect(api.mock.calls.some(([,o])=>o?.method)).toBe(false);
 });

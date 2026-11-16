@@ -72,6 +72,9 @@ export default function BattleAdminPanel({onDenied, recordId, onOpen}) {
   const [message, setMessage] = useState('');
   const pending = useRef(false);
   const [imageUploading, setImageUploading] = useState(false);
+  const actionDialog=useRef(null);
+  const [actionsOpen,setActionsOpen]=useState(false);
+  useEffect(()=>{if(actionsOpen){if(actionDialog.current?.showModal)actionDialog.current.showModal();else actionDialog.current?.setAttribute('open','');}else if(actionDialog.current?.close)actionDialog.current.close();else actionDialog.current?.removeAttribute('open');},[actionsOpen]);
 
   async function work(fn) {
     if (pending.current) return;
@@ -375,8 +378,8 @@ export default function BattleAdminPanel({onDenied, recordId, onOpen}) {
 
           </div><div className="admin-detail-pane">
           {(!onOpen || recordId === 'new' || id) && (
-              <form className="admin-form admin-structured-editor" onSubmit={saveMonster}>
-                <header className="admin-editor-heading admin-editor-heading-actions"><div><small>{id?'수정 / '+id:'신규 등록'}</small><h3>{draft.name||'신규 마물'}</h3></div><label className="admin-editor-toggle"><input type="checkbox" checked={draft.is_active} disabled={busy} onChange={e=>change('is_active',e.target.checked)}/>활성</label></header><section className="admin-editor-section"><h4>마물 기본 정보 · 능력치</h4><div className="admin-editor-grid">
+              <form className="admin-form admin-structured-editor" onSubmit={saveMonster} onInvalidCapture={e=>{if(actionDialog.current?.contains(e.target))setActionsOpen(true);}}>
+                <header className="admin-editor-heading admin-editor-heading-actions"><div><small>{id?'수정 / '+id:'신규 등록'}</small><h3>{draft.name||'신규 마물'}</h3></div><label className="admin-editor-toggle"><input type="checkbox" checked={draft.is_active} disabled={busy} onChange={e=>change('is_active',e.target.checked)}/>활성</label></header><section className="admin-editor-section"><h4>마물 기본 정보</h4><div className="admin-editor-grid">
 
                 {['name', 'description'].map(k => (
                     <label key={k}>
@@ -397,6 +400,7 @@ export default function BattleAdminPanel({onDenied, recordId, onOpen}) {
                     onUploadingChange={setImageUploading}
                 />
 
+                </div></section><section className="admin-editor-section"><h4>능력치</h4><div className="admin-editor-grid admin-stat-grid">
                 {['max_hp', 'atk', 'def', 'agi'].map(k => (
                     <div key={k}>
                       {number(k, draft[k], v => change(k, v))}
@@ -440,7 +444,10 @@ export default function BattleAdminPanel({onDenied, recordId, onOpen}) {
                   지역 추가
                 </button>
 
-                </section><section className="admin-editor-section"><h4>마물 행동</h4>
+                </section><section className="admin-editor-section"><h4>전투 행동</h4>
+                <button type="button" disabled={busy} onClick={()=>setActionsOpen(true)}>전투 행동 관리 ({draft.actions.length})</button>
+                <div className="admin-action-summary">{draft.actions.map((a,i)=><div key={i}><strong>{a.name||'이름 없는 행동'}</strong><span>{displayLabel(a.action_type)}</span><span>{a.is_active?`확률 ${a.probability}%`:'비활성'}</span></div>)}</div>
+                <dialog ref={actionDialog} className="admin-picker-dialog admin-action-dialog" aria-label="전투 행동 관리" onCancel={()=>setActionsOpen(false)} onClose={()=>setActionsOpen(false)}><header><strong>전투 행동 관리</strong><button type="button" onClick={()=>setActionsOpen(false)}>닫기</button></header>
 
                 {draft.actions.map((a, i) => (
                     <fieldset key={i}>
@@ -490,7 +497,7 @@ export default function BattleAdminPanel({onDenied, recordId, onOpen}) {
                   행동 추가
                 </button>
 
-                <p>활성 확률 합계: {actionProbability}%</p>
+                <p>활성 확률 합계: {actionProbability}%</p><button type="button" onClick={()=>setActionsOpen(false)}>편집 완료</button><p>마물 저장을 눌러야 변경 사항이 반영됩니다.</p></dialog>
 
                 </section><section className="admin-editor-section"><h4>마물 보상</h4>
                 <p>기본 식재료는 1개 확정 지급합니다. 추가 식재료는 확률 합계 100% 이내에서 최대 1개만 지급하며, 일반 아이템은 별도로 추첨합니다.</p>

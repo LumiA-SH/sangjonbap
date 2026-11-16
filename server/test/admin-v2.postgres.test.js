@@ -75,10 +75,16 @@ const c = await raw.connect(); return {
             const search = await repo.searchAdminUsers(u.id); assert.equal(search.length, 1); assert.equal(search[0].mastodon_account_id, undefined);
         });
         await t.test('food registration creates its item atomically without a selector', async () => {
-            const input={name:'automatic food',is_failure:true,rp_effect_texts:['RP']};
+            const input={name:'automatic food',description:'food description',is_active:false,is_failure:true,rp_effect_texts:['RP']};
             const k=key();
             const row=await repo.saveAdminMaster(a.id,'foods',null,input,k);
             assert.equal(row.name,input.name);
+            assert.equal(row.description,input.description);
+            assert.equal(row.is_active,false);
+            const changed=await save('foods',row.item_id,{description:'updated description',is_active:true});
+            assert.equal(changed.description,'updated description');
+            assert.equal(changed.is_active,true);
+            assert.equal(changed.item_id,row.item_id);
             assert.equal((await pool.query('select category from public.item where id=$1',[row.item_id])).rows[0].category,'FOOD');
             await rejects(repo.saveAdminMaster(a.id,'foods',null,input,k),'DUPLICATE_REQUEST');
             await rejects(save('foods',null,{name:'unauthorized food'},u.id),'ADMIN_REQUIRED');

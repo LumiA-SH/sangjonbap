@@ -27,6 +27,8 @@ const defaults = {
     is_active: true
   },
   foods: {
+    description: null,
+    is_active: true,
     image_url: null,
     grade_id: null,
     is_failure: false,
@@ -265,7 +267,7 @@ export function validateDraft(kind, draft) {
   return '';
 }
 
-export function MasterEditor({kind, record, onSaved, onDenied, onBusy}) {
+export function MasterEditor({kind, record, onSaved, onDenied, onBusy, deleteControl}) {
   const [draft, setDraft] = useState(() =>
       Object.fromEntries(
           Object.entries(defaults[kind]).map(([k, v]) => [k,
@@ -565,7 +567,7 @@ export function MasterEditor({kind, record, onSaved, onDenied, onBusy}) {
                   ? (record.name || <AdminReferenceName itemId={record.item_id} eager onDenied={onDenied}/>)
                   : (record.name || '등록 정보')
           ) : '새로 등록'}
-        </h3></div>{Object.hasOwn(defaults[kind], 'is_active')&&<label className="admin-editor-toggle"><input type="checkbox" checked={!!draft.is_active} disabled={busy} onChange={e=>change('is_active',e.target.checked)}/>활성</label>}</header>
+        </h3></div>{Object.hasOwn(defaults[kind], 'is_active')&&<label className="admin-editor-toggle"><input type="checkbox" checked={!!draft.is_active} disabled={busy} onChange={e=>change('is_active',e.target.checked)}/>활성</label>}{deleteControl}</header>
 
         {kind === 'areas' && (
             <>
@@ -575,11 +577,11 @@ export function MasterEditor({kind, record, onSaved, onDenied, onBusy}) {
         )}
 
         {kind === 'recipes' && (
-            <>
+            <details className="admin-editor-reference"><summary>요리 규칙 · 등록 안내</summary>
               <p>기본 성공률 80%, 성공 3개 / 실패 1개. 성공률·성공 수량 변경은 다음 요리부터 적용됩니다. 실패 재료는 max(1, floor(수량/2))입니다.</p>
               <p>상점 판매 가격 (등급별 자동 적용): {recipePrices[draft.discovery_grade] ? `${recipePrices[draft.discovery_grade]}코인` : '등급 선택 후 자동 결정'}</p>
               <p>완성 음식과 실패 요리는 먼저 아이템·음식 설정에 등록되어 있어야 합니다. 필요한 식재료는 아이템 메뉴에서 등록합니다.</p>
-            </>
+            </details>
         )}
 
         {kind === 'gachas' && (
@@ -597,23 +599,14 @@ export function MasterEditor({kind, record, onSaved, onDenied, onBusy}) {
         )}
 
         {kind === 'foods' ? <>
-          {section('음식 기본 정보', ['name', 'image_url'], '음식 이름 변경은 연결된 아이템의 이름에도 반영됩니다. 인벤토리·상점의 연결은 유지됩니다.')}
+          {section('음식 기본 정보', ['name', 'description', 'image_url'], '음식 이름 변경은 연결된 아이템의 이름에도 반영됩니다. 인벤토리·상점의 연결은 유지됩니다.')}
 
           {section('음식 구분', ['is_failure'])}
 
           {failureFood ? (
               section('실패요리 RP 효과', ['rp_effect_texts'], '섭취 시 문구 후보 중 하나를 사용합니다. 실제 자원·능력치 효과는 적용되지 않습니다.')
           ) : <>
-          {section('음식 등급 설정', ['grade_id'],
-              selectedGrade
-                  ? `선택 등급: ${selectedGrade.name} · 혈량 +${selectedGrade.blood_recovery} · 성장 확률 ${selectedGrade.stat_growth_rate}%`
-                  : grades.length
-                      ? '음식 등급을 선택하세요. 등급별 혈량 회복량과 성장 확률이 적용됩니다.'
-                      : '등록된 음식 등급이 없습니다. 공통 밸런스의 음식 등급별 효과에서 먼저 등록해 주세요.')}
-
-
-            {section('음식 효과', selectedGrade ? ['stat_growth_enabled', 'stat_growth_target'] : ['blood_recovery', 'stat_growth_enabled', 'stat_growth_target'],
-                selectedGrade ? `등급 기본 혈량 회복 +${selectedGrade.blood_recovery} · 성장 확률 ${selectedGrade.stat_growth_rate}%` : '음식 등급을 선택하면 해당 등급의 효과를 사용합니다.')}
+          {section('일반 음식 효과', selectedGrade ? ['grade_id','stat_growth_enabled','stat_growth_target'] : ['grade_id','blood_recovery','stat_growth_enabled','stat_growth_target'], selectedGrade ? `선택한 등급의 공통 효과 · 혈량 +${selectedGrade.blood_recovery} / 성장 확률 ${selectedGrade.stat_growth_rate}%` : '공통 밸런스에 등록한 음식 등급을 선택하세요.')}
             <details className="admin-editor-reference">
               <summary>기존 RP 문구 확인 · 수정</summary>
               {section('RP 문구', ['rp_effect_texts'])}
@@ -622,8 +615,8 @@ export function MasterEditor({kind, record, onSaved, onDenied, onBusy}) {
 
 
         </> : kind === 'recipes' ? <>
-          {section('레시피 기본 정보', ['name', 'discovery_grade', 'description', 'image_url'])}
-          {section('조리 설정', ['success_rate'])}
+          {section('레시피 기본 정보', ['name', 'discovery_grade', 'description', 'image_url', 'success_rate'])}
+
         </> : kind === 'areas' ? <>
           {section('구역 기본 정보', ['name', 'description', 'image_url', 'sort_order'])}
           {section('공개 · 조우 설정', ['is_open', 'auto_unlock', 'unlock_at', 'encounter_rate'])}
@@ -631,7 +624,7 @@ export function MasterEditor({kind, record, onSaved, onDenied, onBusy}) {
 
         {child && (
             <fieldset className="admin-wide" disabled={busy}>
-              <legend>{kind === 'recipes' ? '필요 재료' : '보상'}</legend>
+              <legend>{kind === 'recipes' ? '필요 재료 (최대 5종)' : '보상'}</legend>
 
               {rows.map((row, index) => (
                   <div className="admin-child-row" key={index}>
@@ -772,6 +765,7 @@ export default function MasterPanel({kind, onDenied, recordId, onOpen, after, on
   const listing = useRef(0);
 
   const [search, setSearch] = useState('');
+  const [activeFilter,setActiveFilter]=useState('all');
   const Editor = kind === 'gachas' ? GachaStockEditor : MasterEditor;
 
   const [records, setRecords] = useState([]);
@@ -866,6 +860,7 @@ export default function MasterPanel({kind, onDenied, recordId, onOpen, after, on
   const normalizedSearch = search.trim().toLowerCase();
 
   const visibleRecords = records.filter(row => {
+    if(activeFilter!=="all"&&typeof row.is_active==="boolean"&&row.is_active!==(activeFilter==="active"))return false;
     if (!normalizedSearch) return true;
 
     const referenceKey = kind === 'foods' ? `items:${row.item_id}` : '';
@@ -908,6 +903,8 @@ export default function MasterPanel({kind, onDenied, recordId, onOpen, after, on
           <input value={search} onChange={e => setSearch(e.target.value)}/>
         </label>
 
+        {['foods','recipes','gachas'].includes(kind)&&<label>표시 상태<select value={activeFilter} onChange={e=>setActiveFilter(e.target.value)}><option value="all">전체</option><option value="active">활성 데이터만</option><option value="inactive">비활성 데이터만</option></select></label>}
+        <small className="admin-list-count">현재 페이지 {visibleRecords.length} / {records.length}건</small>
         {kind==='gachas'?<table className="gacha-catalog-table"><thead><tr><th>가챠 이름</th><th>가격</th><th>보상 종류</th><th>상태</th><th>관리</th></tr></thead><tbody>{visibleRecords.map(row=><tr key={row.id}><td><button type="button" className="admin-entry-title" disabled={busy||saving} onClick={()=>select(row)}>{row.name}</button></td><td>1 코인</td><td>{(row.rewards||[]).filter(r=>r.is_active!==false).length}종</td><td>{row.is_active?'활성':'비활성'}</td><td><AdminDeleteControl menu={kind} recordId={String(row.id)} disabled={busy||saving} onDenied={onDenied} onDeleted={async()=>{invalidateAdminNames();await load();setMessage('삭제 완료');}}/></td></tr>)}</tbody></table>: (
         <ul className="admin-master-records">
           {visibleRecords.map(row => (
@@ -915,7 +912,7 @@ export default function MasterPanel({kind, onDenied, recordId, onOpen, after, on
                 <div className="admin-record-summary">
                   <button type="button" className="admin-entry-title" disabled={busy || saving} aria-current={String(selected?.id)===String(row.id)?"true":undefined} onClick={()=>select(row)}>
                     {kind === 'foods'
-                        ? <AdminReferenceName
+                        ? row.name || <AdminReferenceName
                             itemId={row.item_id}
                             eager={!!normalizedSearch}
                             onResolved={handleNameResolved}
@@ -939,19 +936,7 @@ export default function MasterPanel({kind, onDenied, recordId, onOpen, after, on
                   <small>등록 ID {row.id}</small>
                 </div>
 
-                <div className="admin-record-actions">
-                  <AdminDeleteControl menu={kind} recordId={String(row.id)} disabled={busy || saving} onDenied={onDenied}
-                    onDeleted={async()=>{
-                      invalidateAdminNames();
-                      if(String(selected?.id)===String(row.id)||String(recordId)===String(row.id)){
-                        setSelected(null);
-                        setRevision(v=>v+1);
-                        onOpen?.(null);
-                      }
-                      await load();
-                      setMessage('삭제 완료');
-                    }}/>
-                </div>
+
               </li>
           ))}
         </ul>)}
@@ -976,6 +961,7 @@ export default function MasterPanel({kind, onDenied, recordId, onOpen, after, on
                 key={revision}
                 kind={kind}
                 record={selected}
+                deleteControl={selected&&<AdminDeleteControl menu={kind} recordId={String(selected.id)} disabled={busy||saving} onDenied={onDenied} onDeleted={async()=>{invalidateAdminNames();setSelected(null);setRevision(v=>v+1);onOpen?.(null);await load();setMessage('삭제 완료');}}/>}
                 onDenied={onDenied}
                 onBusy={setSaving}
                 onSaved={async record => {

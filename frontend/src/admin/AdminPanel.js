@@ -350,8 +350,8 @@ export function Editor({kind,record,seed,onSaved,onDenied,deleteControl}) {
 <header className="admin-editor-heading admin-editor-heading-actions"><div><small>{record?'수정 / '+record.id:'신규 등록'}</small><h3>{record?record.name||'등록 정보':'새로 등록'}</h3></div><div className="admin-editor-heading-controls"><label className="admin-editor-toggle"><input type="checkbox" checked={!!draft.is_active} disabled={busy} onChange={e=>change('is_active',e.target.checked)}/>활성</label>{deleteControl}</div></header>
 {(kind==='items'?[
  ['아이템 기본 정보',['name','category','description','image_url']],
- ['사용 · 이동 설정',['transferable','usable','battle_usable']],
- ['아이템 효과',['effect_type','blood_pack_kind','effect_value','use_target']]
+ ...(draft.category==='CONSUMABLE'||draft.effect_type?[['소모품 효과',['effect_type','blood_pack_kind','effect_value','use_target']]]:[]),
+ ['사용 및 운영 설정',['transferable','usable','battle_usable']]
 ]:[
  ['판매 아이템',['item_id']],['가격 · 노출 설정',['price','sort_order']],
  ['구매 · 재고 제한',['purchase_limit','stock_limit','daily_limit']]
@@ -726,11 +726,10 @@ export default function AdminPanel({
 
         return (
             <div className="admin-record-workspace"><div className="admin-list-pane">
-                <p>
-                    혈액팩은 무료(+10, 0코인, 하루 1개)와 일반(+30, 유료)을
+                <details className="admin-editor-reference"><summary>아이템 · 상점 운영 안내</summary><p>혈액팩은 무료(+10, 0코인, 하루 1개)와 일반(+30, 유료)을
                     별도 아이템으로 관리합니다. 일반팩 가격은 운영진이 정합니다.
                     기록은 보존합니다.
-                </p>
+</p></details>
 
                 {kind==='items'&&selected&&
                     <div className="admin-toolbar-actions">

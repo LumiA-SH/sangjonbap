@@ -13,6 +13,9 @@ export default function ItemPicker({
                                      rpOnly = false,
                                      type = 'all'
                                    }) {
+  const dialog=useRef(null);
+  const [opened,setOpened]=useState(false);
+  useEffect(()=>{if(opened){if(dialog.current?.showModal)dialog.current.showModal();else dialog.current?.setAttribute('open','');}else if(dialog.current?.close)dialog.current.close();else dialog.current?.removeAttribute('open');},[opened]);
   const [query, setQuery] = useState('');
   const [rows, setRows] = useState([]);
   const [selected, setSelected] = useState(null);
@@ -128,6 +131,7 @@ export default function ItemPicker({
   function selectItem(item) {
     itemCache.set(String(item.id), item);
     setSelected(item);
+    setOpened(false);
     onChange(String(item.id), item);
     setQuery('');
     setRows([]);
@@ -161,7 +165,11 @@ export default function ItemPicker({
   }
 
   return (
-      <div className="admin-item-picker">
+      <div className="admin-item-picker admin-compact-picker">
+        <button type="button" className="admin-picker-trigger" disabled={disabled} onClick={()=>{setOpened(true);search();}} aria-haspopup="dialog">{selected && String(selected.id)===String(value)?selected.name:value?"선택된 항목 확인 중…":`${label} 목록에서 선택`} <span aria-hidden="true">▾</span></button>
+        {value&&<button type="button" className="admin-picker-clear" disabled={disabled} onClick={clearItem}>선택 해제</button>}
+        <dialog ref={dialog} className="admin-picker-dialog" aria-label={`${label} 선택`} onCancel={()=>setOpened(false)} onClose={()=>setOpened(false)}>
+        <header><strong>{label} 선택</strong><button type="button" onClick={()=>setOpened(false)}>닫기</button></header>
         <label>
           {label} 이름 검색
           <input
@@ -212,7 +220,8 @@ export default function ItemPicker({
         )}
 
         {after && <button type="button" disabled={disabled||busy} onClick={()=>search(after)}>다음 항목 더 보기</button>}
-        <div className="admin-selected-item">
+        </dialog>
+        <div className="admin-selected-item" hidden>
           {selected && String(selected.id) === String(value) ? (
               <>
                 <div>

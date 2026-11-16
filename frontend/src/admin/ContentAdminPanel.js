@@ -168,6 +168,7 @@ export default function ContentAdminPanel({kind, onDenied}) {
            </details>
 
            <button disabled={busy}>안내 저장</button>
+           <section className="admin-content-preview"><h4>게시 미리보기</h4>{[...(kind==='system'?[]:[draft]),...(draft.items||[])].map((row,i)=><article key={row.id||i}><h3>{row.title||'제목 없음'}</h3><small>{row.published?'공개':'비공개'}</small><p style={{whiteSpace:'pre-wrap'}}>{row.body||'본문 없음'}</p></article>)}</section>
           </form>
       )}
 
