@@ -221,6 +221,7 @@ export default function App() {
 
   const running = useRef(false);
   const adminWasOpen = useRef(false);
+  const lastDataView = useRef(null);
   const accountMenuRef = useRef(null);
 
   useEffect(() => {
@@ -362,7 +363,7 @@ export default function App() {
     }
   }
 
-  async function refreshAll() {
+  async function refreshAll(sections = null, refreshBattle = true) {
     const requests = [
       ['gachas', '/gacha/catalog', data => setGachas(data.gachas)],
       ['cooking', '/cooking/catalog', setCooking],
@@ -376,7 +377,7 @@ export default function App() {
         setGlobalInvestigationRate(data.globalInvestigationRate);
         setInvestigationApCost(data.investigationApCost);
       }]
-    ];
+    ].filter(([name]) => !Array.isArray(sections) || sections.includes(name));
 
     const results = await Promise.allSettled(requests.map(([, path]) => api(path)));
     const nextErrors = {};
@@ -391,11 +392,43 @@ export default function App() {
       }
     });
 
-    setErrors(nextErrors);
-    setRevision(value => value + 1);
+    setErrors(previous => {
+      const next = {...previous};
+      for (const [name] of requests) delete next[name];
+      return {...next, ...nextErrors};
+    });
+    if (refreshBattle) setRevision(value => value + 1);
 
     return Object.keys(nextErrors).length === 0;
   }
+
+  useEffect(() => {
+    if (!loggedIn || !user?.character_id) {
+      lastDataView.current = null;
+      return;
+    }
+    if (adminOpen || revision === 0) return;
+    if (lastDataView.current === view) return;
+
+    const previous = lastDataView.current;
+    lastDataView.current = view;
+    // The initial full refresh already includes the first visible screen.
+    if (previous === null) return;
+
+    const sections = {
+      home: ['character'],
+      character: ['character', 'inventory'],
+      inventory: ['character', 'inventory', 'storage', 'cooking'],
+      shop: ['character', 'products'],
+      cooking: ['character', 'inventory', 'cooking'],
+      investigation: ['character', 'areas'],
+      gacha: ['character', 'gachas'],
+      battle: ['inventory']
+    }[view];
+    if (sections) refreshAll(sections, false);
+    // A tab entry refresh does not trigger another battle query.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, revision, loggedIn, user?.character_id, adminOpen]);
 
   async function login(event) {
     event.preventDefault();

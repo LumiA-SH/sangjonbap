@@ -72,7 +72,9 @@ export function readLocation() {
       : 'home',
   menu: 'dashboard',
   record: ['game/roster', 'game/feed-notice', 'game/feed-event'].includes(path) &&
-  /^[1-9][0-9]*$/.test(params.get('record') || '')
+  (path === 'game/feed-notice'
+      ? /^[-a-zA-Z0-9_]{1,60}$/.test(params.get('record') || '')
+      : /^[1-9][0-9]*$/.test(params.get('record') || ''))
       ? params.get('record')
       : null
  };

@@ -124,7 +124,7 @@ export default function GachaStockEditor({record, onSaved, onDenied, onBusy}) {
     <div className="gacha-table-wrap"><table className="gacha-reward-table"><thead><tr><th>보상</th><th>종류</th><th>지급 수량</th><th>가중치</th><th>예상 확률</th><th>삭제</th></tr></thead><tbody>
     {filtered.slice(page*20,page*20+20).map(({row,index})=><tr key={row.id||index}>
       <td data-label="보상">{row.id?<AdminReferenceName itemId={row.item_id} eager onResolved={handleNameResolved} onDenied={onDenied}/>:<ItemPicker label="보상 아이템" value={row.item_id} disabled={busy} onDenied={onDenied} onChange={(id,item)=>change(index,{item_id:id,name:item?.name||'',category:item?.category})}/>}
-      <details><summary>재고 · 활성 설정</summary><label><input type="checkbox" checked={row.is_active!==false} disabled={busy} onChange={e=>change(index,{is_active:e.target.checked})}/>보상 활성</label>
+      <details><summary>활성 설정</summary><label><input type="checkbox" checked={row.is_active!==false} disabled={busy} onChange={e=>change(index,{is_active:e.target.checked})}/>보상 활성</label>
       <label>최대 당첨 횟수<input type="number" min="1" max="2147483647" step="1" required={row.is_active!==false} disabled={busy} value={row.max_stock??''} onChange={e=>{const max=e.target.value===''?null:Number(e.target.value);const issued=row.max_stock==null?0:row.max_stock-row.remaining_stock;change(index,{max_stock:max,remaining_stock:max==null?null:max-issued});}}/></label>
       <p>남은 당첨 횟수: {row.remaining_stock??'미설정'} · 누적 당첨: {row.max_stock==null?'미확정':row.max_stock-row.remaining_stock}</p></details></td>
       <td data-label="종류">{row.category?({MATERIAL:'재료',CONSUMABLE:'소비품',FOOD:'음식',ETC:'기타'})[row.category]||'아이템':'아이템·음식'}</td>

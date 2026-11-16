@@ -420,7 +420,7 @@ test('notice preview and more use independent content and never call System',asy
  const more=jest.fn();api.mockResolvedValue({content:{items:[{id:'n',title:'운영 공지',body:'공지 본문'}]}});
  await act(async()=>root.render(<NoticeFeed preview onMore={more}/>));
  expect(api).toHaveBeenCalledWith('/public/guides/notice');expect(api.mock.calls.some(([p])=>p.includes('system-feed'))).toBe(false);
- expect(div.textContent).toContain('운영 공지');expect(div.textContent).toContain('공지 본문');await act(async()=>button('더보기 ›').click());expect(more).toHaveBeenCalledTimes(1);
+ expect(div.textContent).toContain('운영 공지');expect(div.textContent).not.toContain('공지 본문');await act(async()=>button('더보기 ›').click());expect(more).toHaveBeenCalledTimes(1);
 });
 test('notice admin saves independent published content',async()=>{
  api.mockImplementation(async(p,o)=>o?{content:o.body.content,version:'new'}:{content:{items:[]},version:'old'});
@@ -549,4 +549,28 @@ test('hidden battle skips initial and revision reads, entering battle fetches cu
  expect(api).toHaveBeenCalledWith('/battles/latest');
  await act(async()=>root.render(<BattlePanel {...props} visible revision={2}/>));
  expect(api).toHaveBeenCalledTimes(2);
+});
+
+test('notice UUID route opens existing detail and returns to list without another request', async () => {
+ const id='12345678-1234-4234-8234-123456789012';
+ const open=jest.fn(),back=jest.fn();
+ api.mockResolvedValue({content:{items:[{id,title:'상세 공지',body:'첫 문단\n둘째 문단'}]}});
+ const oldHash=window.location.hash;
+ try {
+  await act(async()=>root.render(<NoticeFeed onOpen={open}/>));
+  await act(async()=>Simulate.click(div.querySelector('.survival-notice-open')));
+  expect(open).toHaveBeenCalledWith(id);
+  window.location.hash='#game/feed-notice?record='+id;
+  expect(readLocation().record).toBe(id);
+  await act(async()=>root.render(<NoticeFeed selectedId={readLocation().record} onBack={back}/>));
+  expect(div.querySelector('h3').textContent).toBe('상세 공지');
+  expect(div.querySelector('.survival-notice-detail-body').textContent).toBe('첫 문단\n둘째 문단');
+  await act(async()=>Simulate.click(button('목록으로 돌아가기')));
+  expect(back).toHaveBeenCalledTimes(1);
+  await act(async()=>root.render(<NoticeFeed onOpen={open}/>));
+  expect(div.querySelector('.survival-notice-open')).not.toBeNull();
+  expect(api).toHaveBeenCalledTimes(1);
+  window.location.hash='#game/roster?record='+id;
+  expect(readLocation().record).toBeNull();
+ } finally {window.location.hash=oldHash;}
 });
