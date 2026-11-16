@@ -674,7 +674,6 @@ export default function App() {
                           <small>운영진이 게시한 이벤트 소식</small>
                         </div>
                       </div>
-                      <p>등록된 이벤트가 없습니다.</p>
                     </DashboardCard>
 
                     <DashboardCard title="최근 기록" subtitle="ACTIVITY LOG" action={<button type="button" className="survival-card-link" onClick={() => navigate('feed-activity')}>더보기 ›</button>} className="survival-activity">
