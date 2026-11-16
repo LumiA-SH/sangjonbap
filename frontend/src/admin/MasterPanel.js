@@ -561,13 +561,27 @@ export function MasterEditor({kind, record, onSaved, onDenied, onBusy, deleteCon
 
   return (
       <form onSubmit={save} className="admin-form admin-structured-editor">
-        <header className="admin-editor-heading admin-editor-heading-actions"><div><small>{record ? `수정 / ${record.id}` : '신규 등록'}</small><h3>
-          {record ? (
-              kind === 'foods'
-                  ? (record.name || <AdminReferenceName itemId={record.item_id} eager onDenied={onDenied}/>)
-                  : (record.name || '등록 정보')
-          ) : '새로 등록'}
-        </h3></div>{Object.hasOwn(defaults[kind], 'is_active')&&<label className="admin-editor-toggle"><input type="checkbox" checked={!!draft.is_active} disabled={busy} onChange={e=>change('is_active',e.target.checked)}/>활성</label>}{deleteControl}</header>
+        <header className="admin-editor-heading admin-editor-heading-actions">
+          <div>
+            <small>{record ? `수정 / ${record.id}` : '신규 등록'}</small>
+            <h3>
+              {record ? (
+                  kind === 'foods'
+                      ? (record.name || <AdminReferenceName itemId={record.item_id} eager onDenied={onDenied}/>)
+                      : (record.name || '등록 정보')
+              ) : '새로 등록'}
+            </h3>
+          </div>
+          <div className="admin-editor-heading-controls admin-editor-heading-vertical">
+            {Object.hasOwn(defaults[kind], 'is_active')&&
+                <label className="admin-editor-toggle">
+                  <input type="checkbox" checked={!!draft.is_active} disabled={busy} onChange={e=>change('is_active',e.target.checked)}/>
+                  활성화
+                </label>
+            }
+            {deleteControl}
+          </div>
+        </header>
 
         {kind === 'areas' && (
             <>
