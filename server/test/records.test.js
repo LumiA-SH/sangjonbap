@@ -52,6 +52,7 @@ test('production cookie auth permits own records, blocks unlinked users and non-
     const repo = {
         getOAuthSession: async () => user,
         getAdminLogCategories: async()=>[],
+        getSystemFeedRevision: async()=>({enabled:true,revision:'revision-only'}),
         getSystemFeed: async(kind,before,options)=>({enabled:true,records:[],nextBefore:null,kind,includeFollowers:options.includeFollowers}),
         listAdminRecords: async () => [], getAdminRecord: async () => ({}), saveAdminRecord: async () => ({})
     };
@@ -64,6 +65,9 @@ test('production cookie auth permits own records, blocks unlinked users and non-
     t.after(() => new Promise(resolve => server.close(resolve)));
     const base = `http://127.0.0.1:${server.address().port}/api`;
     const get = (path, auth = true) => fetch(base + path, {headers: auth ? {Cookie: '__Host-sangjonbap-session=' + 'a'.repeat(64)} : {}});
+    assert.equal((await get('/public/system-feed/revision',false)).status,401);
+    assert.deepEqual((await (await get('/public/system-feed/revision')).json()).data,{enabled:true,revision:'revision-only'});
+    assert.equal((await get('/public/system-feed/revision?accountId=other')).status,400);
     assert.equal((await get('/public/system-feed?kind=activity',false)).status,401);
     assert.equal((await get('/public/system-feed?kind=notice',false)).status,401);
     const recent=await get('/public/system-feed?kind=activity');assert.equal(recent.status,200);assert.equal((await recent.json()).data.includeFollowers,true);assert.match(recent.headers.get('cache-control'),/private, no-store/);
@@ -151,4 +155,18 @@ test('authenticated recent activity includes own followers-only posts but never 
  assert.deepEqual((await repo.getSystemFeed('activity',null,{includeFollowers:true})).records.map(r=>r.id),['9','4']);
  assert.deepEqual((await repo.getSystemFeed('activity')).records,[]);
  assert.deepEqual((await repo.getSystemFeed('notice',null,{includeFollowers:true})).records,[]);
+});
+
+
+test('sent revision checks never call Mastodon; unchanged sends share cache and successful sends invalidate it',async()=>{
+ let sent={count:'1',latest:'2026-11-16T00:00:00Z'},time=0,calls=0;
+ const policy=homepagePolicy();
+ const pool={async query(sql){if(sql.includes('mastodon_event')){assert.match(sql,/status='SENT' and remote_status_id is not null/);return {rows:[sent]};}return {rows:[{config_value:policy}]};}};
+ const repo=createSystemFeedRepository(pool,{now:()=>time,fetcher:async url=>{calls++;return new Response(JSON.stringify(url.includes('/statuses?')?[statusPost('9')]:{id:'123',username:'System',acct:'System'}));}});
+ const initial=await repo.getSystemFeedRevision();assert.equal(calls,0);assert.match(initial.revision,/^[a-f0-9]{64}$/);
+ const first=await repo.getSystemFeed();assert.equal(first.revision,initial.revision);assert.equal(calls,2);
+ time=300000;assert.deepEqual(await repo.getSystemFeedRevision(),initial);await repo.getSystemFeed();assert.equal(calls,2);
+ sent={count:'2',latest:'2026-11-16T00:01:00Z'};assert.notEqual((await repo.getSystemFeedRevision()).revision,initial.revision);assert.equal(calls,2);
+ await Promise.all([repo.getSystemFeed(),repo.getSystemFeed()]);assert.equal(calls,4);
+ policy.enabled=false;assert.equal((await repo.getSystemFeedRevision()).enabled,false);assert.equal(calls,4);
 });

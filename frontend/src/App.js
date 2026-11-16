@@ -282,13 +282,11 @@ export default function App() {
     });
 
     read();
-    window.addEventListener('focus', read);
-    const timer = setInterval(read, 60000);
+
 
     return () => {
       live = false;
-      clearInterval(timer);
-      window.removeEventListener('focus', read);
+
     };
   }, [loggedIn, user?.character_id, revision]);
 

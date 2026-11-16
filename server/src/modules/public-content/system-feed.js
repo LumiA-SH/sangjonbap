@@ -1,3 +1,4 @@
+import {createHash} from 'node:crypto';
 import {AppError} from '../../shared/http.js';
 import {readPolicy} from '../admin/operating-policy.js';
 
@@ -27,8 +28,12 @@ export function createSystemFeedRepository(pool,{fetcher=fetch,now=Date.now,env=
    const text=await response.text();if(text.length>1000000)throw unavailable();return JSON.parse(text);
   }catch(error){if(error instanceof AppError)throw error;throw unavailable();}
  }
- async function page(policy,before){
-  const key=JSON.stringify([policy,before]),cached=cache.get(key);
+ async function revisionFor(policy){
+  const {rows}=await pool.query("select count(*)::text as count, max(sent_at)::text as latest from public.mastodon_event where status='SENT' and remote_status_id is not null");
+  return createHash('sha256').update(JSON.stringify([policy,rows[0]?.count||'0',rows[0]?.latest||null])).digest('hex');
+ }
+ async function page(policy,before,revision){
+  const key=JSON.stringify([policy,before,revision]),cached=cache.get(key);
   if(cached&&cached.until>now())return cached.promise;
   if(cache.size>=64)cache.delete(cache.keys().next().value);
   const promise=(async()=>{
@@ -40,10 +45,13 @@ export function createSystemFeedRepository(pool,{fetcher=fetch,now=Date.now,env=
    const rows=await json('/api/v1/accounts/'+policy.accountId+'/statuses?'+query);
    if(!Array.isArray(rows)||rows.length>40)throw unavailable();return rows;
   })();
-  cache.set(key,{promise,until:now()+60000});
+  cache.set(key,{promise,until:now()+900000});
   try{return await promise;}catch(e){cache.delete(key);retryAt=Math.max(retryAt,now()+10000);throw e;}
  }
- return {async getSystemFeed(kind='activity',before=null,{includeFollowers=false}={}){
+ return {async getSystemFeedRevision(){
+  const policy=await readPolicy(pool,'homepage');
+  return {enabled:policy.enabled,revision:await revisionFor(policy)};
+ },async getSystemFeed(kind='activity',before=null,{includeFollowers=false}={}){
   if(!['activity','notice','event'].includes(kind)||(before!==null&&!id(before)))throw new AppError(400,'INVALID_FEED_QUERY','게시글 조회 조건을 확인하세요.');
   if(kind!=='activity')return {enabled:false,records:[],nextBefore:null};
   const policy=await readPolicy(pool,'homepage');
@@ -51,7 +59,8 @@ export function createSystemFeedRepository(pool,{fetcher=fetch,now=Date.now,env=
   if(!id(policy.accountId))throw new AppError(503,'SYSTEM_FEED_NOT_CONFIGURED','시스템 계정 설정을 확인하세요.');
   // Only the session-protected recent-activity route opts into followers-only posts.
   const runnerActivity=kind==='activity'&&includeFollowers;
-  const rows=await page(policy,before),records=[];
+  const revision=await revisionFor(policy);
+  const rows=await page(policy,before,revision),records=[];
   for(const row of rows){
    if(!row||typeof row!=='object'||!id(row.id)||(before&&BigInt(row.id)>=BigInt(before))||String(row.account?.id)!==policy.accountId)continue;
    if(policy.excludeReplies&&row.in_reply_to_id!=null||policy.excludeBoosts&&row.reblog)continue;
@@ -66,6 +75,6 @@ export function createSystemFeedRepository(pool,{fetcher=fetch,now=Date.now,env=
   const limit=Math.min(40,policy.limit),visible=records.slice(0,limit);
   const last=rows.at(-1)?.id;
   const next=records.length>limit?visible.at(-1)?.id:rows.length===40&&id(last)?last:null;
-  return {enabled:true,records:visible,nextBefore:next&&(!before||BigInt(next)<BigInt(before))?next:null};
+  return {enabled:true,revision,records:visible,nextBefore:next&&(!before||BigInt(next)<BigInt(before))?next:null};
  }};
 }

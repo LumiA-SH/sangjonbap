@@ -426,3 +426,24 @@ test('notice admin saves independent published content',async()=>{
  await act(async()=>Simulate.submit(div.querySelector('form')));
  expect(api).toHaveBeenCalledWith('/admin/content/notice',expect.objectContaining({method:'PATCH',body:expect.objectContaining({expectedVersion:'old',content:{items:[expect.objectContaining({title:'새 공지',body:'본문',published:true})]}})}));
 });
+
+
+test('recent feed checks only revision every five minutes and preserves posts while updating',async()=>{
+ jest.useFakeTimers();
+ try{
+  const page={enabled:true,revision:'one',records:[{id:'9',text:'기존 게시글',createdAt:'2026-11-15T00:00:00Z',url:'https://survival-bob.site/@System/9'}],nextBefore:null};
+  api.mockResolvedValue(page);
+  await act(async()=>root.render(<SystemFeed preview/>));expect(api).toHaveBeenCalledTimes(1);
+  await act(async()=>{jest.advanceTimersByTime(60000);window.dispatchEvent(new Event('focus'));});expect(api).toHaveBeenCalledTimes(1);
+  api.mockResolvedValue({enabled:true,revision:'one'});
+  await act(async()=>jest.advanceTimersByTime(240000));expect(api).toHaveBeenCalledTimes(2);expect(api).toHaveBeenLastCalledWith('/public/system-feed/revision',{background:true});
+  expect(div.textContent).toContain('기존 게시글');
+  let finish;
+  api.mockResolvedValueOnce({enabled:true,revision:'two'}).mockImplementationOnce(()=>new Promise(resolve=>{finish=resolve;}));
+  await act(async()=>jest.advanceTimersByTime(300000));expect(api).toHaveBeenCalledTimes(4);expect(div.textContent).toContain('기존 게시글');expect(div.textContent).not.toContain('게시글을 불러오는 중');
+  await act(async()=>window.dispatchEvent(new Event('focus')));expect(api).toHaveBeenCalledTimes(4);
+  await act(async()=>finish({...page,revision:'two'}));
+  await act(async()=>root.render(<SystemFeed preview active={false}/>));
+  await act(async()=>jest.advanceTimersByTime(300000));expect(api).toHaveBeenCalledTimes(4);expect(div.textContent).not.toContain('기존 게시글');
+ }finally{jest.useRealTimers();}
+});
