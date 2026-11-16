@@ -1,3 +1,4 @@
+import {Buffer} from 'node:buffer';
 import {createHash} from 'node:crypto';
 import {AppError} from '../../shared/http.js';
 import {readPolicy} from '../admin/operating-policy.js';
@@ -48,7 +49,13 @@ export function createSystemFeedRepository(pool,{fetcher=fetch,now=Date.now,env=
   cache.set(key,{promise,until:now()+900000});
   try{return await promise;}catch(e){cache.delete(key);retryAt=Math.max(retryAt,now()+10000);throw e;}
  }
- return {async getSystemFeedRevision(){
+ return {async getSystemFeedConnection(){
+  // The built-in anonymous key is public, never return a service or System token.
+  const key=env.SUPABASE_ANON_KEY;
+  try{if(typeof key!=='string'||JSON.parse(Buffer.from(key.split('.')[1],'base64url').toString()).role!=='anon')throw Error();}
+  catch{throw new AppError(503,'SYSTEM_FEED_REALTIME_UNAVAILABLE','최근 기록 실시간 연결 설정을 확인하세요.');}
+  return {url:'wss://grkohfxvafbquhmgnvwj.supabase.co/realtime/v1/websocket',key,table:'system_feed_signal'};
+ },async getSystemFeedRevision(){
   const policy=await readPolicy(pool,'homepage');
   return {enabled:policy.enabled,revision:await revisionFor(policy)};
  },async getSystemFeed(kind='activity',before=null,{includeFollowers=false}={}){

@@ -1,40 +1,40 @@
 import {useEffect,useRef,useState} from 'react';
 import {api} from '../api/client';
+import {subscribeSystemFeed} from './systemFeedUpdates';
 
 export const feedTitles={activity:'최근 기록',notice:'공지사항',event:'이벤트'};
 export default function SystemFeed({kind='activity',preview=false,active=true,onMore}){
  const [data,setData]=useState(null),[error,setError]=useState(''),[loading,setLoading]=useState(false);
- const request=useRef(null),busy=useRef(false),snapshot=useRef(null),cursor=useRef(null),lastCheck=useRef(0);
+ const request=useRef(null),busy=useRef(false),snapshot=useRef(null),cursor=useRef(null),refreshQueued=useRef(false),refreshRef=useRef(()=>{});
  async function load(before=null,background=false){
   if(busy.current)return;
   busy.current=true;cursor.current=before;
   const sequence={};request.current=sequence;setLoading(true);setError('');
   try{const path=`/public/system-feed?kind=${kind}${before?'&before='+encodeURIComponent(before):''}`;
    const result=await (background?api(path,{background:true}):api(path));
-   if(request.current===sequence){snapshot.current=result;setData(result);lastCheck.current=Date.now();}
+   if(request.current===sequence){snapshot.current=result;setData(result);}
   }catch(e){if(request.current===sequence){if(e.status===401||e.status===403){snapshot.current=null;setData(null);}setError(e.message||'게시글을 불러오지 못했습니다.');}}
-  finally{if(request.current===sequence){busy.current=false;setLoading(false);}}
+  finally{if(request.current===sequence){busy.current=false;setLoading(false);if(refreshQueued.current){refreshQueued.current=false;refreshRef.current();}}}
  }
  useEffect(()=>{
   if(!active){request.current=null;busy.current=false;snapshot.current=null;setData(null);return;}
   load();
   async function refresh(){
-   if(document.visibilityState==='hidden'||busy.current||cursor.current||Date.now()-lastCheck.current<300000)return;
-   lastCheck.current=Date.now();busy.current=true;
+   if(document.visibilityState==='hidden'||cursor.current)return;
+   if(busy.current){refreshQueued.current=true;return;}
+   busy.current=true;
    const sequence={};request.current=sequence;
    try{
     const result=await api('/public/system-feed/revision',{background:true});
     if(request.current!==sequence)return;
-    busy.current=false;
+    busy.current=false;setError('');
     if(!snapshot.current||result.enabled!==snapshot.current.enabled||(result.enabled&&result.revision!==snapshot.current.revision))await load(null,true);
    }catch(e){if(request.current===sequence){if(e.status===401||e.status===403){snapshot.current=null;setData(null);}setError(e.message||'새 게시글 확인에 실패했습니다.');}}
-   finally{if(request.current===sequence)busy.current=false;}
+   finally{if(request.current===sequence){busy.current=false;if(refreshQueued.current){refreshQueued.current=false;refresh();}}}
   }
-  // Only check the sent-outbox revision; never poll Mastodon for unchanged posts.
-  const timer=setInterval(refresh,300000);
-  window.addEventListener('focus',refresh);
-  document.addEventListener('visibilitychange',refresh);
-  return()=>{request.current=null;busy.current=false;clearInterval(timer);window.removeEventListener('focus',refresh);document.removeEventListener('visibilitychange',refresh);};
+  refreshRef.current=refresh;
+  const stop=subscribeSystemFeed({onChange:refresh,onError:e=>{if(e.status===401||e.status===403){snapshot.current=null;setData(null);}setError(e.message||'실시간 연결을 확인하세요.');}});
+  return()=>{request.current=null;busy.current=false;refreshQueued.current=false;refreshRef.current=()=>{};stop();};
   // eslint-disable-next-line react-hooks/exhaustive-deps
  },[kind,active,preview]);
  const records=data?.records||[];

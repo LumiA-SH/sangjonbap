@@ -1,3 +1,5 @@
+import {subscribeSystemFeed} from './systemFeedUpdates';
+jest.mock('./systemFeedUpdates',()=>({subscribeSystemFeed:jest.fn(()=>()=>{})}));
 import BattleAdminPanel from '../admin/BattleAdminPanel';
 import RequestLoading from '../api/RequestLoading';
 import ShopPanel from '../dev/ShopPanel';
@@ -25,7 +27,7 @@ import AnemiaNotice,{anemiaText,AnemiaPolicyContext} from './AnemiaNotice';
 import ContentAdminPanel from '../admin/ContentAdminPanel';
 import {api,subscribeApiPending} from '../api/client';
 jest.mock('../api/client',()=>({api:jest.fn(),subscribeApiPending:jest.fn()}));
-let div,root;beforeEach(()=>{global.IS_REACT_ACT_ENVIRONMENT=true;api.mockReset();window.confirm=jest.fn(()=>true);Object.defineProperty(global,'crypto',{configurable:true,value:{randomUUID:()=> '12345678-1234-4234-8234-123456789012'}});div=document.createElement('div');root=createRoot(div);});afterEach(async()=>{await act(async()=>root.unmount());});
+let div,root;beforeEach(()=>{subscribeSystemFeed.mockImplementation(()=>()=>{});global.IS_REACT_ACT_ENVIRONMENT=true;api.mockReset();window.confirm=jest.fn(()=>true);Object.defineProperty(global,'crypto',{configurable:true,value:{randomUUID:()=> '12345678-1234-4234-8234-123456789012'}});div=document.createElement('div');root=createRoot(div);});afterEach(async()=>{await act(async()=>root.unmount());});
 const button=t=>[...div.querySelectorAll('button')].find(b=>b.textContent===t);
 test('unregistered content, retry and plain text safety',async()=>{
  api.mockResolvedValue({content:null});await act(async()=>root.render(<GuidePage kind="world"/>));expect(div.textContent).toContain('현재 공개된 안내가 없습니다');api.mockRejectedValueOnce(Error('연결 실패'));await act(async()=>root.render(<GuidePage key="system" kind="system"/>));expect(div.textContent).toContain('연결 실패');api.mockResolvedValue({content:{items:[{id:'1',title:'규칙',body:'<script>alert(1)</script>\n문단'}]}});await act(async()=>button('다시 불러오기').click());expect(div.querySelector('script')).toBeNull();expect(div.querySelector('.public-prose').textContent).toContain('\n문단');
@@ -428,22 +430,39 @@ test('notice admin saves independent published content',async()=>{
 });
 
 
-test('recent feed checks only revision every five minutes and preserves posts while updating',async()=>{
+test('recent feed updates on push without polling, retains content and coalesces changes',async()=>{
  jest.useFakeTimers();
  try{
   const page={enabled:true,revision:'one',records:[{id:'9',text:'기존 게시글',createdAt:'2026-11-15T00:00:00Z',url:'https://survival-bob.site/@System/9'}],nextBefore:null};
   api.mockResolvedValue(page);
   await act(async()=>root.render(<SystemFeed preview/>));expect(api).toHaveBeenCalledTimes(1);
-  await act(async()=>{jest.advanceTimersByTime(60000);window.dispatchEvent(new Event('focus'));});expect(api).toHaveBeenCalledTimes(1);
+  const signal=subscribeSystemFeed.mock.calls.at(-1)[0].onChange;
+  await act(async()=>{jest.advanceTimersByTime(600000);window.dispatchEvent(new Event('focus'));});expect(api).toHaveBeenCalledTimes(1);
   api.mockResolvedValue({enabled:true,revision:'one'});
-  await act(async()=>jest.advanceTimersByTime(240000));expect(api).toHaveBeenCalledTimes(2);expect(api).toHaveBeenLastCalledWith('/public/system-feed/revision',{background:true});
-  expect(div.textContent).toContain('기존 게시글');
+  await act(async()=>signal());expect(api).toHaveBeenCalledTimes(2);
   let finish;
   api.mockResolvedValueOnce({enabled:true,revision:'two'}).mockImplementationOnce(()=>new Promise(resolve=>{finish=resolve;}));
-  await act(async()=>jest.advanceTimersByTime(300000));expect(api).toHaveBeenCalledTimes(4);expect(div.textContent).toContain('기존 게시글');expect(div.textContent).not.toContain('게시글을 불러오는 중');
-  await act(async()=>window.dispatchEvent(new Event('focus')));expect(api).toHaveBeenCalledTimes(4);
-  await act(async()=>finish({...page,revision:'two'}));
-  await act(async()=>root.render(<SystemFeed preview active={false}/>));
-  await act(async()=>jest.advanceTimersByTime(300000));expect(api).toHaveBeenCalledTimes(4);expect(div.textContent).not.toContain('기존 게시글');
+  await act(async()=>{signal();});expect(api).toHaveBeenCalledTimes(4);expect(div.textContent).toContain('기존 게시글');expect(div.textContent).not.toContain('게시글을 불러오는 중');
+  await act(async()=>{signal();signal();});expect(api).toHaveBeenCalledTimes(4);
+  api.mockResolvedValue({enabled:true,revision:'two'});
+  await act(async()=>finish({...page,revision:'two'}));expect(api).toHaveBeenCalledTimes(5);
+  await act(async()=>root.render(<SystemFeed preview active={false}/>));expect(div.textContent).not.toContain('기존 게시글');
  }finally{jest.useRealTimers();}
+});
+
+test('realtime signal joins, catches up, handles changes, heartbeats and cleans up',async()=>{
+ jest.useFakeTimers();const sockets=[];
+ class FakeSocket{constructor(url){this.url=url;sockets.push(this);this.send=jest.fn();this.close=jest.fn();}}
+ const actual=jest.requireActual('./systemFeedUpdates'),changed=jest.fn(),error=jest.fn();
+ api.mockResolvedValue({url:'wss://grkohfxvafbquhmgnvwj.supabase.co/realtime/v1/websocket',key:'public-fixture',table:'system_feed_signal'});
+ const stop=actual.subscribeSystemFeed({onChange:changed,onError:error,Socket:FakeSocket});
+ try{
+  await act(async()=>{});const ws=sockets[0];ws.onopen();const join=JSON.parse(ws.send.mock.calls[0][0]);expect(join.payload.config.postgres_changes[0].table).toBe('system_feed_signal');
+  ws.onmessage({data:JSON.stringify({event:'phx_reply',ref:join.ref,payload:{status:'ok'}})});expect(changed).toHaveBeenCalledTimes(1);
+  ws.onmessage({data:JSON.stringify({topic:join.topic,event:'postgres_changes',payload:{data:{table:'system_feed_signal',type:'UPDATE',record:{revision:'opaque'}}}})});expect(changed).toHaveBeenCalledTimes(2);
+  jest.advanceTimersByTime(25000);expect(api).toHaveBeenCalledTimes(1);const hb=JSON.parse(ws.send.mock.calls.at(-1)[0]);expect(hb.event).toBe('heartbeat');
+  ws.onmessage({data:JSON.stringify({event:'phx_reply',ref:hb.ref,payload:{status:'ok'}})});
+  ws.onclose();await act(async()=>jest.advanceTimersByTime(1000));expect(sockets).toHaveLength(2);expect(api).toHaveBeenCalledTimes(1);
+  stop();expect(sockets[1].close).toHaveBeenCalled();await act(async()=>jest.advanceTimersByTime(60000));expect(sockets).toHaveLength(2);
+ }finally{stop();jest.useRealTimers();}
 });

@@ -31,3 +31,31 @@ test('existing outbox isolated migration, atomic rollback, dedupe and concurrent
         assert.equal(await outbox.claim(), null); assert.equal((await pool.query("select last_error from public.mastodon_event where status='FAILED'")).rows[0].last_error, 'DELIVERY_UNCERTAIN');
     } finally {await raw.query(`drop schema ${schema} cascade`); await raw.end();}
 });
+
+
+test('feed signal commits only sent transitions, preserves game data and rejects public writes', {skip:!process.env.ISOLATED_PG_CONFIG}, async()=>{
+ const raw=createIsolatedPool(),schema='feed_signal_'+randomUUID().replaceAll('-',''),rewrite=q=>q.replaceAll('public.',schema+'.');
+ const query=(q,p)=>raw.query(rewrite(q),p);
+ try{
+  await raw.query('create schema '+schema);
+  await raw.query('create table '+schema+'.mastodon_event(like public.mastodon_event including all); create table '+schema+'.system_config(like public.system_config including all)');
+  await query(fs.readFileSync(new URL('../../supabase/migrations/20261115110543_mastodon_delivery.sql',import.meta.url),'utf8'));
+  await query(fs.readFileSync(new URL('../../supabase/migrations/20261116021026_system_feed_realtime_signal.sql',import.meta.url),'utf8'));
+  const revision=async()=>(await query('select revision from public.system_feed_signal')).rows[0].revision;
+  const initial=await revision();
+  const event=(await query("insert into public.mastodon_event(event_type,message,status,dedupe_key) values('dice','fixture','PENDING','feed-signal-fixture') returning id")).rows[0];
+  assert.equal(await revision(),initial);
+  await query("update public.mastodon_event set status='FAILED' where id=$1",[event.id]);assert.equal(await revision(),initial);
+  const c=await raw.connect();
+  try{await c.query('begin');await c.query(rewrite("update public.mastodon_event set status='SENT',remote_status_id='123' where id=$1"),[event.id]);await c.query('rollback');}finally{c.release();}
+  assert.equal(await revision(),initial);
+  await query("update public.mastodon_event set status='SENT',remote_status_id='123' where id=$1",[event.id]);const sent=await revision();assert.notEqual(sent,initial);
+  await query("update public.mastodon_event set status='SENT' where id=$1",[event.id]);assert.equal(await revision(),sent);
+  await query("insert into public.system_config(config_key,config_value) values('operating_homepage','{}')");
+  await query("update public.system_config set config_value=jsonb_build_object('enabled',true) where config_key='operating_homepage'");assert.notEqual(await revision(),sent);
+  const privileges=(await raw.query("select has_table_privilege('anon',$1,'SELECT') as read,has_table_privilege('anon',$1,'UPDATE') as write,has_table_privilege('authenticated',$1,'UPDATE') as runner_write",[schema+'.system_feed_signal'])).rows[0];assert.deepEqual(privileges,{read:true,write:false,runner_write:false});
+  await raw.query('grant usage on schema '+schema+' to anon');
+  const reader=await raw.connect();try{await reader.query('begin');await reader.query('set local role anon');const result=await reader.query('select * from '+schema+'.system_feed_signal');assert.deepEqual(Object.keys(result.rows[0]).sort(),['revision','singleton']);await assert.rejects(reader.query('update '+schema+'.system_feed_signal set revision=gen_random_uuid()'),{code:'42501'});await reader.query('rollback');}finally{reader.release();}
+  assert.equal((await query('select count(*)::integer as n from public.mastodon_event')).rows[0].n,1);
+ }finally{await raw.query('drop schema if exists '+schema+' cascade');await raw.end();}
+});

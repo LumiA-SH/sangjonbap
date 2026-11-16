@@ -52,6 +52,7 @@ test('production cookie auth permits own records, blocks unlinked users and non-
     const repo = {
         getOAuthSession: async () => user,
         getAdminLogCategories: async()=>[],
+        getSystemFeedConnection: async()=>({table:'system_feed_signal'}),
         getSystemFeedRevision: async()=>({enabled:true,revision:'revision-only'}),
         getSystemFeed: async(kind,before,options)=>({enabled:true,records:[],nextBefore:null,kind,includeFollowers:options.includeFollowers}),
         listAdminRecords: async () => [], getAdminRecord: async () => ({}), saveAdminRecord: async () => ({})
@@ -65,6 +66,8 @@ test('production cookie auth permits own records, blocks unlinked users and non-
     t.after(() => new Promise(resolve => server.close(resolve)));
     const base = `http://127.0.0.1:${server.address().port}/api`;
     const get = (path, auth = true) => fetch(base + path, {headers: auth ? {Cookie: '__Host-sangjonbap-session=' + 'a'.repeat(64)} : {}});
+    assert.equal((await get('/public/system-feed/connection',false)).status,401);
+    assert.equal((await get('/public/system-feed/connection')).status,200);
     assert.equal((await get('/public/system-feed/revision',false)).status,401);
     assert.deepEqual((await (await get('/public/system-feed/revision')).json()).data,{enabled:true,revision:'revision-only'});
     assert.equal((await get('/public/system-feed/revision?accountId=other')).status,400);
@@ -169,4 +172,11 @@ test('sent revision checks never call Mastodon; unchanged sends share cache and 
  sent={count:'2',latest:'2026-11-16T00:01:00Z'};assert.notEqual((await repo.getSystemFeedRevision()).revision,initial.revision);assert.equal(calls,2);
  await Promise.all([repo.getSystemFeed(),repo.getSystemFeed()]);assert.equal(calls,4);
  policy.enabled=false;assert.equal((await repo.getSystemFeedRevision()).enabled,false);assert.equal(calls,4);
+});
+
+
+test('realtime connection exposes only an anonymous key and never accepts privileged credentials',async()=>{
+ const key=role=>'header.'+Buffer.from(JSON.stringify({role})).toString('base64url')+'.signature';
+ for(const value of [undefined,'private-token',key('service_role')]){const repo=createSystemFeedRepository({}, {env:{SUPABASE_ANON_KEY:value}});await assert.rejects(repo.getSystemFeedConnection(),{code:'SYSTEM_FEED_REALTIME_UNAVAILABLE'});}
+ const config=await createSystemFeedRepository({}, {env:{SUPABASE_ANON_KEY:key('anon'),MASTODON_SYSTEM_ACCESS_TOKEN:'never-expose'}}).getSystemFeedConnection();assert.equal(config.table,'system_feed_signal');assert.equal(config.key,key('anon'));assert.ok(!JSON.stringify(config).includes('never-expose'));
 });
