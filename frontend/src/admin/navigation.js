@@ -7,6 +7,7 @@ export const gameTabs = [
 
 export const adminMenus = [
  ['dashboard', '운영 대시보드'],
+ ['notices', '공지사항 관리'],
  ['guide-world', '세계관 · 안내'],
  ['guide-system', '시스템 안내 관리'],
  ['guide-schedule', '러닝 일정 관리'],
@@ -34,7 +35,7 @@ export const adminMenus = [
 export const adminMenuGroups = [
  {title:'대시보드',description:'운영 현황과 최근 기록',menus:['dashboard']},
  {title:'데이터',description:'아이템 · 음식 · 레시피 · 마물 · 단서 · 구역',menus:['items','foods','recipes','battle','clues','areas','area-hub']},
- {title:'운영',description:'캐릭터 · 상점 · 가챠 · 창고 · 공통 설정',menus:['characters','products','gachas','storage','balance','guide-world','logs','diagnostics']},
+ {title:'운영',description:'캐릭터 · 상점 · 가챠 · 창고 · 공통 설정',menus:['characters','products','gachas','storage','balance','guide-world','notices','logs','diagnostics']},
  {title:'권한 관리',description:'운영진 계정과 권한',menus:['users']}
 ];
 

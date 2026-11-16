@@ -35,6 +35,19 @@ test('P3 public content PostgreSQL integration', {skip: !process.env.ISOLATED_PG
             const body = {content: v, expectedVersion: before.version, requestKey: key()}; await content.saveAdminContent(admin.u.id, 'world', body); assert.deepEqual((await content.getPublicContent('world')).content, {title: v.title, body: v.body}); await assert.rejects(content.saveAdminContent(admin.u.id, 'world', body), {code: 'DUPLICATE_REQUEST'}); await assert.rejects(content.saveAdminContent(admin.u.id, 'world', {...body, requestKey: key()}), {code: 'CONTENT_CHANGED'});
             before = await content.getAdminContent('world'); fault = true; await assert.rejects(save('world', {...v, published: false}), /audit failure/); fault = false; assert.deepEqual(await content.getAdminContent('world'), before);
         });
+        await t.test('independent notices preserve drafts, reject non-admin, detect conflicts and roll back with audit',async()=>{
+            const migration=fs.readFileSync(new URL('../../supabase/migrations/20261116014031_public_notices.sql',import.meta.url),'utf8');
+            await pool.query(migration);
+            const before=await content.getAdminContent('notice');
+            const value={items:[{id:'public',title:'공지 제목',body:'공개 내용',published:true,order:1},{id:'draft',title:'비공개',body:'비밀 초안',published:false,order:0}]};
+            await assert.rejects(content.saveAdminContent(runner.u.id,'notice',{content:value,expectedVersion:before.version,requestKey:key()}),{code:'ADMIN_REQUIRED'});
+            await save('notice',value);
+            assert.deepEqual((await content.getPublicContent('notice')).content.items,[{id:'public',title:'공지 제목',body:'공개 내용'}]);
+            const saved=await content.getAdminContent('notice');await pool.query(migration);assert.deepEqual(await content.getAdminContent('notice'),saved);
+            await assert.rejects(content.saveAdminContent(admin.u.id,'notice',{content:value,expectedVersion:before.version,requestKey:key()}),{code:'CONTENT_CHANGED'});
+            fault=true;await assert.rejects(save('notice',{items:[]}),/audit failure/);fault=false;assert.deepEqual(await content.getAdminContent('notice'),saved);
+            await save('notice',{items:[]});assert.deepEqual((await content.getPublicContent('notice')).content.items,[]);
+        });
         await t.test('system only published items in configured order; simultaneous editors one wins', async () => {
             const item = (id, order, published = true) => ({id, order, published, title: id, body: 'text'}); const before = await content.getAdminContent('system'); const results = await Promise.allSettled([1, 2].map(n => content.saveAdminContent(admin.u.id, 'system', {content: {items: [item('second', 2), item('first', 1), item('SECRET', 0, false)]}, expectedVersion: before.version, requestKey: key()}))); assert.equal(results.filter(r => r.status === 'fulfilled').length, 1); assert.deepEqual((await content.getPublicContent('system')).content.items.map(r => r.id), ['first', 'second']); assert.ok((await pool.query("select 1 from public.action_log where action_type='PUBLIC_CONTENT_UPDATE' and admin_user_id=$1", [admin.u.id])).rowCount);
         });

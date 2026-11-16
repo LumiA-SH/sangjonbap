@@ -42,7 +42,7 @@ export function validatePolicy(kind,v){
   for(const k of ['enabled','publicOnly','excludeReplies','excludeBoosts'])bool(v[k]);
   for(const k of ['accountId','noticeTag','eventTag'])if(v[k]!==null&&(typeof v[k]!=='string'||!v[k].trim()||v[k].length>100))invalid();
   number(v.limit,1,100);
-  if(v.enabled&&['accountId','noticeTag','eventTag','limit'].some(k=>v[k]===null))invalid();
+  if(v.enabled&&['accountId','limit'].some(k=>v[k]===null))invalid();
  }else if(Object.values(v).some(x=>!['HOLD','PREVIEW_ONLY'].includes(x)))invalid();
  return v;
 }

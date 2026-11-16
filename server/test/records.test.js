@@ -52,7 +52,7 @@ test('production cookie auth permits own records, blocks unlinked users and non-
     const repo = {
         getOAuthSession: async () => user,
         getAdminLogCategories: async()=>[],
-        getSystemFeed: async(kind,before)=>({enabled:true,records:[],nextBefore:null,kind}),
+        getSystemFeed: async(kind,before,options)=>({enabled:true,records:[],nextBefore:null,kind,includeFollowers:options.includeFollowers}),
         listAdminRecords: async () => [], getAdminRecord: async () => ({}), saveAdminRecord: async () => ({})
     };
     for (const name of ['getMonsterDiscoveryRecords', 'getActionRecords', 'getClueRecords', 'getDiscoveryRecords', 'getAdminActionRecords']) {
@@ -64,8 +64,13 @@ test('production cookie auth permits own records, blocks unlinked users and non-
     t.after(() => new Promise(resolve => server.close(resolve)));
     const base = `http://127.0.0.1:${server.address().port}/api`;
     const get = (path, auth = true) => fetch(base + path, {headers: auth ? {Cookie: '__Host-sangjonbap-session=' + 'a'.repeat(64)} : {}});
-    assert.equal((await get('/public/system-feed?kind=notice',false)).status,200);
-    assert.equal((await get('/public/system-feed?accountId=other',false)).status,400);
+    assert.equal((await get('/public/system-feed?kind=activity',false)).status,401);
+    assert.equal((await get('/public/system-feed?kind=notice',false)).status,401);
+    const recent=await get('/public/system-feed?kind=activity');assert.equal(recent.status,200);assert.equal((await recent.json()).data.includeFollowers,true);assert.match(recent.headers.get('cache-control'),/private, no-store/);
+    assert.equal((await (await get('/public/system-feed?kind=notice')).json()).data.includeFollowers,false);
+    assert.equal((await get('/public/system-feed?accountId=other')).status,400);
+    assert.equal((await get('/public/system-feed?includeFollowers=true')).status,400);
+    const savedUser=user;user=null;assert.equal((await get('/public/system-feed')).status,401);user=savedUser;
     assert.equal((await get('/records/clues', false)).status, 401);
     assert.equal((await get('/records/action-logs?requestKey=12345678-1234-4234-8234-123456789012', false)).status, 401);
     assert.equal((await get('/records/action-logs')).status, 200);
@@ -112,7 +117,7 @@ test('System feed respects disabled policy without external requests and validat
 });
 test('System feed shares cache, filters tags/visibility/replies/boosts and never sends OAuth tokens',async()=>{
  const {repo,calls,policy}=feedFixture(homepagePolicy(),[statusPost('9'),statusPost('8',{visibility:'private'}),statusPost('7',{visibility:'unlisted'}),statusPost('6',{tags:[{name:'이벤트'}]}),statusPost('5',{in_reply_to_id:'1'}),statusPost('4',{reblog:statusPost('2')}),statusPost('3',{account:{id:'999'}})]);
- const [a,n,e]=await Promise.all([repo.getSystemFeed(),repo.getSystemFeed('notice'),repo.getSystemFeed('event')]);assert.deepEqual(a.records.map(r=>r.id),['9','6']);assert.deepEqual(n.records.map(r=>r.id),['9']);assert.deepEqual(e.records.map(r=>r.id),['6']);assert.equal(calls.length,2);
+ const [a,n,e]=await Promise.all([repo.getSystemFeed(),repo.getSystemFeed('notice'),repo.getSystemFeed('event')]);assert.deepEqual(a.records.map(r=>r.id),['9','6']);assert.equal(n.enabled,false);assert.equal(e.enabled,false);assert.deepEqual(n.records,[]);assert.deepEqual(e.records,[]);assert.equal(calls.length,2);
  assert.deepEqual(Object.keys(a.records[0]).sort(),['id','text','warning','createdAt','url','boosted'].sort());assert.equal(a.records[0].text,'소식 & 안내');assert.ok(calls.every(c=>!c.options.headers.Authorization&&c.options.redirect==='error'&&c.url.startsWith('https://survival-bob.site/')));
  policy.publicOnly=false;assert.ok((await repo.getSystemFeed()).records.some(r=>r.id==='7'));
  policy.enabled=false;assert.equal((await repo.getSystemFeed()).records.length,0);
@@ -130,4 +135,20 @@ test('System feed uses only System credentials, verifies the owner and reports r
  const repo=createSystemFeedRepository({async query(){return {rows:[{config_value:homepagePolicy()}]};}},{env,fetcher:async(url,options)=>{calls.push({url,options});return url.endsWith('verify_credentials')?new Response(JSON.stringify({id:'123',username:'System',acct:'System'})):new Response('',{status:403});}});
  await assert.rejects(repo.getSystemFeed(),e=>e.code==='SYSTEM_FEED_AUTH_REQUIRED'&&!e.message.includes('token'));
  assert.equal(calls.length,2);assert.ok(calls.every(c=>c.options.headers.Authorization==='Bearer fake-system-token'&&!JSON.stringify(c).includes('never-use-login-secret')));
+});
+
+test('recent activity can be enabled without connecting notices or events',async()=>{
+ const {repo,calls}=feedFixture({...homepagePolicy(),noticeTag:null,eventTag:null});
+ assert.deepEqual(await repo.getSystemFeed('notice'),{enabled:false,records:[],nextBefore:null});
+ assert.deepEqual(await repo.getSystemFeed('event'),{enabled:false,records:[],nextBefore:null});
+ assert.equal(calls.length,0);
+ const result=await repo.getSystemFeed('activity');
+ assert.equal(result.enabled,true);assert.equal(result.records.length,1);assert.equal(calls.length,2);
+});
+
+test('authenticated recent activity includes own followers-only posts but never direct messages or private boosts',async()=>{
+ const {repo}=feedFixture({...homepagePolicy(),excludeBoosts:false},[statusPost('9',{visibility:'private'}),statusPost('8',{visibility:'direct'}),statusPost('7',{visibility:'private',account:{id:'999'}}),statusPost('6',{reblog:statusPost('5',{visibility:'private'})}),statusPost('4',{visibility:'unlisted'})]);
+ assert.deepEqual((await repo.getSystemFeed('activity',null,{includeFollowers:true})).records.map(r=>r.id),['9','4']);
+ assert.deepEqual((await repo.getSystemFeed('activity')).records,[]);
+ assert.deepEqual((await repo.getSystemFeed('notice',null,{includeFollowers:true})).records,[]);
 });

@@ -38,7 +38,7 @@ export default function ContentAdminPanel({kind, onDenied}) {
  async function load() {
   const r = await api('/admin/content/' + kind);
   setLoaded(r);
-  setDraft(kind === 'system' && r.content.items.length === 0 ? {...r.content, items:[{id:crypto.randomUUID(),title:'',body:'',published:false,order:0}]} : r.content);
+  setDraft(['system','notice'].includes(kind) && r.content.items.length === 0 ? {...r.content, items:[{id:crypto.randomUUID(),title:'',body:'',published:false,order:0}]} : r.content);
  }
 
  useEffect(() => {
@@ -152,14 +152,14 @@ export default function ContentAdminPanel({kind, onDenied}) {
 
       {draft && (
           <form onSubmit={save}>
-           {kind !== 'system' && editor(draft, null)}
+           {!['system','notice'].includes(kind) && editor(draft, null)}
 
            {draft.items?.map((row, i) => (
                <div key={row.id}>{editor(row, i)}</div>
            ))}
 
            {kind !== 'world' && (
-               <button type="button" disabled={busy || draft.items.length >= 20} onClick={addItem}>안내 항목 추가</button>
+               <button type="button" disabled={busy || draft.items.length >= 20} onClick={addItem}>{kind==='notice'?'공지 추가':'안내 항목 추가'}</button>
            )}
 
            <details>
@@ -167,8 +167,8 @@ export default function ContentAdminPanel({kind, onDenied}) {
             <pre>{JSON.stringify({before: loaded.content, after: draft}, null, 2)}</pre>
            </details>
 
-           <button disabled={busy}>안내 저장</button>
-           <section className="admin-content-preview"><h4>게시 미리보기</h4>{[...(kind==='system'?[]:[draft]),...(draft.items||[])].map((row,i)=><article key={row.id||i}><h3>{row.title||'제목 없음'}</h3><small>{row.published?'공개':'비공개'}</small><p style={{whiteSpace:'pre-wrap'}}>{row.body||'본문 없음'}</p></article>)}</section>
+           <button disabled={busy}>{kind==='notice'?'공지 저장':'안내 저장'}</button>
+           <section className="admin-content-preview"><h4>게시 미리보기</h4>{[...(['system','notice'].includes(kind)?[]:[draft]),...(draft.items||[])].map((row,i)=><article key={row.id||i}><h3>{row.title||'제목 없음'}</h3><small>{row.published?'공개':'비공개'}</small><p style={{whiteSpace:'pre-wrap'}}>{row.body||'본문 없음'}</p></article>)}</section>
           </form>
       )}
 

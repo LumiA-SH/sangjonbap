@@ -4,7 +4,7 @@ import {AppError} from '../../shared/http.js';
 import {adminTransaction,requireAdminRow,checkDuplicate} from '../admin/transaction.js';
 import {requestKey} from '../admin/master-service.js';
 import {writeActionLog} from '../../shared/game.js';
-export const contentDefaults={world:{title:'',body:'',published:false},system:{items:[]},schedule:{title:'',body:'',startAt:null,endAt:null,published:false,items:[]}};
+export const contentDefaults={notice:{items:[]},world:{title:'',body:'',published:false},system:{items:[]},schedule:{title:'',body:'',startAt:null,endAt:null,published:false,items:[]}};
 const fail=(message='안내 입력값을 확인하세요.',code='INVALID_CONTENT',status=400)=>{throw new AppError(status,code,message);};
 const fields=(v,keys)=>{if(!v||typeof v!=='object'||Array.isArray(v)||Object.keys(v).length!==keys.length||keys.some(k=>!Object.hasOwn(v,k)))fail();};
 const text=(v,max)=>{if(typeof v!=='string'||v.length>max)fail();};
@@ -20,7 +20,7 @@ export function contentTime(value){
 function period(v){const s=contentTime(v.startAt),e=contentTime(v.endAt);if((s===null)!==(e===null)||s!==null&&e<=s)fail('시작과 종료를 함께 입력하고 종료는 시작 이후로 지정하세요.');if(v.published&&s===null)fail('공개 일정에는 시작·종료 시각이 필요합니다.');}
 export function validateContent(kind,v){
  kindCheck(kind);fields(v,Object.keys(contentDefaults[kind]));if(Buffer.byteLength(JSON.stringify(v),'utf8')>12000)fail('한 안내의 전체 내용은 UTF-8 12KB 이내입니다.');
- if(kind!=='system')published(v);if(kind==='world'){if(v.published&&!v.body.trim())fail('공개 세계관의 본문을 입력하세요.');return v;}
+ if(!['system','notice'].includes(kind))published(v);if(kind==='world'){if(v.published&&!v.body.trim())fail('공개 세계관의 본문을 입력하세요.');return v;}
  if(kind==='schedule')period(v);
  if(!Array.isArray(v.items)||v.items.length>20)fail('항목은 최대 20개입니다.');const ids=new Set();
  for(const row of v.items){fields(row,['id','title','body','published','order',...(kind==='schedule'?['startAt','endAt']:[])]);published(row);
@@ -41,7 +41,7 @@ export function createPublicContentRepository(pool){
  const items=()=>v.items.filter(x=>x.published).sort((a,b)=>a.order-b.order||a.id.localeCompare(b.id));
  let content=null;
  if(kind==='world'&&v.published)content={title:v.title,body:v.body};
- if(kind==='system')content={items:items().map(({id,title,body})=>({id,title,body}))};
+ if(['system','notice'].includes(kind))content={items:items().map(({id,title,body})=>({id,title,body}))};
  if(kind==='schedule'&&v.published)content={title:v.title,body:v.body,startAt:v.startAt,endAt:v.endAt,state:scheduleState(v.startAt,v.endAt,now),items:items().map(({id,title,body,startAt,endAt})=>({id,title,body,startAt,endAt,state:scheduleState(startAt,endAt,now)}))};
  return {content,serverNow:new Date(row.server_now).toISOString()};
  }

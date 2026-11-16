@@ -665,6 +665,7 @@ export default function AdminPanel({
             );
         }
 
+        if (kind==='notices')return <ContentAdminPanel key={kind} kind="notice" onDenied={denied}/>;
         if (kind.startsWith('guide-')) {
             return <div className="admin-guide-workspace"><nav className="admin-guide-tabs" aria-label="안내 콘텐츠 종류">{[["world","세계관"],["system","시스템 안내"],["schedule","러닝 일정"]].map(([id,label])=><button type="button" key={id} aria-pressed={kind===`guide-${id}`} onClick={()=>setKind(`guide-${id}`)}>{label}</button>)}</nav><ContentAdminPanel key={kind} kind={kind.slice(6)} onDenied={denied}/></div>;
         }

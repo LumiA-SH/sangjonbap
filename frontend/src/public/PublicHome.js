@@ -1,4 +1,4 @@
-import SystemFeed from './SystemFeed';
+import NoticeFeed from './NoticeFeed';
 import {apiUrl} from '../api/client';
 import {publicAsset} from '../publicAsset';
 import MobileLoginHelp from '../MobileLoginHelp';
@@ -84,7 +84,7 @@ export default function PublicHome({
                     <span>OFFICIAL NOTICE</span>
                     <h3>공지사항</h3>
                 </div>
-                <SystemFeed kind="notice" preview onMore={()=>onNavigate('feed-notice')}/>
+                <NoticeFeed preview onMore={()=>onNavigate('feed-notice')}/>
             </section>
         </section>
     );

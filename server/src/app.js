@@ -84,7 +84,7 @@ export function createApp(config, repository, authDependencies={}) {
   );
   if(config.provider==='mastodon')app.use('/api/auth/mastodon',mastodonRoutes(config,repository,sessions,authDependencies));
 
-  app.use('/api/public',publicContentRoutes(repository));
+  app.use('/api/public',publicContentRoutes(repository,sessions));
 
   // Complete overdue resets before accepting new gameplay on every instance.
   // Auth/health remain available when reset recovery needs operator attention.

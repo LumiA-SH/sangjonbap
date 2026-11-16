@@ -43,18 +43,22 @@ export function createSystemFeedRepository(pool,{fetcher=fetch,now=Date.now,env=
   cache.set(key,{promise,until:now()+60000});
   try{return await promise;}catch(e){cache.delete(key);retryAt=Math.max(retryAt,now()+10000);throw e;}
  }
- return {async getSystemFeed(kind='activity',before=null){
+ return {async getSystemFeed(kind='activity',before=null,{includeFollowers=false}={}){
   if(!['activity','notice','event'].includes(kind)||(before!==null&&!id(before)))throw new AppError(400,'INVALID_FEED_QUERY','게시글 조회 조건을 확인하세요.');
+  if(kind!=='activity')return {enabled:false,records:[],nextBefore:null};
   const policy=await readPolicy(pool,'homepage');
-  if(!policy.enabled)return {enabled:false,records:[],nextBefore:null};
+  if(!policy.enabled||(kind==='notice'&&!policy.noticeTag)||(kind==='event'&&!policy.eventTag))return {enabled:false,records:[],nextBefore:null};
   if(!id(policy.accountId))throw new AppError(503,'SYSTEM_FEED_NOT_CONFIGURED','시스템 계정 설정을 확인하세요.');
+  // Only the session-protected recent-activity route opts into followers-only posts.
+  const runnerActivity=kind==='activity'&&includeFollowers;
   const rows=await page(policy,before),records=[];
   for(const row of rows){
    if(!row||typeof row!=='object'||!id(row.id)||(before&&BigInt(row.id)>=BigInt(before))||String(row.account?.id)!==policy.accountId)continue;
    if(policy.excludeReplies&&row.in_reply_to_id!=null||policy.excludeBoosts&&row.reblog)continue;
    const post=row.reblog||row;
-   if(![row.visibility,post.visibility].every(v=>['public','unlisted'].includes(v)))continue;
-   if(policy.publicOnly&&(row.visibility!=='public'||post.visibility!=='public'))continue;
+   const allowed=runnerActivity&&!row.reblog?['public','unlisted','private']:['public','unlisted'];
+   if(![row.visibility,post.visibility].every(v=>allowed.includes(v)))continue;
+   if(!runnerActivity&&policy.publicOnly&&(row.visibility!=='public'||post.visibility!=='public'))continue;
    if(kind!=='activity'&&!(Array.isArray(post.tags)?post.tags:[]).some(t=>tag(t.name)===tag(policy[kind==='notice'?'noticeTag':'eventTag'])))continue;
    if(!Number.isFinite(Date.parse(row.created_at)))continue;
    records.push({id:row.id,text:postText(post.content),warning:postText(post.spoiler_text),createdAt:row.created_at,url:instance+'/@System/'+row.id,boosted:!!row.reblog});

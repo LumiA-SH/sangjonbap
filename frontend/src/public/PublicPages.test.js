@@ -136,8 +136,8 @@ test('action record summaries distinguish midnight interruption and retain legac
 import SystemFeed from './SystemFeed';
 test('System posts use actual text, same-category more link, KST and safe rendering',async()=>{
  const more=jest.fn();api.mockResolvedValue({enabled:true,records:[{id:'9',text:'<img src=x onerror=alert(1)>\n실제 소식',createdAt:'2026-11-15T00:00:00Z',url:'https://survival-bob.site/@System/9'}],nextBefore:'9'});
- await act(async()=>root.render(<SystemFeed kind="notice" preview onMore={more}/>));expect(api).toHaveBeenCalledWith('/public/system-feed?kind=notice');expect(div.textContent).toContain('실제 소식');expect(div.textContent).toContain('KST');expect(div.querySelector('img')).toBeNull();await act(async()=>button('더보기 ›').click());expect(more).toHaveBeenCalledTimes(1);
- await act(async()=>root.render(<SystemFeed key="full" kind="notice"/>));await act(async()=>button('이전 게시글').click());expect(api).toHaveBeenCalledWith('/public/system-feed?kind=notice&before=9');
+ await act(async()=>root.render(<SystemFeed kind="activity" preview onMore={more}/>));expect(api).toHaveBeenCalledWith('/public/system-feed?kind=activity');expect(div.textContent).toContain('실제 소식');expect(div.textContent).toContain('KST');expect(div.querySelector('img')).toBeNull();await act(async()=>button('더보기 ›').click());expect(more).toHaveBeenCalledTimes(1);
+ await act(async()=>root.render(<SystemFeed key="full" kind="activity"/>));await act(async()=>button('이전 게시글').click());expect(api).toHaveBeenCalledWith('/public/system-feed?kind=activity&before=9');
 });
 test('System feed distinguishes disabled, empty, error and retry states',async()=>{
  api.mockResolvedValue({enabled:false,records:[],nextBefore:null});await act(async()=>root.render(<SystemFeed/>));expect(div.textContent).toContain('연동 준비 중');
@@ -408,4 +408,21 @@ test('monster action dialog edits draft without saving until monster save',async
  expect(div.querySelector('dialog').hasAttribute('open')).toBe(false);
  expect(div.querySelector('.admin-action-summary').textContent).toBeTruthy();
  expect(api.mock.calls.some(([,o])=>o?.method)).toBe(false);
+});
+
+import NoticeFeed from './NoticeFeed';
+test('notice preview and more use independent content and never call System',async()=>{
+ const more=jest.fn();api.mockResolvedValue({content:{items:[{id:'n',title:'운영 공지',body:'공지 본문'}]}});
+ await act(async()=>root.render(<NoticeFeed preview onMore={more}/>));
+ expect(api).toHaveBeenCalledWith('/public/guides/notice');expect(api.mock.calls.some(([p])=>p.includes('system-feed'))).toBe(false);
+ expect(div.textContent).toContain('운영 공지');expect(div.textContent).toContain('공지 본문');await act(async()=>button('더보기 ›').click());expect(more).toHaveBeenCalledTimes(1);
+});
+test('notice admin saves independent published content',async()=>{
+ api.mockImplementation(async(p,o)=>o?{content:o.body.content,version:'new'}:{content:{items:[]},version:'old'});
+ await act(async()=>root.render(<ContentAdminPanel kind="notice" onDenied={jest.fn()}/>));
+ const title=div.querySelector('input[maxlength="100"]');await act(async()=>Simulate.change(title,{target:{value:'새 공지'}}));
+ await act(async()=>Simulate.change(div.querySelector('textarea'),{target:{value:'본문'}}));
+ await act(async()=>Simulate.change(div.querySelector('input[type=checkbox]'),{target:{checked:true}}));
+ await act(async()=>Simulate.submit(div.querySelector('form')));
+ expect(api).toHaveBeenCalledWith('/admin/content/notice',expect.objectContaining({method:'PATCH',body:expect.objectContaining({expectedVersion:'old',content:{items:[expect.objectContaining({title:'새 공지',body:'본문',published:true})]}})}));
 });

@@ -5,7 +5,7 @@ import {api} from '../api/client';
 const names = {
  anemia: '빈혈 RP 단계',
  announcements: '시스템 공지 정책',
- homepage: '홈페이지 공지·이벤트',
+ homepage: '홈페이지 최근 기록',
  recovery: '과거 데이터 복구 정책'
 };
 
@@ -108,7 +108,7 @@ export default function OperatingPolicyPanel({onDenied}) {
  }
 
  function fields(values, change) {
-  return Object.entries(values).map(([k, v]) => {
+  return Object.entries(values).filter(([k])=>kind!=='homepage'||!['noticeTag','eventTag','publicOnly'].includes(k)).map(([k, v]) => {
    let input;
 
    if (typeof v === 'boolean') {
@@ -193,6 +193,7 @@ export default function OperatingPolicyPanel({onDenied}) {
  }
 
  function getDescription() {
+  if(kind==='homepage')return 'System 게시글은 로그인한 러너의 최근 기록에만 표시됩니다. 공지사항은 공지사항 관리에서 별도로 등록합니다.';
   if (kind === 'anemia') return '표시 전용입니다. 활성화 시 혈량 1~100을 빠짐없이 한 번씩 포함해야 합니다. 혈량 0과 사망 상태는 변경할 수 없습니다.';
   if (kind === 'recovery') return '조회·미리보기 정책만 저장합니다. 복구 실행 및 과거 데이터 변경은 차단됩니다.';
   if(kind === 'announcements') return '실제 발송은 서버 게시 활성화와 별도 스케줄 승인이 필요합니다. 중복 방지는 필수이며 재시도는 최대 3회·최소 5분입니다. 조사율은 구역별 기준입니다. 스토리·레이드는 조건 확정 전 활성화할 수 없습니다.';
