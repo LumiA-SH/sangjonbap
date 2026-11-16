@@ -891,6 +891,16 @@ export default function MasterPanel({kind, onDenied, recordId, onOpen, after, on
         (kind === 'foods' && !resolvedName);
   });
 
+
+  function openAdminRow(event,row) {
+    if(busy||saving) return;
+
+    if(event.target.closest('button, a, input, select, textarea, label, summary, [role="button"], [role="link"], .admin-record-actions, .admin-delete-inline')) return;
+    if(kind==='gachas'&&event.target.closest('td:last-child')) return;
+
+    select(row);
+  }
+
   return (
       <section aria-label="마스터 관리" className={"admin-record-workspace"+(kind==='gachas'?" gacha-catalog"+(recordId==='new'||selected?" has-editor":""):"")}><div className="admin-list-pane">
         <p role="status">{busy ? '불러오는 중…' : message}</p>
@@ -919,10 +929,10 @@ export default function MasterPanel({kind, onDenied, recordId, onOpen, after, on
 
         {['foods','recipes','gachas'].includes(kind)&&<label>표시 상태<select value={activeFilter} onChange={e=>setActiveFilter(e.target.value)}><option value="all">전체</option><option value="active">활성 데이터만</option><option value="inactive">비활성 데이터만</option></select></label>}
         <small className="admin-list-count">현재 페이지 {visibleRecords.length} / {records.length}건</small>
-        {kind==='gachas'?<table className="gacha-catalog-table"><thead><tr><th>가챠 이름</th><th>가격</th><th>보상 종류</th><th>상태</th><th>관리</th></tr></thead><tbody>{visibleRecords.map(row=><tr key={row.id}><td><button type="button" className="admin-entry-title" disabled={busy||saving} onClick={()=>select(row)}>{row.name}</button></td><td>1 코인</td><td>{(row.rewards||[]).filter(r=>r.is_active!==false).length}종</td><td>{row.is_active?'활성':'비활성'}</td><td><AdminDeleteControl menu={kind} recordId={String(row.id)} disabled={busy||saving} onDenied={onDenied} onDeleted={async()=>{invalidateAdminNames();await load();setMessage('삭제 완료');}}/></td></tr>)}</tbody></table>: (
+        {kind==='gachas'?<table className="gacha-catalog-table"><thead><tr><th>가챠 이름</th><th>가격</th><th>보상 종류</th><th>상태</th><th>관리</th></tr></thead><tbody>{visibleRecords.map(row=><tr key={row.id} className="admin-clickable-row" onClick={event=>openAdminRow(event,row)}><td><button type="button" className="admin-entry-title" disabled={busy||saving} onClick={()=>select(row)}>{row.name}</button></td><td>1 코인</td><td>{(row.rewards||[]).filter(r=>r.is_active!==false).length}종</td><td>{row.is_active?'활성':'비활성'}</td><td><AdminDeleteControl menu={kind} recordId={String(row.id)} disabled={busy||saving} onDenied={onDenied} onDeleted={async()=>{invalidateAdminNames();await load();setMessage('삭제 완료');}}/></td></tr>)}</tbody></table>: (
         <ul className="admin-master-records">
           {visibleRecords.map(row => (
-              <li key={row.id}>
+              <li key={row.id} className="admin-clickable-row" onClick={event=>openAdminRow(event,row)}>
                 <div className="admin-record-summary">
                   <button type="button" className="admin-entry-title" disabled={busy || saving} aria-current={String(selected?.id)===String(row.id)?"true":undefined} onClick={()=>select(row)}>
                     {kind === 'foods'

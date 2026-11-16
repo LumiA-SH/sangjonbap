@@ -176,7 +176,10 @@ export default function ClueAdminPanel({onDenied, recordId, onOpen}) {
 
       <ul className="admin-two-column-list admin-clue-list">
        {rows.map(r => (
-           <li key={r.id}>
+           <li key={r.id} className="admin-clickable-row" onClick={event=>{
+             if(busy||event.target.closest('button, a, input, select, textarea, label, summary, [role="button"], [role="link"], .admin-record-actions, .admin-delete-inline')) return;
+             choose(String(r.id));
+           }}>
             <div className="admin-list-detail">
              <button type="button" className="admin-entry-title" disabled={busy} aria-current={String(loaded?.record?.id)===String(r.id)?"true":undefined} onClick={()=>choose(String(r.id))}>{r.title}</button>
              <small>

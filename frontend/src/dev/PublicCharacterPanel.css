@@ -1,0 +1,349 @@
+/* ========================================
+   01. PUBLIC CHARACTER PANEL
+======================================== */
+
+.public-character-panel {
+    width: 100%;
+    min-width: 0;
+    color: #29272a;
+}
+
+.public-character-panel * {
+    box-sizing: border-box;
+}
+
+.public-character-panel__heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #dedbda;
+}
+
+.public-character-panel__eyebrow {
+    display: block;
+    margin-bottom: 6px;
+    color: #780d19;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+}
+
+.public-character-panel__heading h3 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+}
+
+.public-character-panel__battle-badge {
+    padding: 7px 12px;
+    border: 1px solid #780d19;
+    border-radius: 4px;
+    background: #780d19;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.public-character-panel__content {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.public-character-panel__identity {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 14px 18px;
+    border: 1px solid #e1dddd;
+    border-radius: 6px;
+    background: #faf9f8;
+}
+
+.public-character-panel__identity strong {
+    font-size: 17px;
+}
+
+.public-character-panel__identity span {
+    font-size: 13px;
+    color: #666166;
+}
+
+/* ========================================
+   02. DETAIL GRID / CARDS
+======================================== */
+
+.public-character-panel__grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+    align-items: stretch;
+}
+
+.public-character-panel__card {
+    min-width: 0;
+    padding: 22px;
+    border: 1px solid #dedbda;
+    border-radius: 8px;
+    background: #fffefa;
+}
+
+.public-character-panel__card-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 22px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid #e8e5e3;
+}
+
+.public-character-panel__card-heading h4 {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 700;
+}
+
+/* ========================================
+   03. VITAL STATUS
+======================================== */
+
+.public-character-panel__vitals {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    margin: 0;
+}
+
+.public-character-panel__vital {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+}
+
+.public-character-panel__vital-info {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.public-character-panel__vital-info dt {
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.public-character-panel__vital-info dd {
+    margin: 0;
+    font-size: 13px;
+    color: #747074;
+    font-variant-numeric: tabular-nums;
+}
+
+.public-character-panel__vital-info dd strong {
+    color: #29272a;
+    font-size: 16px;
+}
+
+.public-character-panel__progress {
+    overflow: hidden;
+    width: 100%;
+    height: 10px;
+    border-radius: 3px;
+    background: #e9e7e6;
+}
+
+.public-character-panel__progress-fill {
+    height: 100%;
+    border-radius: inherit;
+    transition: width 0.25s ease;
+}
+
+.public-character-panel__progress--hp .public-character-panel__progress-fill {
+    background: #7b111d;
+}
+
+.public-character-panel__progress--blood .public-character-panel__progress-fill {
+    background: #bb626a;
+}
+
+.public-character-panel__progress--ap .public-character-panel__progress-fill {
+    background: #62646d;
+}
+
+/* ========================================
+   04. COMBAT STATUS
+======================================== */
+
+.public-character-panel__battle-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin: 0;
+}
+
+.public-character-panel__battle-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    min-height: 130px;
+    padding: 18px 10px;
+    border: 1px solid #e7e3e1;
+    border-radius: 6px;
+    background: #f6f4f2;
+    text-align: center;
+}
+
+.public-character-panel__battle-stat dt {
+    color: #790e19;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
+.public-character-panel__battle-stat dd {
+    margin: 10px 0 6px;
+    color: #262429;
+    font-size: 30px;
+    font-weight: 700;
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+}
+
+.public-character-panel__battle-stat > span {
+    color: #777177;
+    font-size: 12px;
+}
+
+/* ========================================
+   05. INVENTORY
+======================================== */
+
+.public-character-panel__inventory .public-character-panel__card-heading {
+    margin-bottom: 18px;
+}
+
+.public-character-panel__inventory-count {
+    padding: 5px 10px;
+    border: 1px solid #e3dfdd;
+    border-radius: 4px;
+    background: #f5f2f1;
+    color: #615c60;
+    font-size: 12px;
+}
+
+.public-character-panel__item-list {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.public-character-panel__item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    min-width: 0;
+    padding: 13px 15px;
+    border: 1px solid #e6e2e0;
+    border-radius: 5px;
+    background: #faf9f7;
+}
+
+.public-character-panel__item-name {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.public-character-panel__item-quantity {
+    flex-shrink: 0;
+    color: #790e19;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.public-character-panel__empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100px;
+    padding: 20px;
+    border: 1px dashed #d8d3d1;
+    border-radius: 5px;
+    background: #faf9f7;
+    color: #888186;
+    font-size: 13px;
+}
+
+/* ========================================
+   06. NOTICE
+======================================== */
+
+.public-character-panel__notice {
+    margin: 0;
+    padding: 12px 15px;
+    border-left: 3px solid #888187;
+    background: #f5f4f3;
+    color: #716d70;
+    font-size: 12px;
+    line-height: 1.7;
+}
+
+/* ========================================
+   07. RESPONSIVE
+======================================== */
+
+@media (max-width: 900px) {
+    .public-character-panel__item-list {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .public-character-panel__card {
+        padding: 18px;
+    }
+}
+
+@media (max-width: 700px) {
+    .public-character-panel__grid {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 12px;
+    }
+
+    .public-character-panel__content {
+        gap: 12px;
+    }
+
+    .public-character-panel__card {
+        padding: 16px;
+    }
+
+    .public-character-panel__battle-stat {
+        min-height: 110px;
+        padding: 14px 8px;
+    }
+
+    .public-character-panel__battle-stat dd {
+        font-size: 25px;
+    }
+
+    .public-character-panel__item-list {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .public-character-panel__progress-fill {
+        transition: none;
+    }
+}

@@ -348,7 +348,10 @@ export default function BattleAdminPanel({onDenied, recordId, onOpen}) {
 
           <ul className="admin-two-column-list admin-monster-list">
             {rows.map(r => (
-                <li key={r.id}>
+                <li key={r.id} className="admin-clickable-row" onClick={event=>{
+                  if(busy||event.target.closest('button, a, input, select, textarea, label, summary, [role="button"], [role="link"], .admin-record-actions, .admin-delete-inline')) return;
+                  openMonster(r);
+                }}>
                   <div className="admin-list-detail">
                     <button type="button" className="admin-entry-title" disabled={busy} aria-current={String(id)===String(r.id)?"true":undefined} onClick={()=>openMonster(r)}>{r.name}</button>
                     <small>기본 식재료: {r.base_ingredient_name || '미설정'}</small>

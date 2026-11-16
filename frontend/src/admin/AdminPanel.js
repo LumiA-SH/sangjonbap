@@ -615,7 +615,7 @@ export default function AdminPanel({onBack,onExit=onBack,onLogout,onAccessLost,r
         }
 
         if(kind==='area-hub') {
-            return <AreaDiscoveryPanel onDenied={denied} onManage={id=>onNavigate?onNavigate({menu:'areas',area:String(id),record:null,after:null}):setKind('areas')}/>;
+            return <AreaDiscoveryPanel onDenied={denied} onManage={id=>onNavigate?onNavigate({menu:'areas',area:id==null?null:String(id),record:null,after:null}):setKind('areas')}/>;
         }
 
         if(kind==='investigation'||(kind==='areas'&&recordId!=='new')) {

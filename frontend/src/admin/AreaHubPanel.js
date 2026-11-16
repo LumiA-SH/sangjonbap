@@ -1200,12 +1200,119 @@ export function AreaDiscoveryPanel({onDenied,onManage}) {
   finally{if(live)setBusy(false);}
  })();return()=>{live=false;};},[onDenied]);
  const count=items=>items.filter(x=>x.found).length+' / '+items.length;
- return <section className="area-discovery-page"><p>구역별 발견 현황과 미발견 대상을 확인합니다.</p>
- {busy&&<p role="status">조사 현황을 불러오는 중…</p>}{error&&<p role="alert">{error}</p>}
- <header className="area-discovery-heading"><h3>구역별 발견 현황</h3><span>발견 {count(rows.flatMap(r=>r.groups.flatMap(g=>g.items)))}</span></header><div className="area-discovery-scroll"><table className="admin-log-table"><thead><tr><th>구역</th><th>현재 조사율</th><th>고유 결과</th><th>마물</th><th>레시피</th><th>합계</th></tr></thead><tbody>
- {rows.map(({area,groups})=><Fragment key={area.id}><tr><td><div className="area-discovery-zone"><button type="button" aria-expanded={expanded===area.id} aria-label={area.name+' 발견 대상 펼치기'} onClick={()=>setExpanded(expanded===area.id?null:area.id)}>{expanded===area.id?'−':'+'}</button><div><strong>{area.name}</strong><small>ID {area.id}</small></div></div></td><td>{Number(area.investigation_rate ?? area.calculated_investigation_rate ?? 0)}%</td>{groups.map(g=><td key={g.title}>{count(g.items)}</td>)}<td>{count(groups.flatMap(g=>g.items))}</td></tr>
- {expanded===area.id&&<tr><td colSpan="6"><div className="area-discovery-details">{groups.map(g=><section key={g.title}><h3>{g.title}</h3><table><tbody>{g.items.map(item=><tr key={item.id}><td>{item.name}</td><td><span className={item.found?'area-found':'area-missing'}>{item.found===undefined?'확인 필요':item.found?'● 발견':'○ 미발견'}</span></td></tr>)}{!g.items.length&&<tr><td>등록된 항목 없음</td></tr>}<tr><th>합계</th><td>{count(g.items)}</td></tr></tbody></table></section>)}</div><button type="button" onClick={()=>onManage(area.id)}>이 구역 관리</button></td></tr>}</Fragment>)}
- {!busy&&!error&&!rows.length&&<tr><td colSpan="6">등록된 구역이 없습니다.</td></tr>}
- {!!rows.length&&<tr><th>구역별 합계</th><td>—</td>{[0,1,2].map(i=><td key={i}>{count(rows.flatMap(r=>r.groups[i].items))}</td>)}<td>{count(rows.flatMap(r=>r.groups.flatMap(g=>g.items)))}</td></tr>}
- </tbody></table></div></section>;
+ const renderRatio=items=>(
+  <span className="area-discovery-ratio">
+   <strong>{items.filter(item=>item.found).length}</strong>
+   <span> / {items.length}</span>
+  </span>
+ );
+
+ return (
+  <section className="area-discovery-page">
+   <div className="area-discovery-topbar">
+    <p>구역별 발견 현황과 아직 발견되지 않은 대상을 조회합니다.</p>
+    <button type="button" className="area-discovery-manage" onClick={()=>onManage(null)}>구역 관리로 이동</button>
+   </div>
+
+   {busy&&<p role="status">조사 현황을 불러오는 중…</p>}
+   {error&&<p role="alert">{error}</p>}
+
+   <div className="area-discovery-card">
+    <header className="area-discovery-heading">
+     <h3>구역별 발견 현황</h3>
+     <span>전체 {count(rows.flatMap(r=>r.groups.flatMap(g=>g.items)))} 발견</span>
+    </header>
+
+    <div className="area-discovery-scroll">
+     <table className="admin-log-table area-discovery-table">
+      <thead>
+       <tr>
+        <th scope="col">구역</th>
+        <th scope="col">현재 조사율</th>
+        <th scope="col">고유 결과</th>
+        <th scope="col">마물</th>
+        <th scope="col">레시피</th>
+        <th scope="col">합계</th>
+       </tr>
+      </thead>
+
+      <tbody>
+       {rows.map(({area,groups})=>(
+        <Fragment key={area.id}>
+         <tr className="area-discovery-row">
+          <td>
+           <div className="area-discovery-zone">
+            <button type="button" aria-expanded={expanded===area.id} aria-label={area.name+' 발견 대상 펼치기'} onClick={()=>setExpanded(expanded===area.id?null:area.id)}>
+             {expanded===area.id?'−':'+'}
+            </button>
+            <div>
+             <strong>{area.name}</strong>
+             <small>{String(area.id).startsWith('AREA-')?'':'ID '}{area.id}</small>
+            </div>
+           </div>
+          </td>
+          <td className="area-discovery-rate">
+           {groups.some(group=>group.items.length)
+            ? Number(area.investigation_rate??area.calculated_investigation_rate??0)+'%'
+            : '—'}
+          </td>
+          {groups.map(group=><td key={group.title}>{renderRatio(group.items)}</td>)}
+          <td>{renderRatio(groups.flatMap(group=>group.items))}</td>
+         </tr>
+
+         {expanded===area.id&&
+          <tr className="area-discovery-expanded">
+           <td colSpan={6}>
+            <div className="area-discovery-details">
+             {groups.map(group=>(
+              <section key={group.title}>
+               <h3>{group.title}</h3>
+               <table>
+                <tbody>
+                 {group.items.map(item=>(
+                  <tr key={item.id}>
+                   <td>{item.name}</td>
+                   <td>
+                    <span className={item.found?'area-found':'area-missing'}>
+                     {item.found===undefined?'확인 필요':item.found?'● 발견':'○ 미발견'}
+                    </span>
+                   </td>
+                  </tr>
+                 ))}
+                 {!group.items.length&&<tr><td colSpan={2}>등록된 항목 없음</td></tr>}
+                 <tr><th scope="row">합계</th><td>{count(group.items)}</td></tr>
+                </tbody>
+               </table>
+              </section>
+             ))}
+            </div>
+            <button type="button" className="area-discovery-detail-manage" onClick={()=>onManage(area.id)}>이 구역 관리</button>
+           </td>
+          </tr>
+         }
+        </Fragment>
+       ))}
+
+       {!busy&&!error&&!rows.length&&
+        <tr className="area-discovery-empty">
+         <td colSpan={6}>등록된 구역이 없습니다.</td>
+        </tr>
+       }
+      </tbody>
+
+      {!!rows.length&&
+       <tfoot>
+        <tr>
+         <th scope="row">전체 합계</th>
+         <td>—</td>
+         {[0,1,2].map(i=><td key={i}>{renderRatio(rows.flatMap(r=>r.groups[i].items))}</td>)}
+         <td>{renderRatio(rows.flatMap(r=>r.groups.flatMap(g=>g.items)))}</td>
+        </tr>
+       </tfoot>
+      }
+     </table>
+    </div>
+   </div>
+  </section>
+ );
 }

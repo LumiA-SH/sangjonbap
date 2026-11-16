@@ -154,6 +154,14 @@
    03. LIST OPEN / SELECTION
 ======================================== */
 
+.admin-panel .admin-content .admin-clickable-row {
+    cursor: pointer;
+}
+
+.admin-panel .admin-content .admin-clickable-row:hover {
+    background: #faf0f1;
+}
+
 .admin-panel .admin-list-pane .admin-record-open {
  position: relative;
  display: flex;
@@ -195,7 +203,7 @@
  outline-offset: -2px;
 }
 
-.admin-panel .admin-content .admin-list-pane li:has([aria-current="true"]) {
+.admin-panel .admin-content .admin-list-pane :is(.admin-records, .admin-master-records, .admin-two-column-list) > li:has([aria-current="true"]) {
  background: #faf0f1;
  box-shadow: inset 3px 0 var(--admin-red);
 }
