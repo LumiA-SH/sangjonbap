@@ -166,8 +166,7 @@ export function validateMasterInput(kind,body,create) {
             integer(row.quantity,1,'quantity');
 
             if (k==='rewards') {
-                if (row.quantity!==1)invalid('가챠는 아이템 1개를 지급합니다.');
-                if (row.weight!==undefined)integer(row.weight,1,'weight');
+                if(row.weight!==undefined)integer(row.weight,1,'weight');
 
                 if (!(row.is_active===false&&row.max_stock===null&&row.remaining_stock===null)) {
                     validateStockChange({max_stock:row.max_stock,remaining_stock:row.remaining_stock},row);

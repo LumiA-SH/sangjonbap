@@ -8,7 +8,7 @@ import {saveGachaStock} from '../src/modules/admin/gacha-stock.js';
 
 const rp = {id: '8', name: 'RP 물품', description: '추억을 적는 물품', is_active: true, transferable: true, usable: false, battle_usable: false, effect_type: null, effect_value: null, use_target: 'NONE', category: 'ETC'};
 // SQL transaction emulator: verifies write ordering and rollback, NOT PostgreSQL row locking.
-function fixture({stock = 1, currency = 2, failLog = false, item = rp, food = false} = {}) {
+function fixture({stock = 1, currency = 2, failLog = false, item = rp, food = false, quantity = 1} = {}) {
     let state = {character: {id: '1', hp: 100, max_hp: 100, blood: 100, max_blood: 100, ap: 10, max_ap: 10, currency, status: 'ALIVE', death_count: 0}, stock, inventory: 0, logs: []};
     let snapshot; const calls = []; const rows = values => ({rows: values, rowCount: values.length});
     const client = {        
@@ -21,7 +21,7 @@ const dailyGateResult = dailyGateFixture(raw); if (dailyGateResult) return daily
             if (sql.startsWith('select c.*')) return rows([{...state.character}]);
             if (sql.startsWith('select id from public.battle')) return rows([]);
             if (sql.startsWith('select * from public.gacha where')) return rows([{id: '4', name: 'RP 가챠', is_active: true, price: 99}]);
-            if (sql.startsWith('select * from public.gacha_reward')) return rows([{id: '7', item_id: '8', quantity: 99, weight: 99, max_stock: stock == null ? null : Math.max(1, stock), remaining_stock: state.stock}]);
+            if (sql.startsWith('select * from public.gacha_reward')) return rows([{id: '7', item_id: '8', quantity, weight: 99, max_stock: stock == null ? null : Math.max(1, stock), remaining_stock: state.stock}]);
             if (sql.startsWith('select * from public.item')) return rows([item]);
             if (sql.startsWith('select 1 from public.food_config')) return rows(food ? [{}] : []);
             if (sql.includes('cross join (select clock_timestamp() as now)')) return rows([{boundary: false, outside: false}]);
@@ -96,4 +96,12 @@ test('inactive new reward still requires active item; legacy inactive record can
     await saveGachaStock(c, '4', {rewards: [{id: '7', item_id: '8', max_stock: null, remaining_stock: null}]}, [{item_id: '8', max_stock: null, remaining_stock: null, is_active: false}]);
     assert(calls.some(sql => sql.startsWith('update public.gacha_reward set is_active=false')));
     await assert.rejects(saveGachaStock(c, '4', {rewards: [{id: '7', item_id: '8', max_stock: 3, remaining_stock: 2}]}, [{item_id: '8', max_stock: null, remaining_stock: null, is_active: false}]), e => e.code === 'GACHA_STOCK_CONFLICT');
+});
+
+
+test('configured quantity is granted once while a single award slot is consumed',async()=>{
+ const f=fixture({stock:2,quantity:3});const key=randomUUID();const r=await f.repo.drawGacha('u','4',key);
+ assert.equal(r.reward.quantity,3);assert.equal(f.state().inventory,3);assert.equal(f.state().stock,1);
+ assert.equal(f.state().logs[0].detail.reward.quantity,3);
+ await assert.rejects(f.repo.drawGacha('u','4',key),e=>e.code==='DUPLICATE_REQUEST');assert.equal(f.state().inventory,3);
 });

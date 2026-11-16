@@ -95,7 +95,7 @@ const c = await raw.connect(); return {
         });
         const rp = await repo.saveAdminRecord(a.id, 'items', null, {name: 'RP', category: 'MATERIAL', transferable: true, usable: false, battle_usable: false, use_target: 'NONE', effect_type: null, effect_value: null}, key());
         const rp2 = await repo.saveAdminRecord(a.id, 'items', null, {name: 'RP2', category: 'MATERIAL', transferable: true, usable: false, battle_usable: false, use_target: 'NONE', effect_type: null, effect_value: null}, key());
-        const stock = (id, n) => ({item_id: id, quantity: 1, max_stock: n, remaining_stock: n});
+        const stock = (id, n) => ({item_id: id, quantity: 1, weight:1,max_stock: n, remaining_stock: n});
         await save('foods', null, {item_id: food.id, blood_recovery:7});
         await save('foods', null, {item_id: failure.id, is_failure:true});
         let recipe = await save('recipes', null, {name: 'DEV recipe', success_rate: 100, result_item_id: food.id, failure_item_id: failure.id, ingredients: [{item_id: material.id, quantity: 2}]}),
@@ -152,7 +152,7 @@ const c = await raw.connect(); return {
             await rejects(save('recipes', recipe.id, {ingredients: [{item_id: '9223372036854775807', quantity: 1}]}), 'ITEM_NOT_FOUND');
             assert.equal((await repo.getAdminMaster('recipes', recipe.id)).ingredients[0].quantity, 3);
             gacha = await repo.getAdminMaster('gachas', gacha.id);
-            assert.deepEqual(gacha.rewards.map(r => r.probability), [25, 75]);
+            assert.deepEqual(gacha.rewards.map(r => r.probability), [50, 50]);
             assert.equal((await repo.listAdminMasters('gachas'))[0].id, gacha.id);
             await rejects(save('gachas', gacha.id, {start_at: '2026-10-12T00:00:00Z', end_at: '2026-10-11T00:00:00Z'}), 'INVALID_ADMIN_INPUT');
             const timed = await save('gachas', gacha.id, {start_at: '2026-10-11T00:00:00.000001Z', end_at: '2026-10-11T00:00:00.000002Z'});

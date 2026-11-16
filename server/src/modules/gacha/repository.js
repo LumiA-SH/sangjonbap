@@ -61,6 +61,7 @@ export function createGachaRepository(pool, {random} = {}) {
                                     'name', i.name,
                                     'description', i.description,
                                     'image_url', i.image_url,
+                                    'quantity', r.quantity,
                                     'remainingStock', r.remaining_stock
                                 ) order by r.id
                             )
@@ -159,7 +160,7 @@ export function createGachaRepository(pool, {random} = {}) {
                     [before.id, selected.item_id]
                 )).rows[0];
 
-                if (Number(current?.quantity || 0) + 1 > 2147483647) {
+                if (Number(current?.quantity || 0) + selected.quantity > 2147483647) {
                     fail('INVENTORY_LIMIT_CONFLICT', '보상 수량이 DB 저장 범위를 초과합니다.');
                 }
 
@@ -171,7 +172,7 @@ export function createGachaRepository(pool, {random} = {}) {
                 if (!stock.rowCount) fail('GACHA_SOLD_OUT', '보상이 품절되었습니다.');
 
                 const character = await changeCharacterResources(client, before, {currency: -1});
-                const inventory = await changeInventoryQuantity(client, before.id, selected.item_id, 1);
+                const inventory = await changeInventoryQuantity(client, before.id, selected.item_id, selected.quantity);
                 const item = items.get(String(selected.item_id));
 
                 const result = {
@@ -184,7 +185,7 @@ export function createGachaRepository(pool, {random} = {}) {
                         itemId: selected.item_id,
                         name: item.name,
                         description: item.description,
-                        quantity: 1
+                        quantity: selected.quantity
                     },
                     inventoryBefore: inventory.before,
                     inventoryQuantity: inventory.after
@@ -205,7 +206,7 @@ export function createGachaRepository(pool, {random} = {}) {
                     type: 'gacha',
                     key: requestKey,
                     characterId: before.id,
-                    values: {character: before.name, reward: item.name, quantity: '1'}
+                    values: {character: before.name, reward: item.name, quantity: String(selected.quantity)}
                 });
 
                 await commitGameTransaction(client);

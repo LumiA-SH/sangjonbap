@@ -1,3 +1,4 @@
+import {createInventoryRepository} from '../src/modules/inventory/repository.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
@@ -42,6 +43,21 @@ await t.test(name, async () => {
         });    
 }
     try {
+        await scenario('zero storage rows are hidden and restocked rows return without deleting history',async()=>{
+            const c=await pool.connect();try{await c.query('begin');
+            await c.query('insert into public.storage(item_id,quantity) values($1,0),($2,2)',items);
+            const storage=createInventoryRepository(c);
+            assert.equal((await storage.getStorage()).some(r=>r.item_id===items[0]),false);
+            assert.equal((await storage.getStorage()).find(r=>r.item_id===items[1]).quantity,2);
+            await c.query('update public.storage set quantity=3 where item_id=$1',[items[0]]);
+            assert.equal((await storage.getStorage()).find(r=>r.item_id===items[0]).quantity,3);
+            }finally{await c.query('rollback');c.release();}
+        });
+        await scenario('configured multiple item reward preserves stock draw count and log',async()=>{
+            await pool.query('update public.gacha_reward set quantity=3 where gacha_id=$1',[gachas[0]]);
+            try{const r=await draw();assert.equal(r.reward.quantity,3);assert.equal(r.inventoryQuantity,3);assert.equal((await snapshot()).logs[0].detail.reward.quantity,3);}
+            finally{await pool.query('update public.gacha_reward set quantity=1 where gacha_id=$1',[gachas[0]]);}
+        });
         await scenario('last global stock permits exactly one concurrent winner across characters', async () => {
             await pool.query('update public.gacha_reward set remaining_stock=case when item_id=$2 then 1 else 0 end where gacha_id=$1', [gachas[0], items[0]]);
             const outcomes = await Promise.allSettled([draw(0), draw(1)]);
@@ -59,8 +75,8 @@ await t.test(name, async () => {
             assert.equal((await pool.query('select quantity from public.inventory where character_id=$1 and item_id=$2', [characters[1], result.reward.itemId])).rows[0].quantity, 1);
         });
         await scenario('draw weighted reward, exact price, inventory and log; catalog rewards', async () => {
-            const r = await draw(); assert.equal(r.currency, 99); assert.equal(r.reward.itemId, items[1]); assert.equal(r.reward.quantity, 1); assert.equal('totalWeight' in r.reward, false); assert.equal('weight' in r.reward, false);
-            assert.equal(r.inventoryQuantity, 1); assert.equal((await snapshot()).logs[0].detail.reward.itemId, items[1]);
+            const r = await draw(); assert.equal(r.currency, 99); assert.equal(r.reward.itemId, items[0]); assert.equal(r.reward.quantity, 1); assert.equal('totalWeight' in r.reward, false); assert.equal('weight' in r.reward, false);
+            assert.equal(r.inventoryQuantity, 1); assert.equal((await snapshot()).logs[0].detail.reward.itemId, items[0]);
             const list = (await repo.getGachaCatalog(users[0])).gachas.find(g => g.id === gachas[0]); assert.ok(Array.isArray(list.rewards)); assert.ok(list.rewards.every(r=>!('weight' in r))); assert.equal(list.outside, false);
         });
         await scenario('insufficient currency, DEAD and NEAR_DEATH restriction change nothing', async () => {
@@ -139,7 +155,7 @@ release: () => c.release(), query(sql, args) {
             await pool.query('update public.gacha set price=0 where id=$1', [gachas[0]]); assert.equal((await draw()).currency, 99);
         });
         await scenario('inventory integer overflow does not charge', async () => {
-            await pool.query('insert into public.inventory(character_id,item_id,quantity) values ($1,$2,2147483647)', [characters[0], items[1]]);
+            await pool.query('insert into public.inventory(character_id,item_id,quantity) values ($1,$2,2147483647)', [characters[0], items[0]]);
             const before = await snapshot(); await rejects(draw(), 'INVENTORY_LIMIT_CONFLICT'); assert.deepEqual(await snapshot(), before);
         });
     } finally {

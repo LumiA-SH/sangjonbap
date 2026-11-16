@@ -88,6 +88,7 @@ export function createInventoryRepository(pool) {
                         m.transferable,m.battle_usable,m.is_active
                  from public.storage s
                           left join public.item m on m.id=s.item_id
+                 where s.quantity>0
                  order by m.category nulls last,m.name nulls last,s.item_id`
             );
             return r.rows;

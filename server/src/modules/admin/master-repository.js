@@ -15,7 +15,7 @@ const definitions={
 // One SQL snapshot for parent and children, including bigint IDs as strings.
 async function records(client,kind,id,after='0') {
     const d=definitions[kind];
-    const nested=d.child?`,coalesce((select jsonb_agg(jsonb_build_object('item_id',x.item_id::text,'quantity',x.quantity${kind==='gachas'?",'id',x.id::text,'weight',x.weight,'is_active',x.is_active,'max_stock',x.max_stock,'remaining_stock',x.remaining_stock,'name',(select name from public.item where id=x.item_id)":''}) order by x.${kind==='gachas'?'id':'item_id'}) from public.${d.child} x where x.${d.foreign}=p.id),'[]'::jsonb) ${d.rows}`:'';
+    const nested=d.child?`,coalesce((select jsonb_agg(jsonb_build_object('item_id',x.item_id::text,'quantity',x.quantity${kind==='gachas'?",'id',x.id::text,'weight',x.weight,'is_active',x.is_active,'max_stock',x.max_stock,'remaining_stock',x.remaining_stock,'name',(select name from public.item where id=x.item_id),'category',(select category from public.item where id=x.item_id)":''}) order by x.${kind==='gachas'?'id':'item_id'}) from public.${d.child} x where x.${d.foreign}=p.id),'[]'::jsonb) ${d.rows}`:'';
     const areaRecipes=kind==='recipes'?`,coalesce((select jsonb_agg(jsonb_build_object(
         'area_id',ar.area_id::text,'area_name',a.name,'weight',ar.weight,
         'drop_rate',ar.drop_rate,'discovered',exists(select 1 from public.recipe_discovery d where d.recipe_id=p.id)
@@ -50,7 +50,8 @@ async function records(client,kind,id,after='0') {
             const total=row.rewards.filter(r=>r.is_active!==false).reduce((sum,r)=>sum+(r.remaining_stock||0),0);
             row.remainingStock=total;
             row.stockHold=row.rewards.some(r=>r.is_active!==false&&r.max_stock==null);
-            row.rewards=row.rewards.map(r=>({...r,probability:total&&r.is_active!==false?(r.remaining_stock||0)/total*100:0}));
+            const weightTotal=row.rewards.filter(r=>r.is_active!==false&&r.remaining_stock>0).reduce((sum,r)=>sum+Number(r.weight),0);
+            row.rewards=row.rewards.map(r=>({...r,probability:weightTotal&&r.is_active!==false&&r.remaining_stock>0?Number(r.weight)/weightTotal*100:0}));
         }
 
         return row;

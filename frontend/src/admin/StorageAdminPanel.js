@@ -3,6 +3,7 @@ import {api} from '../api/client';
 
 export default function StorageAdminPanel({onDenied}) {
  const [rows, setRows] = useState([]);
+ const [showEmpty,setShowEmpty]=useState(false);
  const [q, setQ] = useState('');
  const [next, setNext] = useState(null);
  const [selected, setSelected] = useState(null);
@@ -73,10 +74,11 @@ export default function StorageAdminPanel({onDenied}) {
   <form className="admin-log-search" onSubmit={e=>{e.preventDefault();work(()=>load());}}>
    <label>아이템 검색<input value={q} disabled={busy} onChange={e=>setQ(e.target.value)}/></label><button disabled={busy}>검색</button>
   </form>
+  <label><input type="checkbox" checked={showEmpty} onChange={e=>setShowEmpty(e.target.checked)}/>0개 항목 포함 (재고 추가)</label>
   <form className="admin-storage-form" onSubmit={save}>
    <div className="admin-balance-table-wrap"><table className="admin-balance-table"><thead><tr><th>아이템</th><th>현재 수량</th><th>변경 수량</th></tr></thead><tbody>
-    {rows.map(row=><tr key={row.item_id}><td><strong>{row.name}</strong><small> ID {row.item_id}</small></td><td>{row.quantity}</td><td><input aria-label={row.name+' 변경 수량'} type="number" min="0" max="2147483647" step="1" disabled={busy} value={selected?.item_id===row.item_id?quantity:row.quantity} onChange={e=>{if(selected?.item_id!==row.item_id)selectItem(row);setQuantity(e.target.value===''?'':Number(e.target.value));}}/></td></tr>)}
-    {!rows.length&&<tr><td colSpan="3">등록된 재고가 없습니다.</td></tr>}
+    {rows.filter(row=>showEmpty||row.quantity>0).map(row=><tr key={row.item_id}><td><strong>{row.name}</strong><small> ID {row.item_id}</small></td><td>{row.quantity}</td><td><input aria-label={row.name+' 변경 수량'} type="number" min="0" max="2147483647" step="1" disabled={busy} value={selected?.item_id===row.item_id?quantity:row.quantity} onChange={e=>{if(selected?.item_id!==row.item_id)selectItem(row);setQuantity(e.target.value===''?'':Number(e.target.value));}}/></td></tr>)}
+    {!rows.some(row=>showEmpty||row.quantity>0)&&<tr><td colSpan="3">등록된 재고가 없습니다.</td></tr>}
    </tbody></table></div>
    {selected&&<section className="admin-editor-section"><p>{selected.name}: 변경 전 {selected.quantity} → 변경 후 {quantity}개</p><label>수정 사유<input required maxLength={500} value={reason} disabled={busy} onChange={e=>setReason(e.target.value)}/></label>
     <footer className="admin-editor-footer"><button disabled={busy||!Number.isInteger(quantity)||quantity<0||quantity>2147483647||!reason.trim()}>재고 저장</button><button type="button" disabled={busy} onClick={()=>setSelected(null)}>취소</button></footer>

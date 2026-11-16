@@ -36,7 +36,7 @@ test('nested ingredient/reward validation and dates', () => {
     for (const ingredients of [[], [row, row], [{...row, quantity: 0}], [{...row, extra: 'x'}]]) assert.throws(() => validateMasterInput('recipes', {ingredients, requestKey: key}, false));
     for (const rewards of [[{...row, weight: 0}], [{...row, weight: 1.5}], [{...row, weight: 1}, {...row, weight: 2}]]) assert.throws(() => validateMasterInput('gachas', {rewards, requestKey: key}, false));
     assert.deepEqual(validateMasterInput('gachas', {rewards: [], requestKey: key}, false).patch.rewards, []);
-    assert.equal(validateMasterInput('gachas', {rewards: [{...row, max_stock: 2, remaining_stock: 2}], start_at: null, requestKey: key}, false).patch.rewards[0].max_stock, 2);
+    assert.equal(validateMasterInput('gachas', {rewards: [{...row, weight:1, max_stock: 2, remaining_stock: 2}], start_at: null, requestKey: key}, false).patch.rewards[0].max_stock, 2);
     assert.throws(() => validateMasterInput('gachas', {start_at: '2026-10-11T12:00', requestKey: key}, false));
     assert.throws(() => validateMasterInput('recipes', {result_quantity: 0, requestKey: key}, false));
     assert.equal(validateMasterInput('recipes', {result_quantity: 4, requestKey: key}, false).patch.result_quantity, 4);

@@ -19,9 +19,9 @@ export async function saveGachaStock(client,gachaId,before,rewards) {
             requireRewardItem(item);
         }
         await client.query(`insert into public.gacha_reward(gacha_id,item_id,quantity,weight,is_active,max_stock,remaining_stock)
-            values($1,$2,1,1,$3,$4,$5) on conflict(gacha_id,item_id) do update set
-            quantity=1,is_active=excluded.is_active,max_stock=excluded.max_stock,remaining_stock=excluded.remaining_stock`,
-            [gachaId,row.item_id,row.is_active??true,row.max_stock,row.remaining_stock]);
+            values($1,$2,$6,$7,$3,$4,$5) on conflict(gacha_id,item_id) do update set
+            quantity=excluded.quantity,weight=excluded.weight,is_active=excluded.is_active,max_stock=excluded.max_stock,remaining_stock=excluded.remaining_stock`,
+            [gachaId,row.item_id,row.is_active??true,row.max_stock,row.remaining_stock,row.quantity??old.get(row.item_id)?.quantity??1,row.weight??old.get(row.item_id)?.weight??1]);
     }
     // Omission is deactivation, never erase the historical capacity/awards.
     await client.query('update public.gacha_reward set is_active=false where gacha_id=$1 and not(item_id=any($2::bigint[]))',[gachaId,rewards.map(row=>row.item_id)]);

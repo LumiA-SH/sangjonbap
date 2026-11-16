@@ -422,7 +422,7 @@ export default function GachaPanel({gachas = [], character, error, busy, run, re
           </div>
         </div>
 
-        <p className="gacha-footer-note">가챠는 1회당 코인 1개를 소비합니다. 남아 있는 보상 재고에 비례하여 무작위 추첨되며 품절된 보상은 제외됩니다.</p>
+        <p className="gacha-footer-note">가챠는 1회당 코인 1개를 소비합니다. 설정된 보상 가중치에 따라 무작위 추첨되며 품절된 보상은 제외됩니다.</p>
       </section>
   );
 }

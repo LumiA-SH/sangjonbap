@@ -1,3 +1,4 @@
+import BattleAdminPanel from '../admin/BattleAdminPanel';
 import RequestLoading from '../api/RequestLoading';
 import ShopPanel from '../dev/ShopPanel';
 import GachaStockEditor from '../admin/GachaStockEditor';
@@ -362,4 +363,21 @@ test('temporary loading indicator delays display and clears after requests compl
  await act(async()=>jest.advanceTimersByTime(400));expect(div.textContent).toContain('서버 응답');
  await act(async()=>notify(0));expect(div.textContent).toBe('');
  }finally{jest.useRealTimers();}
+});
+
+
+test('new monster defaults active while saved inactive monster stays inactive',async()=>{
+ api.mockResolvedValue({records:[]});await act(async()=>root.render(<BattleAdminPanel recordId="new" onOpen={jest.fn()} onDenied={jest.fn()}/>));
+ expect(div.querySelector('.admin-editor-toggle input').checked).toBe(true);
+ api.mockResolvedValue({record:{id:'3',name:'비활성 마물',max_hp:1,atk:0,def:0,agi:0,is_active:false,actions:[],drops:[],areas:[]}});
+ await act(async()=>root.render(<BattleAdminPanel recordId="3" onOpen={jest.fn()} onDenied={jest.fn()}/>));
+ expect(div.querySelector('.admin-editor-toggle input').checked).toBe(false);
+});
+test('gacha table saves configured quantity and fixed weight with stock kept separate',async()=>{
+ const saved=jest.fn();api.mockResolvedValue({record:{id:'1'}});
+ await act(async()=>root.render(<GachaStockEditor record={{id:'1',name:'보급',rewards:[{id:'2',item_id:'4',name:'보상',quantity:3,weight:7,max_stock:5,remaining_stock:3,is_active:true}]}} onSaved={saved} onDenied={jest.fn()} onBusy={jest.fn()}/>));
+ expect(div.querySelector('[aria-label="지급 수량"]').value).toBe('3');expect(div.querySelector('[aria-label="가중치"]').value).toBe('7');
+ await act(async()=>Simulate.submit(div.querySelector('form')));
+ const call=api.mock.calls.find(([,options])=>options?.method==='PATCH');
+ expect(call[1].body.rewards[0]).toMatchObject({quantity:3,weight:7,max_stock:5,remaining_stock:3});expect(saved).toHaveBeenCalled();
 });

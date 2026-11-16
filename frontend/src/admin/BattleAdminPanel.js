@@ -14,7 +14,7 @@ const emptyMonster = () => ({
   atk: 0,
   def: 0,
   agi: 0,
-  is_active: false,
+  is_active: true,
   areas: [],
   drops: [],
   actions: [

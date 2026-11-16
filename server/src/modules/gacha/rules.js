@@ -5,8 +5,8 @@ export function validateRewards(rewards) {
     const ids=rewards.filter(row=>row.item_id!=null).map(row=>String(row.item_id));
     if(new Set(ids).size!==ids.length)throw new AppError(500,'GACHA_REWARDS_INVALID','중복 보상 아이템 설정입니다.');
     if(rewards.some(row=>row.max_stock==null||row.remaining_stock==null))throw new AppError(409,'GACHA_STOCK_HOLD','기존 보상의 재고 전환 설정이 필요합니다.');
-    const total = rewards.reduce((sum,row) => sum + row.remaining_stock,0);
-    if (!rewards.every(row => Number.isInteger(row.max_stock)&&row.max_stock>=1&&row.max_stock<=2147483647&&
+    const total = rewards.filter(row=>row.remaining_stock>0).reduce((sum,row) => sum + Number(row.weight),0);
+    if (!rewards.every(row => Number.isInteger(row.quantity)&&row.quantity>=1&&row.quantity<=2147483647&&Number.isInteger(row.weight)&&row.weight>=1&&row.weight<=2147483647&&Number.isInteger(row.max_stock)&&row.max_stock>=1&&row.max_stock<=2147483647&&
         Number.isInteger(row.remaining_stock)&&row.remaining_stock>=0&&row.remaining_stock<=row.max_stock) || !Number.isSafeInteger(total)) {
         throw new AppError(500,'GACHA_REWARDS_INVALID','보상 재고 설정이 올바르지 않습니다.');
     }
@@ -16,7 +16,7 @@ export function validateRewards(rewards) {
 export function selectReward(rewards, random = randomUnit) {
     validateRewards(rewards);
     const candidates=rewards.filter(row=>row.remaining_stock>0);
-    const selected=chooseResult(candidates.map(row=>({...row,weight:row.remaining_stock})),random);
+    const selected=chooseResult(candidates.map(row=>({...row,weight:row.weight})),random);
     return candidates.find(row=>row.id===selected.id);
 }
 export function requireRewardItem(item) {

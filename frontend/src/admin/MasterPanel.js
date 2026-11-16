@@ -883,7 +883,7 @@ export default function MasterPanel({kind, onDenied, recordId, onOpen, after, on
   });
 
   return (
-      <section aria-label="마스터 관리" className="admin-record-workspace"><div className="admin-list-pane">
+      <section aria-label="마스터 관리" className={"admin-record-workspace"+(kind==='gachas'?" gacha-catalog"+(recordId==='new'||selected?" has-editor":""):"")}><div className="admin-list-pane">
         <p role="status">{busy ? '불러오는 중…' : message}</p>
 
         <div className="admin-toolbar-actions">
@@ -908,6 +908,7 @@ export default function MasterPanel({kind, onDenied, recordId, onOpen, after, on
           <input value={search} onChange={e => setSearch(e.target.value)}/>
         </label>
 
+        {kind==='gachas'?<table className="gacha-catalog-table"><thead><tr><th>가챠 이름</th><th>가격</th><th>보상 종류</th><th>상태</th><th>관리</th></tr></thead><tbody>{visibleRecords.map(row=><tr key={row.id}><td><button type="button" className="admin-entry-title" disabled={busy||saving} onClick={()=>select(row)}>{row.name}</button></td><td>1 코인</td><td>{(row.rewards||[]).filter(r=>r.is_active!==false).length}종</td><td>{row.is_active?'활성':'비활성'}</td><td><AdminDeleteControl menu={kind} recordId={String(row.id)} disabled={busy||saving} onDenied={onDenied} onDeleted={async()=>{invalidateAdminNames();await load();setMessage('삭제 완료');}}/></td></tr>)}</tbody></table>: (
         <ul className="admin-master-records">
           {visibleRecords.map(row => (
               <li key={row.id}>
@@ -953,7 +954,8 @@ export default function MasterPanel({kind, onDenied, recordId, onOpen, after, on
                 </div>
               </li>
           ))}
-        </ul>
+        </ul>)}
+
 
         {after && (
             <button disabled={busy || saving} onClick={() => onPage(null)}>
