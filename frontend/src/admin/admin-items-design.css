@@ -1,0 +1,413 @@
+/* ========================================
+   01. ITEM MANAGEMENT WORKSPACE
+======================================== */
+
+.admin-panel .admin-items-workspace {
+    display: grid;
+    grid-template-columns: minmax(260px, 340px) minmax(0, 1fr);
+    gap: 18px;
+    align-items: start;
+    min-width: 0;
+}
+
+.admin-panel .admin-items-workspace > .admin-list-pane,
+.admin-panel .admin-items-workspace > .admin-detail-pane {
+    min-width: 0;
+    padding: 0;
+    border: 1px solid #dfe3e8;
+    border-radius: 12px;
+    background: #ffffff;
+    box-shadow: 0 3px 16px #18252d0f;
+    overflow: hidden;
+}
+
+/* ========================================
+   02. LIST HEADER / SEARCH
+======================================== */
+
+.admin-panel .admin-items-workspace .admin-item-list-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 18px 17px 12px;
+    border-bottom: 1px solid #e7eaee;
+}
+
+.admin-panel .admin-items-workspace .admin-item-list-heading strong {
+    font-size: 15px;
+    font-weight: 800;
+}
+
+.admin-panel .admin-items-workspace .admin-item-list-heading span {
+    color: #7d8793;
+    font-size: 11px;
+}
+
+.admin-panel .admin-items-workspace .admin-list-main-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin: 0;
+    padding: 13px 17px;
+    border-bottom: 1px solid #e7eaee;
+}
+
+.admin-panel .admin-items-workspace .admin-list-main-actions button {
+    min-height: 34px;
+    padding: 7px 10px;
+    font-size: 12px;
+}
+
+.admin-panel .admin-items-workspace .admin-list-main-actions button:first-child {
+    border-color: #650c13;
+    background: #650c13;
+    color: #ffffff;
+}
+
+.admin-panel .admin-items-workspace .admin-list-main-actions button:first-child:hover:not(:disabled) {
+    background: #80141e;
+    color: #ffffff;
+}
+
+.admin-panel .admin-items-workspace .admin-list-pane .admin-toolbar {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 0;
+    padding: 15px 17px;
+    border: 0;
+    border-bottom: 1px solid #e7eaee;
+    border-radius: 0;
+    background: #ffffff;
+}
+
+.admin-panel .admin-items-workspace .admin-list-pane .admin-toolbar label {
+    width: 100%;
+    min-width: 0;
+    font-size: 12px;
+    color: #46515e;
+}
+
+.admin-panel .admin-items-workspace .admin-list-pane .admin-toolbar input,
+.admin-panel .admin-items-workspace .admin-list-pane .admin-toolbar select {
+    min-height: 39px;
+    border-color: #d7dde4;
+    border-radius: 7px;
+    background: #ffffff;
+}
+
+.admin-panel .admin-items-workspace .admin-item-shop-action {
+    margin: 0;
+    padding: 12px 17px;
+    border-bottom: 1px solid #e7eaee;
+}
+
+.admin-panel .admin-items-workspace .admin-item-shop-action button {
+    width: 100%;
+    min-height: 36px;
+    font-size: 12px;
+}
+
+/* ========================================
+   03. ITEM LIST
+======================================== */
+
+.admin-panel .admin-content .admin-items-workspace .admin-list-pane ul.admin-records {
+    display: flex !important;
+    flex-direction: column;
+    width: 100%;
+    max-height: 62vh;
+    min-height: 130px;
+    margin: 0;
+    padding: 0 !important;
+    border: 0;
+    border-radius: 0;
+    overflow-y: auto;
+}
+
+.admin-panel .admin-content .admin-items-workspace .admin-list-pane ul.admin-records > li {
+    width: 100%;
+    min-height: 0;
+    margin: 0;
+    padding: 0 !important;
+    border: 0 !important;
+    border-bottom: 1px solid #edf0f2 !important;
+}
+
+.admin-panel .admin-content .admin-items-workspace .admin-list-pane .admin-record-open {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
+    min-height: 70px;
+    margin: 0 !important;
+    padding: 13px 30px 13px 17px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    text-align: left;
+}
+
+.admin-panel .admin-items-workspace .admin-list-pane .admin-record-open strong {
+    font-size: 13px;
+    font-weight: 750;
+    color: #303841;
+}
+
+.admin-panel .admin-items-workspace .admin-list-pane .admin-record-open small {
+    margin: 0;
+    font-size: 11px;
+    color: #818b97;
+}
+
+.admin-panel .admin-content .admin-items-workspace .admin-list-pane li:has(.admin-record-open[aria-current="true"]) {
+    background: #fff4f5 !important;
+    box-shadow: inset 3px 0 #650c13;
+}
+
+.admin-panel .admin-items-workspace .admin-list-pane .admin-record-open:hover:not(:disabled) {
+    background: #faf4f5;
+}
+
+/* ========================================
+   04. ITEM DETAIL EDITOR
+======================================== */
+
+.admin-panel .admin-items-workspace .admin-detail-pane .admin-item-editor {
+    display: block;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: #ffffff;
+    box-shadow: none;
+}
+
+.admin-panel .admin-items-workspace .admin-item-editor .admin-editor-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin: 0;
+    padding: 20px 23px;
+    border-bottom: 1px solid #e5e9ed;
+}
+
+.admin-panel .admin-items-workspace .admin-item-editor .admin-editor-heading h3 {
+    margin: 5px 0 0;
+    font-size: 20px;
+    font-weight: 800;
+}
+
+.admin-panel .admin-items-workspace .admin-item-editor .admin-editor-section {
+    margin: 0;
+    padding: 22px 23px;
+    border-bottom: 1px solid #edf0f2;
+}
+
+.admin-panel .admin-items-workspace .admin-item-editor .admin-editor-section h4 {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin: 0 0 16px;
+    padding: 0;
+    border: 0;
+    font-size: 14px;
+    font-weight: 800;
+}
+
+.admin-panel .admin-items-workspace .admin-item-editor .admin-editor-section h4::before {
+    display: block;
+    width: 3px;
+    height: 15px;
+    border-radius: 4px;
+    background: #650c13;
+    content: '';
+}
+
+.admin-panel .admin-items-workspace .admin-item-editor-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 15px;
+}
+
+.admin-panel .admin-items-workspace .admin-item-editor-grid > label {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 7px;
+    min-width: 0;
+    color: #46515e;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.admin-panel .admin-items-workspace .admin-item-editor-grid :is(input:not([type="checkbox"]), select, textarea) {
+    width: 100%;
+    min-height: 39px;
+    padding: 10px 11px;
+    border: 1px solid #d7dde4;
+    border-radius: 7px;
+    background: #ffffff;
+    color: #252b33;
+}
+
+.admin-panel .admin-items-workspace .admin-item-editor-grid textarea {
+    min-height: 90px;
+    resize: vertical;
+}
+
+.admin-panel .admin-items-workspace .admin-item-editor-grid .admin-field-check {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 10px;
+    min-height: 44px;
+    padding: 11px 12px;
+    border: 1px solid #e1e5eb;
+    border-radius: 8px;
+    background: #f8f9fa;
+}
+
+.admin-panel .admin-items-workspace .admin-item-editor-grid .admin-field-check input {
+    flex: 0 0 18px;
+    width: 18px;
+    height: 18px;
+}
+
+.admin-panel .admin-items-workspace .admin-item-editor .admin-editor-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    margin: 0;
+    padding: 15px 23px;
+    border-top: 1px solid #e5e9ed;
+    background: #fcfcfd;
+}
+
+.admin-panel .admin-items-workspace .admin-item-editor .admin-editor-footer > button {
+    min-width: 110px;
+    border-color: #650c13;
+    background: #650c13;
+    color: #ffffff;
+}
+
+.admin-panel .admin-items-workspace .admin-item-editor .admin-editor-footer > button:hover:not(:disabled) {
+    background: #80141e;
+    color: #ffffff;
+}
+
+.admin-panel .admin-items-workspace .admin-empty-detail {
+    margin: 0;
+    padding: 90px 25px;
+    border: 0;
+    color: #89939d;
+    text-align: center;
+}
+
+/* ========================================
+   05. RESPONSIVE
+======================================== */
+
+@media (max-width: 1250px) {
+    .admin-panel .admin-items-workspace {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .admin-panel.admin-detail-active .admin-items-workspace > .admin-list-pane {
+        display: none;
+    }
+}
+
+@media (max-width: 600px) {
+    .admin-panel .admin-items-workspace .admin-item-editor .admin-editor-heading,
+    .admin-panel .admin-items-workspace .admin-item-editor .admin-editor-section,
+    .admin-panel .admin-items-workspace .admin-item-editor .admin-editor-footer {
+        padding: 16px;
+    }
+
+    .admin-panel .admin-items-workspace .admin-list-main-actions {
+        flex-wrap: wrap;
+    }
+}
+
+@media (max-width: 1250px) {
+    .admin-panel .admin-items-workspace > .admin-detail-pane {
+        display: none;
+    }
+
+    .admin-panel.admin-detail-active .admin-items-workspace > .admin-detail-pane {
+        display: block;
+    }
+}
+
+/* ========================================
+   ITEM LIST - LAYOUT FIX
+======================================== */
+
+.admin-panel .admin-content .admin-items-workspace .admin-list-pane ul.admin-records {
+    display: flex !important;
+    flex-direction: column;
+    gap: 0 !important;
+    margin: 0;
+    padding: 0 !important;
+}
+
+.admin-panel .admin-content .admin-items-workspace .admin-list-pane ul.admin-records > li {
+    display: block;
+    flex: 0 0 auto;
+    width: 100%;
+    height: auto;
+    min-height: 0;
+    margin: 0;
+    padding: 0 !important;
+    border-bottom: 1px solid #edf0f2 !important;
+}
+
+.admin-panel .admin-content .admin-items-workspace .admin-list-pane ul.admin-records > li > button.admin-record-open {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 5px;
+    width: 100%;
+    height: auto;
+    min-height: 76px;
+    margin: 0 !important;
+    padding: 13px 30px 13px 17px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    text-align: left;
+    box-sizing: border-box;
+}
+
+.admin-panel .admin-content .admin-items-workspace .admin-list-pane ul.admin-records > li > button.admin-record-open strong,
+.admin-panel .admin-content .admin-items-workspace .admin-list-pane ul.admin-records > li > button.admin-record-open small {
+    display: block;
+    position: static;
+    flex: 0 0 auto;
+    width: 100%;
+    height: auto;
+    margin: 0;
+    padding: 0;
+    line-height: 1.5;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.admin-panel .admin-content .admin-items-workspace .admin-list-pane ul.admin-records > li > button.admin-record-open strong {
+    color: #303841;
+    font-size: 13px;
+    font-weight: 750;
+}
+
+.admin-panel .admin-content .admin-items-workspace .admin-list-pane ul.admin-records > li > button.admin-record-open small {
+    color: #818b97;
+    font-size: 11px;
+    font-weight: 400;
+}
