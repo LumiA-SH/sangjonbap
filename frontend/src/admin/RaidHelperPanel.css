@@ -1,0 +1,90 @@
+.raid-helper {
+    display: grid;
+    gap: 18px;
+    max-width: 900px;
+}
+
+.raid-helper-note {
+    margin: 0;
+    line-height: 1.7;
+}
+
+.raid-helper-card {
+    padding: 20px;
+    border: 1px solid #d7d3d0;
+    border-radius: 9px;
+    background: #fffefa;
+}
+
+.raid-helper-card h3 {
+    margin: 0 0 15px;
+}
+
+.raid-helper-hp strong {
+    font-size: 24px;
+}
+
+.raid-helper-hp-track {
+    height: 12px;
+    margin: 12px 0;
+    overflow: hidden;
+    border-radius: 6px;
+    background: #e8e3e1;
+}
+
+.raid-helper-hp-track span {
+    display: block;
+    height: 100%;
+    background: #650c13;
+    transition: width .2s;
+}
+
+.raid-helper-settings {
+    margin-top: 16px;
+}
+
+.raid-helper-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: end;
+    margin: 15px 0;
+}
+
+.raid-helper-form label {
+    display: flex;
+    flex: 1 1 170px;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+.raid-helper-form label input,
+.raid-helper-form label select {
+    width: 100%;
+}
+
+.raid-helper-preview {
+    display: grid;
+    gap: 10px;
+    margin-top: 18px;
+    padding: 17px;
+    border: 1px solid #bdacae;
+    border-radius: 8px;
+}
+
+.raid-helper-preview > div {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.raid-helper-preview strong {
+    font-size: 29px;
+    color: #650c13;
+}
+
+.raid-helper-preview p {
+    margin: 0;
+}

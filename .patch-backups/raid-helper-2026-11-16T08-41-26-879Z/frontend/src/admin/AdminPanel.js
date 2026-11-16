@@ -1,0 +1,872 @@
+import EventAdminPanel from './EventAdminPanel';
+import {displayLabel} from '../features/displayLabels';
+import {itemCategoryLabel} from '../features/itemCategory';
+import AdminDashboard from './AdminDashboard';
+import ContentAdminPanel from './ContentAdminPanel';
+import StorageAdminPanel from './StorageAdminPanel';
+import ClueAdminPanel from './ClueAdminPanel';
+import {useCallback, useEffect, useRef, useState} from 'react';
+import {api} from '../api/client';
+import {adminMenus,adminMenuGroups} from './navigation';
+import './admin.css';
+import './admin-ui-fixes.css';
+import './admin-organization.css';
+import './admin-items-design.css';
+import DiagnosticsPanel from './DiagnosticsPanel';
+import MasterPanel from './MasterPanel';
+import RolePanel from './RolePanel';
+import RecordsPanel from '../dev/RecordsPanel';
+import BattleAdminPanel from './BattleAdminPanel';
+import ItemPicker from './ItemPicker';
+import BalancePanel from './BalancePanel';
+import CharacterOperationsPanel from './CharacterOperationsPanel';
+import AreaHubPanel,{AreaDiscoveryPanel} from './AreaHubPanel';
+import ImageUploadField from './ImageUploadField';
+import AdminReferenceName,{invalidateAdminNames} from './AdminReferenceName';
+import AdminDeleteControl from './AdminDeleteControl';
+
+const emptyItem={
+    name:'',
+    category:'ETC',
+    description:null,
+    image_url:null,
+    transferable:true,
+    is_active:true,
+    effect_type:null,
+    blood_pack_kind:null,
+    effect_value:null,
+    usable:false,
+    use_target:'NONE',
+    battle_usable:false
+};
+
+const emptyProduct={
+    item_id:'',
+    price:0,
+    purchase_limit:null,
+    stock_limit:null,
+    daily_limit:null,
+    is_active:true,
+    sort_order:0
+};
+
+const fieldLabels={
+    name:'이름',
+    category:'종류',
+    description:'설명',
+    transferable:'이동 가능',
+    is_active:'활성',
+    item_id:'판매할 아이템',
+    price:'가격',
+    purchase_limit:'개인 누적 한도',
+    stock_limit:'전체 누적 재고 한도',
+    sort_order:'표시 순서',
+    daily_limit:'일일 구매 한도',
+    effect_type:'효과',
+    blood_pack_kind:'혈액팩 종류',
+    battle_usable:'전투 사용 가능',
+    effect_value:'효과 수치',
+    usable:'사용 가능',
+    use_target:'사용 대상'
+};
+
+const effectDefaults={
+    BLOOD_PACK:{effect_value:30,blood_pack_kind:'STANDARD',use_target:'SELF'},
+    FIXED_DAMAGE:{effect_value:10,blood_pack_kind:null,use_target:'OTHER'},
+    STUN:{effect_value:1,blood_pack_kind:null,use_target:'OTHER'},
+    POISON:{effect_value:10,blood_pack_kind:null,use_target:'OTHER'},
+    SMOKE:{effect_value:30,blood_pack_kind:null,use_target:'SELF'}
+};
+
+const effectHelp={
+    BLOOD_PACK:'혈량 회복: 무료 +10, 일반 +30',
+    FIXED_DAMAGE:'마물에게 설정한 수치만큼 DEF 무시 피해',
+    STUN:'마물의 다음 행동 1~2회 취소',
+    POISON:'다음 턴부터 3턴 동안 턴당 10 피해',
+    SMOKE:'다음 PC 도주 판정에 설정 수치만큼 %p 추가'
+};
+
+export function Editor({kind,record,seed,onSaved,onDenied,deleteControl}) {
+    const fields=kind==='items'?emptyItem:emptyProduct;
+
+    const [draft,setDraft]=useState(()=>Object.fromEntries(
+        Object.keys(fields).map(key=>[key,record?.[key]??seed?.[key]??fields[key]])
+    ));
+    const [busy,setBusy]=useState(false);
+    const [message,setMessage]=useState('');
+    const [imageUploading,setImageUploading]=useState(false);
+    const saving=useRef(false);
+
+    function change(key,value) {
+        setDraft(current=>({...current,[key]:value}));
+    }
+
+    async function submit(event) {
+        event.preventDefault();
+        if(saving.current||imageUploading) return;
+
+        saving.current=true;
+        setBusy(true);
+        setMessage('');
+
+        try {
+            const {record:saved}=await api(`/admin/${kind}${record?`/${record.id}`:''}`,{
+                method:record?'PATCH':'POST',
+                body:{...draft,requestKey:crypto.randomUUID()}
+            });
+
+            setMessage('저장 성공');
+            onSaved(saved);
+        } catch(e) {
+            setMessage(`${e.code||'SAVE_FAILED'}: ${e.message}`);
+            if(e.status===401||e.status===403) onDenied(e.message);
+        } finally {
+            saving.current=false;
+            setBusy(false);
+        }
+    }
+
+    function changeEffectType(value) {
+        const config=effectDefaults[value];
+
+        setDraft(current=>({
+            ...current,
+            effect_type:value||null,
+            blood_pack_kind:config?.blood_pack_kind??null,
+            effect_value:config?.effect_value??null,
+            usable:!!value,
+            use_target:config?.use_target||'NONE',
+            category:value?'CONSUMABLE':current.category,
+            battle_usable:!!value,
+            transferable:true
+        }));
+    }
+
+    function changeBloodPackKind(value) {
+        setDraft(current=>({
+            ...current,
+            blood_pack_kind:value||null,
+            effect_value:value==='FREE'?10:value==='STANDARD'?30:null
+        }));
+    }
+
+    function changeLimit(key,unlimited) {
+        change(key,unlimited?null:['purchase_limit','daily_limit'].includes(key)?1:0);
+    }
+
+    function renderField(key) {
+        if(key==='item_id') {
+            if(record?.recipe_id!=null) {
+                return (
+                    <div key={key} className="admin-wide">
+                        <strong>판매 레시피</strong>
+                        <p><AdminReferenceName recipeId={record.recipe_id} eager onDenied={onDenied}/></p>
+                        <p>레시피 상품의 연결 대상은 레시피 관리에서 확인합니다.</p>
+                    </div>
+                );
+            }
+
+            return (
+                <ItemPicker
+                    key={key}
+                    label="판매할 아이템"
+                    value={draft.item_id}
+                    disabled={busy}
+                    onDenied={onDenied}
+                    onChange={(id,item)=>{
+                        setDraft(current=>({
+                            ...current,
+                            item_id:id||'',
+                            ...(item?.blood_pack_kind==='FREE'
+                                ? {price:0,daily_limit:1,purchase_limit:null,stock_limit:null}
+                                : {daily_limit:null})
+                        }));
+                    }}
+                />
+            );
+        }
+
+        if(key==='image_url') {
+            return (
+                <ImageUploadField
+                    key={key}
+                    kind="items"
+                    label="아이템 이미지"
+                    value={draft.image_url}
+                    onChange={value=>change('image_url',value)}
+                    disabled={busy}
+                    onDenied={onDenied}
+                    onUploadingChange={setImageUploading}
+                />
+            );
+        }
+
+        let input;
+
+        if(typeof fields[key]==='boolean') {
+            const fixed=kind==='items'&&!!draft.effect_type&&['usable','battle_usable'].includes(key);
+
+            input=(
+                <input type="checkbox" checked={draft[key]} disabled={busy||fixed} onChange={e=>change(key,e.target.checked)}/>
+            );
+        } else if(key==='effect_type') {
+            input=(
+                <>
+                    <select value={draft[key]??''} disabled={busy} onChange={e=>changeEffectType(e.target.value)}>
+                        <option value="">없음</option>
+                        <option value="BLOOD_PACK">혈액팩</option>
+                        <option value="FIXED_DAMAGE">고정 피해 아이템</option>
+                        <option value="STUN">기절 아이템</option>
+                        <option value="POISON">중독 아이템</option>
+                        <option value="SMOKE">연막탄 / 도주 보조</option>
+                    </select>
+                    {draft.effect_type&&<small>{effectHelp[draft.effect_type]}</small>}
+                </>
+            );
+        } else if(key==='blood_pack_kind') {
+            input=(
+                <select value={draft[key]??''} disabled={busy||draft.effect_type!=='BLOOD_PACK'} onChange={e=>changeBloodPackKind(e.target.value)}>
+                    <option value="">선택</option>
+                    <option value="FREE">무료 혈액팩 (+10, 하루 1개)</option>
+                    <option value="STANDARD">일반 혈액팩 (+30, 유료)</option>
+                </select>
+            );
+        } else if(key==='effect_value') {
+            const type=draft.effect_type;
+            const fixed=['BLOOD_PACK','POISON'].includes(type);
+
+            input=(
+                <>
+                    <input type="number" min="1" max={type==='STUN'?2:type==='SMOKE'?100:2147483647} step="1" value={draft[key]??''} disabled={busy||!type||fixed} onChange={e=>change(key,e.target.value===''?null:Number(e.target.value))}/>
+                    {type==='STUN'&&<small>1회 또는 2회</small>}
+                    {type==='SMOKE'&&<small>도주 확률 추가값 (%p)</small>}
+                    {type==='FIXED_DAMAGE'&&<small>방어력 무시 고정 피해</small>}
+                </>
+            );
+        } else if(key==='use_target') {
+            input=<input value={displayLabel(draft[key])} readOnly/>;
+        } else if(key==='category') {
+            input=(
+                <select value={draft[key]} disabled={busy||!!draft.effect_type} onChange={e=>change(key,e.target.value)}>
+                    {['MATERIAL','CONSUMABLE','FOOD','ETC'].map(value=>
+                        <option key={value} value={value}>{itemCategoryLabel(value)}</option>
+                    )}
+                </select>
+            );
+        } else if(key==='description') {
+            input=<textarea value={draft[key]??''} disabled={busy} onChange={e=>change(key,e.target.value||null)}/>;
+        } else if(['purchase_limit','stock_limit','daily_limit'].includes(key)) {
+            input=(
+                <>
+                    <span>
+                        <input type="checkbox" checked={draft[key]===null} disabled={busy} onChange={e=>changeLimit(key,e.target.checked)}/>
+                        무제한(NULL)
+                    </span>
+                    <input type="number" min={key==='purchase_limit'?1:0} max={2147483647} value={draft[key]??''} disabled={busy||draft[key]===null} required={draft[key]!==null} onChange={e=>change(key,e.target.value===''?'':Number(e.target.value))}/>
+                </>
+            );
+        } else {
+            input=(
+                <input
+                    type={['price','sort_order'].includes(key)?'number':'text'}
+                    value={draft[key]}
+                    required
+                    disabled={busy}
+                    maxLength={key==='name'?100:undefined}
+                    onChange={e=>change(key,['price','sort_order'].includes(key)?(e.target.value===''?'':Number(e.target.value)):e.target.value)}
+                />
+            );
+        }
+
+        return (
+            <label key={key} className={key==='description'?'admin-field-wide':typeof fields[key]==='boolean'?'admin-field-check':undefined}>
+                {fieldLabels[key]}{input}
+            </label>
+        );
+    }
+
+    const sections=kind==='items'
+        ? [
+            ['아이템 기본 정보',['name','category','description','image_url']],
+            ...(draft.category==='CONSUMABLE'||draft.effect_type?[['소모품 효과',['effect_type','blood_pack_kind','effect_value','use_target']]]:[]),
+            ['사용 및 운영 설정',['transferable','usable','battle_usable']]
+        ]
+        : [
+            ['판매 아이템',['item_id']],
+            ['가격 · 노출 설정',['price','sort_order']],
+            ['구매 · 재고 제한',['purchase_limit','stock_limit','daily_limit']]
+        ];
+
+    return (
+        <form className={`admin-form admin-structured-editor ${kind==='items'?'admin-item-editor':''}`} onSubmit={submit}>
+            <header className="admin-editor-heading admin-editor-heading-actions">
+                <div>
+                    <small>{record?'수정 / '+record.id:'신규 등록'}</small>
+                    <h3>{record?record.name||'등록 정보':'새로 등록'}</h3>
+                </div>
+                <div className="admin-editor-heading-controls">
+                    <label className="admin-editor-toggle">
+                        <input type="checkbox" checked={!!draft.is_active} disabled={busy} onChange={e=>change('is_active',e.target.checked)}/>
+                        활성
+                    </label>
+                    {deleteControl}
+                </div>
+            </header>
+
+            {sections.map(([title,keys])=>(
+                <section className="admin-editor-section" key={title}>
+                    <h4>{title}</h4>
+                    <div className={`admin-editor-grid ${kind==='items'?'admin-item-editor-grid':''}`}>
+                        {keys.map(renderField)}
+                    </div>
+                </section>
+            ))}
+
+            {record&&
+                <details className="admin-wide">
+                    <summary>변경 전후 확인</summary>
+                    <pre>{JSON.stringify({before:record,after:draft},null,2)}</pre>
+                </details>
+            }
+
+            <footer className="admin-editor-footer">
+                <button disabled={busy||imageUploading}>
+                    {imageUploading?'이미지 업로드 중…':busy?'저장 중…':'저장'}
+                </button>
+                <p role="status">{message}</p>
+            </footer>
+        </form>
+    );
+}
+
+export default function AdminPanel({onBack,onExit=onBack,onLogout,onAccessLost,route,onNavigate}) {
+    const [authentication,setAuthentication]=useState('');
+    const [menuSearch,setMenuSearch]=useState('');
+    const [allowed,setAllowed]=useState(false);
+    const [localKind,setLocalKind]=useState('items');
+    const [rows,setRows]=useState([]);
+    const [selected,setSelected]=useState(null);
+    const [editorKey,setEditorKey]=useState(0);
+    const [message,setMessage]=useState('권한 확인 중…');
+    const [busy,setBusy]=useState(false);
+    const [next,setNext]=useState(null);
+    const [productSeed,setProductSeed]=useState(null);
+    const [search,setSearch]=useState('');
+    const [filter,setFilter]=useState('all');
+    const [resolvedNames,setResolvedNames]=useState({});
+    const [resetting,setResetting]=useState(false);
+    const [deleteRevision,setDeleteRevision]=useState(0);
+
+    const selectionRequest=useRef(0);
+    const listRequest=useRef(0);
+    const resetPending=useRef(false);
+    const resetRequestKey=useRef(null);
+    const accessLost=useRef(onAccessLost);
+    accessLost.current=onAccessLost;
+
+    const [areaNavOpen,setAreaNavOpen]=useState(true);
+    const kind=route?.menu||localKind;
+    const recordId=route?.record;
+    const currentGroup=adminMenuGroups.find(group=>group.menus.includes(kind.startsWith('guide-')?'guide-world':kind));
+    const menuLabel=id=>adminMenus.find(([key])=>key===id)?.[1]||id;
+    const visibleGroups=adminMenuGroups.map(group=>({
+        ...group,
+        menus:group.menus.filter(id=>
+            (group.title+' '+menuLabel(id)).toLocaleLowerCase().includes(menuSearch.trim().toLocaleLowerCase())
+        )
+    })).filter(group=>group.menus.length);
+
+    function setKind(menu) {
+        setSearch('');
+        setSelected(null);
+        setProductSeed(null);
+        setEditorKey(value=>value+1);
+
+        if(onNavigate) {
+            onNavigate({menu,record:null,after:null,area:null});
+        } else {
+            setLocalKind(menu);
+        }
+    }
+
+    function openRecord(record) {
+        onNavigate?.({record});
+    }
+
+    const denied=useCallback(message=>{
+        selectionRequest.current++;
+        listRequest.current++;
+        setAllowed(false);
+        setRows([]);
+        setSelected(null);
+        setMessage(message);
+        accessLost.current?.();
+    },[]);
+
+    async function runTestDailyReset() {
+        if(resetPending.current||!allowed) return;
+
+        if(!window.confirm(
+            '자정 초기화를 수동으로 실행하시겠습니까?\n\n' +
+            '전체 캐릭터의 AP·일일훈련·식사 횟수를 초기화하고 혈량을 감소시킵니다.\n' +
+            '무료 혈액팩 구매 횟수도 초기화되며 진행 중인 일반 전투는 중단됩니다.\n\n' +
+            '이 작업은 자동으로 되돌릴 수 없습니다.'
+        )) return;
+
+        resetPending.current=true;
+        setResetting(true);
+        setMessage('');
+
+        try {
+            resetRequestKey.current ||= crypto.randomUUID();
+
+            const result=await api('/admin/test-daily-reset',{
+                method:'POST',
+                body:{requestKey:resetRequestKey.current}
+            });
+
+            resetRequestKey.current=null;
+            setMessage(
+                `자정 초기화 완료 (${result.day}) · ` +
+                `캐릭터 ${result.charactersReset}명 · ` +
+                `전투 중단 ${result.battlesInterrupted}건 · ` +
+                `무료 혈액팩 구매 횟수 초기화 ${result.freePackCountersCleared}건`
+            );
+        } catch(e) {
+            if(e.code==='DUPLICATE_REQUEST') resetRequestKey.current=null;
+            setMessage(`${e.code||'RESET_FAILED'}: ${e.message}`);
+
+            if([401,403].includes(e.status)&&e.code!=='TEST_DAILY_RESET_DISABLED') {
+                denied(e.message);
+            }
+        } finally {
+            resetPending.current=false;
+            setResetting(false);
+        }
+    }
+
+    const handleNameResolved=useCallback((key,name)=>{
+        setResolvedNames(previous=>{
+            if(previous[key]===name) return previous;
+            return {...previous,[key]:name};
+        });
+    },[]);
+
+    async function load(type=kind,after=route?.after||null) {
+        const request=++listRequest.current;
+        setBusy(true);
+        setMessage('');
+
+        try {
+            const data=await api(`/admin/${type}${after?`?after=${after}`:''}`);
+            if(request!==listRequest.current) return false;
+
+            setRows(data.records);
+            setNext(data.nextAfter);
+            return true;
+        } catch(e) {
+            setMessage(`${e.code||'LOAD_FAILED'}: ${e.message}`);
+            if(e.status===401||e.status===403) denied(e.message);
+        } finally {
+            setBusy(false);
+        }
+    }
+
+    useEffect(()=>{
+        let live=true;
+
+        const verify=()=>api('/admin/access')
+            .then(data=>{
+                if(live) {
+                    if(data.role!=='ADMIN') throw new Error('관리자 권한이 필요합니다.');
+                    setAuthentication(data.authentication||'DEV');
+                    setAllowed(true);
+                }
+            })
+            .catch(e=>{
+                if(live) denied(`${e.code||'ACCESS_FAILED'}: ${e.message}`);
+            });
+
+        verify();
+        window.addEventListener('focus',verify);
+        const timer=window.setInterval(verify,30000);
+
+        return ()=>{
+            live=false;
+            window.removeEventListener('focus',verify);
+            window.clearInterval(timer);
+        };
+
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    },[]);
+
+    useEffect(()=>{
+        selectionRequest.current++;
+        if(!allowed) return;
+
+        setSelected(null);
+        setEditorKey(value=>value+1);
+        setMessage('');
+
+        if(['items','products'].includes(kind)) {
+            load(kind,route?.after);
+
+            if(recordId&&recordId!=='new') {
+                select({id:recordId},false);
+            }
+        }
+
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    },[allowed,kind,recordId,route?.after]);
+
+    async function select(row,navigate=true) {
+        if(onNavigate&&navigate) {
+            openRecord(String(row.id));
+            return;
+        }
+
+        const request=++selectionRequest.current;
+        setBusy(true);
+
+        try {
+            const data=await api(`/admin/${kind}/${row.id}`);
+            if(request!==selectionRequest.current) return;
+
+            setSelected(data.record);
+            setEditorKey(value=>value+1);
+        } catch(e) {
+            setMessage(e.message);
+            if(e.status===401||e.status===403) denied(e.message);
+        } finally {
+            setBusy(false);
+        }
+    }
+
+    function registerProduct() {
+        setProductSeed({
+            item_id:String(selected.id),
+            price:0,
+            daily_limit:selected.blood_pack_kind==='FREE'?1:null
+        });
+
+        if(onNavigate) {
+            onNavigate({menu:'products',record:'new'});
+        } else {
+            setLocalKind('products');
+        }
+
+        setSelected(null);
+        setEditorKey(value=>value+1);
+        if(!route) load('products');
+    }
+
+    function createRecord() {
+        setSelected(null);
+        setProductSeed(null);
+        setEditorKey(value=>value+1);
+        openRecord('new');
+    }
+
+    function handleSubmitCapture(e) {
+        const submitter=e.nativeEvent.submitter||e.target.querySelector('button:not([type="button"])');
+        const text=submitter?.textContent||'';
+
+        if(/저장|등록|수정|적용/.test(text)&&!window.confirm('변경 내용을 저장하시겠습니까?')) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+    }
+
+    function handleSaved(saved) {
+        invalidateAdminNames();
+        setResolvedNames({});
+        setProductSeed(null);
+        setSelected(saved);
+        setEditorKey(value=>value+1);
+
+        load().then(ok=>{
+            if(ok) setMessage('저장 성공');
+        });
+    }
+
+    function getReferenceKey(row) {
+        if(row.recipe_id!=null) return `recipes:${row.recipe_id}`;
+        if(row.item_id!=null) return `items:${row.item_id}`;
+        return null;
+    }
+
+    function renderContent() {
+        if(kind==='dashboard') {
+            return <AdminDashboard onNavigate={setKind} onDenied={denied}/>;
+        }
+
+        if(kind==='events') return <EventAdminPanel onDenied={denied} recordId={route?.record} onOpen={record=>onNavigate({menu:'events',record})}/>;
+        if(kind==='notices') return <ContentAdminPanel key={kind} kind="notice" onDenied={denied}/>;
+
+        if(kind.startsWith('guide-')) {
+            return (
+                <div className="admin-guide-workspace">
+                    <nav className="admin-guide-tabs" aria-label="안내 콘텐츠 종류">
+                        {[['world','세계관'],['system','시스템 안내'],['schedule','러닝 일정']].map(([id,label])=>(
+                            <button type="button" key={id} aria-pressed={kind===`guide-${id}`} onClick={()=>setKind(`guide-${id}`)}>{label}</button>
+                        ))}
+                    </nav>
+                    <ContentAdminPanel key={kind} kind={kind.slice(6)} onDenied={denied}/>
+                </div>
+            );
+        }
+
+        if(kind==='area-hub') {
+            return <AreaDiscoveryPanel onDenied={denied} onManage={id=>onNavigate?onNavigate({menu:'areas',area:id==null?null:String(id),record:null,after:null}):setKind('areas')}/>;
+        }
+
+        if(kind==='investigation'||(kind==='areas'&&recordId!=='new')) {
+            return <AreaHubPanel key={deleteRevision} route={route} onNavigate={onNavigate} onDenied={denied}/>;
+        }
+
+        if(kind==='storage') return <StorageAdminPanel onDenied={denied}/>;
+        if(kind==='clues') return <ClueAdminPanel key={deleteRevision} onDenied={denied} recordId={recordId} onOpen={onNavigate?openRecord:undefined}/>;
+        if(kind==='policies'||kind==='food-grades') return <BalancePanel key={kind} initialTab={kind==='policies'?'policies':'foods'} onDenied={denied}/>;
+        if(kind==='diagnostics') return <DiagnosticsPanel onDenied={denied}/>;
+        if(kind==='characters') return <CharacterOperationsPanel onDenied={denied} recordId={recordId} onOpen={onNavigate?openRecord:undefined}/>;
+        if(kind==='balance') return <BalancePanel onDenied={denied}/>;
+        if(kind==='logs') return <RecordsPanel admin onDenied={denied}/>;
+        if(kind==='battle') return <BattleAdminPanel onDenied={denied} recordId={recordId} onOpen={onNavigate?openRecord:undefined}/>;
+        if(kind==='users') return <RolePanel onDenied={denied}/>;
+
+        if(['foods','food-grades','recipes','gachas','areas'].includes(kind)) {
+            return (
+                <MasterPanel
+                    key={`${kind}-${deleteRevision}`}
+                    kind={kind}
+                    onDenied={denied}
+                    recordId={recordId}
+                    onOpen={onNavigate?openRecord:undefined}
+                    after={route?.after}
+                    onPage={onNavigate?after=>onNavigate({after,record:null}):undefined}
+                />
+            );
+        }
+
+        const normalizedSearch=search.trim().toLowerCase();
+
+        const visibleRows=rows.filter(row=>{
+            if(filter!=='all'&&row.is_active!==(filter==='active')) return false;
+            if(!normalizedSearch) return true;
+
+            const referenceKey=getReferenceKey(row);
+            const resolvedName=referenceKey?resolvedNames[referenceKey]:'';
+            const text=[row.id,row.name,row.item_id,row.recipe_id,resolvedName]
+                .filter(value=>value!=null).join(' ').toLowerCase();
+
+            return text.includes(normalizedSearch)||(kind==='products'&&referenceKey&&!resolvedName);
+        });
+
+        return (
+            <div className={`admin-record-workspace ${kind==='items'?'admin-items-workspace':''}`}>
+                <div className="admin-list-pane">
+                    {kind!=='items'&&
+                        <details className="admin-editor-reference">
+                            <summary>아이템 · 상점 운영 안내</summary>
+                            <p>혈액팩은 무료(+10, 0코인, 하루 1개)와 일반(+30, 유료)을 별도 아이템으로 관리합니다. 일반팩 가격은 운영진이 정합니다. 기록은 보존합니다.</p>
+                        </details>
+                    }
+
+                    {kind==='items'&&selected&&
+                        <div className="admin-toolbar-actions admin-item-shop-action">
+                            <button disabled={busy} onClick={registerProduct}>이 아이템을 상점에 등록</button>
+                        </div>
+                    }
+
+                    {kind==='products'&&
+                        <p>상점 상품 설정은 다음 구매부터 적용됩니다. 기존 구매 이력은 유지됩니다.</p>
+                    }
+
+                    <div className="admin-toolbar-actions admin-list-main-actions">
+                        <button disabled={busy} onClick={createRecord}>{kind==='items'?'＋ 신규 등록':'새로 등록'}</button>
+                        <button disabled={busy} onClick={()=>load()}>목록 새로고침</button>
+                    </div>
+
+                    {kind==='items'&&
+                        <div className="admin-item-list-heading">
+                            <strong>등록 목록</strong>
+                            <span>{visibleRows.length} / {rows.length}건</span>
+                        </div>
+                    }
+
+                    <div className="admin-toolbar">
+                        <label>
+                            {kind==='items'?'아이템 검색':'현재 페이지 검색'}
+                            <input value={search} placeholder={kind==='items'?'이름 또는 ID 검색':undefined} onChange={e=>setSearch(e.target.value)}/>
+                        </label>
+                        <label>
+                            상태
+                            <select value={filter} onChange={e=>setFilter(e.target.value)}>
+                                <option value="all">전체</option>
+                                <option value="active">활성</option>
+                                <option value="inactive">비활성</option>
+                            </select>
+                        </label>
+                    </div>
+
+                    {busy&&<p role="status">불러오는 중…</p>}
+                    {!busy&&!rows.length&&<p>등록된 데이터가 없습니다.</p>}
+
+                    <ul className="admin-records">
+                        {visibleRows.map(row=>(
+                            <li key={row.id}>
+                                <button type="button" className="admin-record-summary admin-record-open" disabled={busy} aria-current={String(selected?.id)===String(row.id)?'true':undefined} onClick={()=>select(row)}>
+                                    <strong>
+                                        {kind==='items'
+                                            ? row.name
+                                            : <AdminReferenceName itemId={row.item_id} recipeId={row.recipe_id} eager={!!normalizedSearch} onResolved={handleNameResolved} onDenied={denied}/>}
+                                    </strong>
+                                    <small>
+                                        {kind==='products'
+                                            ? `가격 ${row.price}코인 · ${row.is_active?'판매 중':'비활성'}`
+                                            : `${itemCategoryLabel(row.category)} · ${row.is_active?'활성':'비활성'}`}
+                                    </small>
+                                    <small>등록 ID {row.id}</small>
+                                </button>
+                            </li>
+                        ))}
+                    </ul>
+
+                    {route?.after&&
+                        <button disabled={busy} onClick={()=>onNavigate({after:null,record:null})}>처음 페이지</button>
+                    }
+
+                    {next&&
+                        <button disabled={busy} onClick={()=>onNavigate?onNavigate({after:next,record:null}):load(kind,next)}>
+                            다음 100건
+                        </button>
+                    }
+                </div>
+
+                <div className="admin-detail-pane">
+                    {(!route||recordId==='new'||selected)&&!busy&&
+                        <Editor
+                            key={`${kind}-${editorKey}`}
+                            kind={kind}
+                            record={selected}
+                            seed={kind==='products'?productSeed:null}
+                            onDenied={denied}
+                            onSaved={handleSaved}
+                            deleteControl={selected&&
+                                <AdminDeleteControl
+                                    menu={kind}
+                                    recordId={String(selected.id)}
+                                    disabled={busy}
+                                    onDenied={denied}
+                                    onDeleted={async()=>{
+                                        invalidateAdminNames();
+                                        setSelected(null);
+                                        setEditorKey(value=>value+1);
+                                        onNavigate?.({record:null});
+                                        setDeleteRevision(value=>value+1);
+                                        await load(kind,route?.after);
+                                        setMessage('삭제 완료');
+                                    }}
+                                />
+                            }
+                        />
+                    }
+                    {!selected&&recordId!=='new'&&
+                        <p className="admin-empty-detail">목록에서 항목을 선택하거나 새로 등록하세요.</p>
+                    }
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <section className={"admin-panel"+((recordId||route?.area)?" admin-detail-active":"")} onSubmitCapture={handleSubmitCapture}>
+            <header className="admin-heading">
+                <div>
+                    <small>생존밥 · 운영 관리</small>
+                    <h1>관리자</h1>
+                </div>
+                <div className="actions">
+                    <button onClick={onBack}>뒤로가기</button>
+                    <button type="button" disabled={!allowed||resetting} onClick={runTestDailyReset}>
+                        {resetting?'자정 초기화 중…':'자정 초기화'}
+                    </button>
+                    <button onClick={onExit}>게임으로 돌아가기</button>
+                    {onLogout&&<button onClick={onLogout}>로그아웃</button>}
+                </div>
+            </header>
+
+            <p>서버 관리자 권한 검증 영역입니다. 인증 방식: {authentication?displayLabel(authentication):'확인 중'}</p>
+            <p role="alert">{message}</p>
+
+            {allowed&&
+                <>
+                    <nav className="admin-navigation" aria-label="관리자 메뉴">
+                        <label className="admin-menu-search">
+                            메뉴 찾기
+                            <input type="search" value={menuSearch} onChange={e=>setMenuSearch(e.target.value)} placeholder="캐릭터, 레시피, 구역…"/>
+                        </label>
+
+                        {visibleGroups.map(group=>{
+                            const Group=group.title==='세부 관리'?'details':'section';
+
+                            return (
+                                <Group className="admin-menu-group" key={group.title} aria-label={group.title}>
+                                    {group.title==='세부 관리'
+                                        ? <summary>추가 설정 · 관리자 권한</summary>
+                                        : <h2>{group.title}</h2>}
+
+                                    {group.menus.map(type=>{
+                                        if(['areas','area-hub'].includes(type)) {
+                                            if(type!==group.menus.find(id=>['areas','area-hub'].includes(id))) return null;
+
+                                            return (
+                                                <div className="admin-area-folder" key="area-folder">
+                                                    <button type="button" aria-expanded={areaNavOpen} aria-controls="admin-area-children" onClick={()=>setAreaNavOpen(open=>!open)}>
+                                                        구역 <span aria-hidden="true">{areaNavOpen?'▾':'▸'}</span>
+                                                    </button>
+                                                    {areaNavOpen&&
+                                                        <div id="admin-area-children" className="admin-area-children">
+                                                            {['area-hub','areas'].map(id=>(
+                                                                <button type="button" key={id} aria-current={kind===id?'page':undefined} disabled={busy} onClick={()=>setKind(id)}>{menuLabel(id)}</button>
+                                                            ))}
+                                                        </div>
+                                                    }
+                                                </div>
+                                            );
+                                        }
+
+                                        return (
+                                            <button type="button" key={type} aria-current={(kind===type||(type==='guide-world'&&kind.startsWith('guide-')))?'page':undefined} disabled={busy} onClick={()=>setKind(type)}>
+                                                {menuLabel(type)}
+                                            </button>
+                                        );
+                                    })}
+                                </Group>
+                            );
+                        })}
+
+                        {!visibleGroups.length&&
+                            <p className="admin-menu-empty" role="status">일치하는 메뉴가 없습니다.</p>
+                        }
+                    </nav>
+
+                    <div className="admin-content">
+                        <div className="admin-page-heading">
+                            <small>{currentGroup?.title} / {recordId?(recordId==='new'?'등록':'상세 · 수정'):'목록 · 관리'}</small>
+                            <h2>{menuLabel(kind.startsWith('guide-')?'guide-world':kind)}</h2>
+                        </div>
+
+                        {(recordId||route?.area)&&
+                            <button className="admin-back-to-list" disabled={busy} onClick={()=>onNavigate({record:null,area:null})}>
+                                편집 취소 · 목록으로
+                            </button>
+                        }
+
+                        {renderContent()}
+                    </div>
+                </>
+            }
+        </section>
+    );
+}

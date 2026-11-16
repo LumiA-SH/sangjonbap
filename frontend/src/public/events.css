@@ -1,0 +1,89 @@
+.event-admin .event-admin-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.event-admin .event-admin-list li {
+    padding: 12px;
+    border-bottom: 1px solid #ddd;
+    overflow-wrap: anywhere;
+}
+
+.event-admin .event-record-select {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+    text-align: left;
+}
+
+.event-admin .event-record-select img {
+    width: 80px;
+    height: 56px;
+    object-fit: cover;
+}
+
+.event-admin .admin-editor-pane {
+    min-width: 0;
+}
+
+.event-admin fieldset {
+    min-width: 0;
+}
+
+.event-admin pre {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.public-event-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+}
+
+.public-event-card {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    text-align: left;
+    overflow-wrap: anywhere;
+}
+
+.public-event-card img {
+    width: 100%;
+    height: 160px;
+    object-fit: cover;
+}
+
+.public-event-detail img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+}
+
+.public-event-detail .event-body {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.survival-event .event-banner-link {
+    display: block;
+    width: 100%;
+    padding: 0;
+    text-align: left;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+}
+
+.survival-event .event-banner-link .survival-event-overlay {
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 600px) {
+    .public-event-list {
+        grid-template-columns: 1fr;
+    }
+}
