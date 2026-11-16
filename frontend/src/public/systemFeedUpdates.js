@@ -1,14 +1,14 @@
 import {api} from '../api/client';
 
 // A public, opaque invalidation signal only. Post bodies still require the game session.
-export function subscribeSystemFeed({onChange,onError,Socket=WebSocket}){
+export function subscribeSystemFeed({onChange,onError,onConnected=()=>{},Socket=WebSocket}){
  let stopped=false,connecting=false,socket=null,retry=null,heartbeat=null,deadline=null,config=null,attempt=0,ref=0,awaitingHeartbeat=null;
  const topic='realtime:system-feed-signal';
  const clear=()=>{clearTimeout(deadline);clearInterval(heartbeat);deadline=null;heartbeat=null;};
  function disconnect(){clear();const old=socket;socket=null;if(old){old.onclose=null;old.onerror=null;old.onmessage=null;old.onopen=null;old.close();}}
- function reconnect(){
+ function reconnect(error){
   disconnect();if(stopped||document.visibilityState==='hidden'||retry)return;
-  onError(new Error('실시간 연결을 복구하고 있습니다.'));
+  onError(error instanceof Error?error:new Error('실시간 연결을 복구하고 있습니다.'));
   retry=setTimeout(()=>{retry=null;connect();},Math.min(30000,1000*2**Math.min(attempt++,5)));
  }
  async function connect(){
@@ -34,13 +34,15 @@ export function subscribeSystemFeed({onChange,onError,Socket=WebSocket}){
      onChange();return;
     }
     if(message.event==='postgres_changes'&&message.topic===topic&&message.payload?.data?.table===config.table&&message.payload.data.type==='UPDATE')onChange();
-    if(message.event==='system'&&message.payload?.status==='ok')onChange();
+    if(message.event==='system'&&message.payload?.status==='ok'){onConnected();onChange();}
     if(message.event==='phx_error'||message.event==='phx_close'||(message.event==='system'&&message.payload?.status==='error'))reconnect();
    };
    ws.onerror=reconnect;ws.onclose=reconnect;
-  }catch(error){if(stopped)return;onError(error);if(error.status!==401&&error.status!==403)reconnect();}finally{connecting=false;}
+  }catch(error){if(stopped)return;if(error.status===401||error.status===403||error.code==='SYSTEM_FEED_REALTIME_UNAVAILABLE'){onError(error);return;}reconnect(error);}finally{connecting=false;}
  }
  const resume=()=>{if(document.visibilityState==='hidden'){clearTimeout(retry);retry=null;disconnect();}else connect();};
  document.addEventListener('visibilitychange',resume);window.addEventListener('online',resume);connect();
- return()=>{stopped=true;clearTimeout(retry);disconnect();document.removeEventListener('visibilitychange',resume);window.removeEventListener('online',resume);};
+ const stop=()=>{stopped=true;clearTimeout(retry);disconnect();document.removeEventListener('visibilitychange',resume);window.removeEventListener('online',resume);};
+ stop.retry=()=>{if(stopped)return;clearTimeout(retry);retry=null;disconnect();config=null;attempt=0;connect();};
+ return stop;
 }

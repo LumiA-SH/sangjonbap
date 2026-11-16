@@ -4,8 +4,8 @@ import {subscribeSystemFeed} from './systemFeedUpdates';
 
 export const feedTitles={activity:'최근 기록',notice:'공지사항',event:'이벤트'};
 export default function SystemFeed({kind='activity',preview=false,active=true,onMore}){
- const [data,setData]=useState(null),[error,setError]=useState(''),[loading,setLoading]=useState(false);
- const request=useRef(null),busy=useRef(false),snapshot=useRef(null),cursor=useRef(null),refreshQueued=useRef(false),refreshRef=useRef(()=>{});
+ const [data,setData]=useState(null),[error,setError]=useState(''),[connectionError,setConnectionError]=useState(''),[loading,setLoading]=useState(false);
+ const connection=useRef(null),request=useRef(null),busy=useRef(false),snapshot=useRef(null),cursor=useRef(null),refreshQueued=useRef(false),refreshRef=useRef(()=>{});
  async function load(before=null,background=false){
   if(busy.current)return;
   busy.current=true;cursor.current=before;
@@ -17,7 +17,7 @@ export default function SystemFeed({kind='activity',preview=false,active=true,on
   finally{if(request.current===sequence){busy.current=false;setLoading(false);if(refreshQueued.current){refreshQueued.current=false;refreshRef.current();}}}
  }
  useEffect(()=>{
-  if(!active){request.current=null;busy.current=false;snapshot.current=null;setData(null);return;}
+  if(!active){request.current=null;busy.current=false;snapshot.current=null;setData(null);setConnectionError('');return;}
   load();
   async function refresh(){
    if(document.visibilityState==='hidden'||cursor.current)return;
@@ -33,14 +33,15 @@ export default function SystemFeed({kind='activity',preview=false,active=true,on
    finally{if(request.current===sequence){busy.current=false;if(refreshQueued.current){refreshQueued.current=false;refresh();}}}
   }
   refreshRef.current=refresh;
-  const stop=subscribeSystemFeed({onChange:refresh,onError:e=>{if(e.status===401||e.status===403){snapshot.current=null;setData(null);}setError(e.message||'실시간 연결을 확인하세요.');}});
-  return()=>{request.current=null;busy.current=false;refreshQueued.current=false;refreshRef.current=()=>{};stop();};
+  const stop=subscribeSystemFeed({onChange:refresh,onConnected:()=>setConnectionError(''),onError:e=>{if(e.status===401||e.status===403){snapshot.current=null;setData(null);}setConnectionError(e.message||'실시간 연결을 확인하세요.');}});
+  connection.current=stop;
+  return()=>{request.current=null;busy.current=false;refreshQueued.current=false;refreshRef.current=()=>{};connection.current=null;stop();};
   // eslint-disable-next-line react-hooks/exhaustive-deps
  },[kind,active,preview]);
  const records=data?.records||[];
  return <div aria-label={`${feedTitles[kind]} 게시글`}>
   {loading&&!data&&<p role="status">게시글을 불러오는 중입니다.</p>}
-  {error&&<p role="alert">{error} <button type="button" onClick={()=>load()}>다시 불러오기</button></p>}
+  {(error||connectionError)&&<p role="alert">{error||connectionError} <button type="button" onClick={()=>{connection.current?.retry?.();load();}}>다시 불러오기</button></p>}
   {data?.enabled===false&&<div className="survival-empty"><p>시스템 계정 게시글 연동 준비 중입니다.</p></div>}
   {data?.enabled&&records.length===0&&<p>표시할 게시글이 없습니다.</p>}
   {records.length>0&&<ul>{records.map(record=><li key={record.id}>

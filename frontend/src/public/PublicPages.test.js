@@ -466,3 +466,21 @@ test('realtime signal joins, catches up, handles changes, heartbeats and cleans 
   stop();expect(sockets[1].close).toHaveBeenCalled();await act(async()=>jest.advanceTimersByTime(60000));expect(sockets).toHaveLength(2);
  }finally{stop();jest.useRealTimers();}
 });
+
+
+test('connection recovery clears its message independently and retry reconnects as well as reloads',async()=>{
+ const retry=jest.fn(),stop=Object.assign(jest.fn(),{retry});subscribeSystemFeed.mockReturnValue(stop);
+ api.mockResolvedValue({enabled:true,revision:'one',records:[],nextBefore:null});
+ await act(async()=>root.render(<SystemFeed/>));const callbacks=subscribeSystemFeed.mock.calls.at(-1)[0];
+ await act(async()=>callbacks.onError(Error('실시간 연결을 복구하고 있습니다.')));expect(div.textContent).toContain('실시간 연결을 복구');
+ await act(async()=>button('다시 불러오기').click());expect(retry).toHaveBeenCalledTimes(1);
+ expect(div.textContent).toContain('실시간 연결을 복구');
+ await act(async()=>callbacks.onConnected());expect(div.textContent).not.toContain('실시간 연결을 복구');expect(div.textContent).not.toContain('다시 불러오기');
+});
+
+test('connection configuration errors keep their real message and do not endlessly retry',async()=>{
+ jest.useFakeTimers();const actual=jest.requireActual('./systemFeedUpdates'),error=jest.fn();
+ api.mockRejectedValue(Object.assign(Error('최근 기록 실시간 연결 설정을 확인하세요.'),{code:'SYSTEM_FEED_REALTIME_UNAVAILABLE',status:503}));
+ const stop=actual.subscribeSystemFeed({onChange:jest.fn(),onError:error,Socket:jest.fn()});
+ try{await act(async()=>{});expect(error.mock.calls[0][0].code).toBe('SYSTEM_FEED_REALTIME_UNAVAILABLE');await act(async()=>jest.advanceTimersByTime(60000));expect(api).toHaveBeenCalledTimes(1);stop.retry();await act(async()=>{});expect(api).toHaveBeenCalledTimes(2);}finally{stop();jest.useRealTimers();}
+});

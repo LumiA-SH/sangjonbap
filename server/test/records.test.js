@@ -175,8 +175,9 @@ test('sent revision checks never call Mastodon; unchanged sends share cache and 
 });
 
 
-test('realtime connection exposes only an anonymous key and never accepts privileged credentials',async()=>{
- const key=role=>'header.'+Buffer.from(JSON.stringify({role})).toString('base64url')+'.signature';
- for(const value of [undefined,'private-token',key('service_role')]){const repo=createSystemFeedRepository({}, {env:{SUPABASE_ANON_KEY:value}});await assert.rejects(repo.getSystemFeedConnection(),{code:'SYSTEM_FEED_REALTIME_UNAVAILABLE'});}
- const config=await createSystemFeedRepository({}, {env:{SUPABASE_ANON_KEY:key('anon'),MASTODON_SYSTEM_ACCESS_TOKEN:'never-expose'}}).getSystemFeedConnection();assert.equal(config.table,'system_feed_signal');assert.equal(config.key,key('anon'));assert.ok(!JSON.stringify(config).includes('never-expose'));
+test('realtime connection works without runtime anon env and never exposes privileged credentials',async()=>{
+ for(const value of [undefined,'private-token','header.'+Buffer.from(JSON.stringify({role:'service_role'})).toString('base64url')+'.signature']){
+  const config=await createSystemFeedRepository({}, {env:{SUPABASE_ANON_KEY:value,MASTODON_SYSTEM_ACCESS_TOKEN:'never-expose'}}).getSystemFeedConnection();
+  const claims=JSON.parse(Buffer.from(config.key.split('.')[1],'base64url'));assert.equal(claims.role,'anon');assert.equal(claims.ref,'grkohfxvafbquhmgnvwj');assert.equal(config.table,'system_feed_signal');assert.notEqual(config.key,value);assert.ok(!JSON.stringify(config).includes('never-expose'));
+ }
 });
