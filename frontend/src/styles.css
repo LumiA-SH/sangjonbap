@@ -1085,3 +1085,73 @@ body > #root > main:not(.admin-workspace) > section {
   }
 }
 
+
+/* ========================================
+   20. HOME FEED LAYOUT
+======================================== */
+
+.survival-home > .survival-actions-card {
+  grid-column: 1;
+}
+
+.survival-home > .survival-notice {
+  grid-column: 2;
+}
+
+.survival-home > .survival-event {
+  grid-column: 1;
+}
+
+.survival-home > .survival-activity {
+  grid-column: 2;
+}
+
+/* ========================================
+   21. ACTIVITY CARD
+======================================== */
+
+.survival-home > .survival-activity {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.survival-activity .system-feed {
+  flex: 1;
+  min-width: 0;
+}
+
+.survival-activity .system-feed-preview .system-feed-list {
+  margin: 0;
+  padding: 0;
+}
+
+.survival-activity .system-feed-preview .system-feed-item {
+  padding: 10px 0;
+}
+
+.survival-activity .system-feed-preview .system-feed-item:first-child {
+  padding-top: 0;
+}
+
+.survival-activity .system-feed-preview .system-feed-meta {
+  margin-bottom: 4px;
+}
+
+.survival-activity .system-feed-preview .system-feed-text {
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+/* ========================================
+   22. RESPONSIVE HOME FEED
+======================================== */
+
+@media (max-width: 900px) {
+  .survival-home > .survival-actions-card,
+  .survival-home > .survival-notice,
+  .survival-home > .survival-event,
+  .survival-home > .survival-activity {
+    grid-column: 1;
+  }
+}

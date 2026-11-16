@@ -661,8 +661,8 @@ export default function App() {
                       </div>
                     </DashboardCard>
 
-                    <DashboardCard title="최근 기록" subtitle="ACTIVITY LOG" action={<button type="button" className="survival-card-link" onClick={() => navigate('feed-activity')}>더보기 ›</button>} className="survival-activity">
-                      <SystemFeed kind="activity" preview active={view==='home'}/>
+                    <DashboardCard title="공지사항" subtitle="NOTICE" action={<button type="button" className="survival-card-link" onClick={() => navigate('feed-notice')}>더보기 ›</button>} className="survival-notice">
+                      <NoticeFeed preview active={view==='home'}/>
                     </DashboardCard>
 
                     <DashboardCard title="이벤트" subtitle="EVENT" action={<button type="button" className="survival-card-link" onClick={()=>navigate('feed-event')}>더보기 ›</button>} className="survival-event">
@@ -677,8 +677,8 @@ export default function App() {
                       <p>등록된 이벤트가 없습니다.</p>
                     </DashboardCard>
 
-                    <DashboardCard title="공지사항" subtitle="NOTICE" action={<button type="button" className="survival-card-link" onClick={()=>navigate('feed-notice')}>더보기 ›</button>} className="survival-notice">
-                      <NoticeFeed preview active={view==='home'}/>
+                    <DashboardCard title="최근 기록" subtitle="ACTIVITY LOG" action={<button type="button" className="survival-card-link" onClick={() => navigate('feed-activity')}>더보기 ›</button>} className="survival-activity">
+                      <SystemFeed kind="activity" preview active={view==='home'}/>
                     </DashboardCard>
                   </div>
               )}

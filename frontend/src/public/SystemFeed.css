@@ -1,0 +1,190 @@
+/* ========================================
+   01. SYSTEM FEED
+======================================== */
+
+.system-feed {
+    width: 100%;
+    min-width: 0;
+    color: #292326;
+}
+
+.system-feed * {
+    box-sizing: border-box;
+}
+
+/* ========================================
+   02. RECORD LIST
+======================================== */
+
+.system-feed-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.system-feed-item {
+    min-width: 0;
+    margin: 0;
+    padding: 13px 0;
+    border-bottom: 1px solid #e9e3e3;
+}
+
+.system-feed-item:first-child {
+    padding-top: 3px;
+}
+
+.system-feed-item:last-child {
+    padding-bottom: 3px;
+    border-bottom: 0;
+}
+
+.system-feed-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.system-feed-meta time {
+    color: #8b777a;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+}
+
+.system-feed-boost {
+    padding: 2px 6px;
+    border: 1px solid #e2cdd0;
+    border-radius: 3px;
+    color: #71131d;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.system-feed-text {
+    margin: 0;
+    color: #30282a;
+    font-size: 13px;
+    line-height: 1.65;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+/* ========================================
+   03. WARNING CONTENT
+======================================== */
+
+.system-feed-warning {
+    margin: 0;
+}
+
+.system-feed-warning summary {
+    color: #71131d;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.6;
+    cursor: pointer;
+}
+
+.system-feed-warning .system-feed-text {
+    margin-top: 8px;
+    padding: 10px 12px;
+    border-left: 3px solid #71131d;
+    background: #f8f5f4;
+}
+
+/* ========================================
+   04. ERROR / EMPTY
+======================================== */
+
+.system-feed-error {
+    display: flex;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 10px;
+    color: #a51e2c;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.system-feed-error button,
+.system-feed-pagination button {
+    padding: 7px 12px;
+    border: 1px solid #71131d;
+    border-radius: 5px;
+    background: #71131d;
+    color: #fff;
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.system-feed-error button:hover,
+.system-feed-pagination button:hover {
+    background: #540b14;
+}
+
+.system-feed-empty {
+    margin: 8px 0;
+    color: #8b777a;
+    font-size: 13px;
+}
+
+/* ========================================
+   05. PAGINATION
+======================================== */
+
+.system-feed-pagination {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 18px;
+}
+
+.system-feed-pagination button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ========================================
+   06. HOME PREVIEW
+======================================== */
+
+.system-feed-preview .system-feed-item {
+    padding-top: 11px;
+    padding-bottom: 11px;
+}
+
+.system-feed-preview .system-feed-text {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+}
+
+.system-feed-preview .system-feed-meta {
+    margin-bottom: 4px;
+}
+
+/* ========================================
+   07. MOBILE
+======================================== */
+
+@media (max-width: 768px) {
+    .system-feed-item {
+        padding: 11px 0;
+    }
+
+    .system-feed-text {
+        font-size: 12px;
+    }
+
+    .system-feed-meta time {
+        font-size: 10px;
+    }
+}
