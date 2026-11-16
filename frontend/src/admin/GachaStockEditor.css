@@ -1,3 +1,373 @@
-.gacha-settings .gacha-table-wrap{overflow-x:auto}.gacha-settings .gacha-reward-table{width:100%;table-layout:fixed;border-collapse:collapse}.gacha-settings th,.gacha-settings td{padding:12px 8px;text-align:left;border-bottom:1px solid #ddd;vertical-align:top;overflow-wrap:anywhere}.gacha-settings th:first-child{width:38%}.gacha-settings td input:not([type=checkbox]){width:100%;min-width:0;box-sizing:border-box}.gacha-settings details{margin-top:12px}.gacha-settings summary{cursor:pointer}.gacha-settings h4{margin:0}@media(max-width:700px){.gacha-settings thead{display:none}.gacha-settings table,.gacha-settings tbody{display:block}.gacha-settings tr{display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid #ddd;padding:10px 0}.gacha-settings td{display:block;border:0;min-width:0}.gacha-settings td:first-child{grid-column:1/-1}.gacha-settings td:before{content:attr(data-label);display:block;font-size:12px;margin-bottom:6px}}
+/* ========================================
+   01. GACHA SETTINGS
+======================================== */
 
-.admin-panel .gacha-catalog{display:block}.gacha-catalog.has-editor>.admin-list-pane,.gacha-catalog:not(.has-editor)>.admin-detail-pane{display:none}.gacha-catalog-table{width:100%;border-collapse:collapse}.gacha-catalog-table th,.gacha-catalog-table td{padding:14px 10px;text-align:left;border-bottom:1px solid #ddd}.gacha-catalog-table button{overflow-wrap:anywhere}.gacha-catalog-table td:first-child{width:45%}
+.gacha-settings .gacha-table-wrap {
+    width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+}
+
+.admin-panel .gacha-settings .gacha-reward-table {
+    display: table;
+    width: 100%;
+    min-width: 760px;
+    margin: 0;
+    border-collapse: collapse;
+    table-layout: fixed;
+    overflow: visible;
+}
+
+.gacha-settings th,
+.gacha-settings td {
+    padding: 12px 8px;
+    border-bottom: 1px solid #dddddd;
+    text-align: left;
+    vertical-align: top;
+    overflow-wrap: anywhere;
+}
+
+.gacha-settings th:first-child {
+    width: 38%;
+}
+
+.gacha-settings td input:not([type="checkbox"]) {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+.gacha-settings details {
+    margin-top: 12px;
+}
+
+.gacha-settings summary {
+    cursor: pointer;
+}
+
+.gacha-settings h4 {
+    margin: 0;
+}
+
+/* ========================================
+   02. GACHA CATALOG
+======================================== */
+
+.admin-panel .gacha-catalog {
+    display: block;
+    width: 100%;
+    min-width: 0;
+}
+
+.admin-panel .gacha-catalog.has-editor > .admin-list-pane,
+.admin-panel .gacha-catalog:not(.has-editor) > .admin-detail-pane {
+    display: none;
+}
+
+.admin-panel .gacha-catalog > .admin-list-pane {
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 1px solid #dce1e7;
+    border-radius: 12px;
+    background: #ffffff;
+    box-shadow: 0 3px 14px #18252d0a;
+    overflow: hidden;
+}
+
+.admin-panel .gacha-catalog > .admin-list-pane > p[role="status"]:empty {
+    display: none;
+}
+
+/* ========================================
+   03. GACHA HEADER / ACTIONS
+======================================== */
+
+.admin-panel .gacha-catalog > .admin-list-pane > .admin-toolbar-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    width: 100%;
+    margin: 0;
+    padding: 20px 22px;
+    border-bottom: 1px solid #e5e9ed;
+}
+
+.admin-panel .gacha-catalog-heading {
+    flex: 1 1 auto;
+    min-width: 150px;
+    margin: 0;
+    color: #242428;
+    font-size: 16px;
+    font-weight: 850;
+}
+
+.admin-panel .gacha-catalog > .admin-list-pane > .admin-toolbar-actions button {
+    min-height: 36px;
+    margin: 0;
+    padding: 8px 12px;
+    font-size: 12px;
+}
+
+.admin-panel .gacha-catalog > .admin-list-pane > .admin-toolbar-actions button:first-of-type {
+    border-color: #650c13;
+    background: #650c13;
+    color: #ffffff;
+}
+
+.admin-panel .gacha-catalog > .admin-list-pane > .admin-toolbar-actions button:first-of-type:hover:not(:disabled) {
+    background: #80141e;
+    color: #ffffff;
+}
+
+/* ========================================
+   04. GACHA SEARCH / FILTER
+======================================== */
+
+.admin-panel .gacha-catalog > .admin-list-pane > label {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+    margin: 0;
+    padding: 13px 22px;
+    border-bottom: 1px solid #edf0f2;
+    color: #46515e;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.admin-panel .gacha-catalog > .admin-list-pane > label input,
+.admin-panel .gacha-catalog > .admin-list-pane > label select {
+    width: 100%;
+    min-height: 40px;
+    border: 1px solid #d7dde4;
+    border-radius: 7px;
+    background: #ffffff;
+}
+
+.admin-panel .gacha-catalog .admin-list-count {
+    display: block;
+    margin: 0;
+    padding: 10px 22px;
+    color: #8490a0;
+    font-size: 11px;
+}
+
+/* ========================================
+   05. GACHA TABLE
+======================================== */
+
+.admin-panel .gacha-catalog-table-wrap {
+    width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+}
+
+.admin-panel .gacha-catalog-table {
+    display: table;
+    width: 100%;
+    min-width: 680px;
+    margin: 0;
+    border-collapse: collapse;
+    table-layout: fixed;
+    overflow: visible;
+}
+
+.admin-panel .gacha-catalog-table th,
+.admin-panel .gacha-catalog-table td {
+    padding: 15px 18px;
+    border-bottom: 1px solid #e6e9ee;
+    font-size: 13px;
+    text-align: left;
+    vertical-align: middle;
+    overflow-wrap: anywhere;
+}
+
+.admin-panel .gacha-catalog-table th {
+    background: #f2f4f6;
+    color: #657184;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.admin-panel .gacha-catalog-table th:nth-child(1) {
+    width: 32%;
+}
+
+.admin-panel .gacha-catalog-table th:nth-child(2) {
+    width: 12%;
+}
+
+.admin-panel .gacha-catalog-table th:nth-child(3) {
+    width: 16%;
+}
+
+.admin-panel .gacha-catalog-table th:nth-child(4) {
+    width: 14%;
+}
+
+.admin-panel .gacha-catalog-table th:nth-child(5) {
+    width: 150px;
+    text-align: center;
+}
+
+.admin-panel .gacha-catalog-table tbody tr:hover td {
+    background: #faf6f7;
+}
+
+.admin-panel .gacha-catalog-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.admin-panel .gacha-catalog-table .admin-entry-title {
+    display: block;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: #242428;
+    font-size: 13px;
+    font-weight: 750;
+    text-align: left;
+    white-space: normal;
+}
+
+.admin-panel .gacha-catalog-table .admin-entry-title:hover:not(:disabled) {
+    border: 0;
+    background: transparent;
+    color: #650c13;
+    text-decoration: underline;
+}
+
+/* ========================================
+   06. GACHA STATUS
+======================================== */
+
+.admin-panel .gacha-status {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 24px;
+    padding: 4px 8px;
+    border-radius: 5px;
+    background: #f4eded;
+    color: #8b3036;
+    font-size: 11px;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.admin-panel .gacha-status.is-active {
+    background: #eaf5ed;
+    color: #237448;
+}
+
+/* ========================================
+   07. GACHA MANAGEMENT
+======================================== */
+
+.admin-panel .gacha-catalog-table td.gacha-catalog-controls {
+    text-align: center;
+    white-space: nowrap;
+}
+
+.admin-panel .gacha-management-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    min-width: 0;
+}
+
+.admin-panel .gacha-management-actions > button {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    min-height: 34px;
+    margin: 0;
+    padding: 7px 11px;
+    border: 1px solid #d5dce4;
+    border-radius: 6px;
+    background: #ffffff;
+    color: #242428;
+    font-size: 12px;
+}
+
+.admin-panel .gacha-management-actions .admin-delete-inline {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 0;
+    margin: 0;
+}
+
+.admin-panel .gacha-management-actions .admin-delete-inline button {
+    min-height: 34px;
+    margin: 0;
+    padding: 7px 11px;
+    border: 1px solid #e4c7cc;
+    border-radius: 6px;
+    background: #ffffff;
+    color: #9e303d;
+    font-size: 12px;
+}
+
+/* ========================================
+   08. GACHA RESPONSIVE
+======================================== */
+
+@media (max-width: 700px) {
+    .gacha-settings thead {
+        display: none;
+    }
+
+    .gacha-settings table,
+    .gacha-settings tbody {
+        display: block;
+    }
+
+    .gacha-settings tr {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        padding: 10px 0;
+        border-bottom: 1px solid #dddddd;
+    }
+
+    .gacha-settings td {
+        display: block;
+        min-width: 0;
+        border: 0;
+    }
+
+    .gacha-settings td:first-child {
+        grid-column: 1 / -1;
+    }
+
+    .gacha-settings td::before {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 12px;
+        content: attr(data-label);
+    }
+
+    .admin-panel .gacha-catalog > .admin-list-pane > .admin-toolbar-actions {
+        align-items: stretch;
+        padding: 15px;
+    }
+
+    .admin-panel .gacha-catalog-heading {
+        flex-basis: 100%;
+    }
+
+    .admin-panel .gacha-catalog > .admin-list-pane > label {
+        padding: 12px 15px;
+    }
+}
