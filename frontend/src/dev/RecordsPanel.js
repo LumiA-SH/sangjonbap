@@ -8,7 +8,8 @@ const sections = [
   {id: 'action-logs', title: '내 행동 로그', description: '캐릭터가 수행한 행동 기록', number: '01'},
   {id: 'investigations', title: '내 조사 기록', description: '지역을 탐색한 조사 기록', number: '02'},
   {id: 'discoveries', title: '서버 최초 발견', description: '서버에 최초로 발견된 정보', number: '03'},
-  {id: 'clues', title: '공개된 단서', description: '공개된 단서와 발견 정보', number: '04'}
+  {id: 'monster-discoveries', title: '마물 최초 발견', description: '서버 전체의 마물 최초 발견 기록', number: '04'},
+  {id: 'clues', title: '공개된 단서', description: '공개된 단서와 발견 정보', number: '05'}
 ];
 
 function recordDate(value) {
@@ -72,7 +73,7 @@ function RecordDetail({record, kind}) {
           {kind === 'clues' && <div><span>발견 상태</span><strong>{record.is_discovered ? '발견 완료' : record.manually_published ? '운영진 공개 · 미발견' : '미발견'}</strong></div>}
           {record.area_name && (
               <div>
-                <span>조사 지역</span>
+                <span>{kind === 'clues' ? '관련 구역' : '조사 구역'}</span>
                 <strong>{record.area_name}</strong>
               </div>
           )}

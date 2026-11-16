@@ -1,3 +1,4 @@
+import {createRecordsRepository} from '../src/modules/records/repository.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
@@ -90,6 +91,9 @@ release: () => c.release(), query(q, p) {
                 assert.equal(first.rewards[0].firstDiscovery, true); assert.equal(first.rewards[0].price, price);
                 assert.equal((await inspect(users[0].c.id)).currency, before.currency);
                 const product = (await shop.getShopProducts(users[1].u.id)).find(p => p.recipe_id === r.id);
+                assert.deepEqual(product.recipe_detail.ingredients,[{itemId:item.id,name:item.name,quantity:2}]);
+                assert.equal(product.recipe_detail.resultName,food.name);
+                assert.equal(product.recipe_detail.resultQuantity,r.result_quantity);
                 assert.equal(product.price, price); assert.equal(product.learned, false);
                 await rejects(inv.investigate(users[0].u.id, a.id, key), 'DUPLICATE_REQUEST');
                 const repeat = await inv.investigate(users[1].u.id, a.id, randomUUID());
@@ -185,7 +189,14 @@ await c.query('begin'); const pc = await lockCharacterByUser(c, user.u.id);
                     const b = await battle.encounter(c, a, pc); await c.query('commit'); return b;
                 } catch (e) {await c.query('rollback'); throw e;} finally {c.release();}
             };
+            const archive=createRecordsRepository(pool);
+            assert.equal((await archive.getMonsterDiscoveryRecords(users[0].u.id)).some(row=>row.id===m.id),false);
             const b1 = await start(users[0]), b2 = await start(users[1]);
+            const entries=(await archive.getMonsterDiscoveryRecords(users[1].u.id)).filter(row=>row.id===m.id);
+            assert.equal(entries.length,1);assert.equal(entries[0].character_id,users[0].c.id);
+            assert.equal(entries[0].title,m.name);assert.equal(entries[0].area_name,a.name);assert.ok(entries[0].discovered_at);
+            assert.deepEqual(await archive.getMonsterDiscoveryRecords('9223372036854775807'),[]);
+            assert.equal((await archive.getMonsterDiscoveryRecords(users[0].u.id,m.id)).some(row=>row.id===m.id),false);
             const command = (u, b) => battle.commandBattle(u.u.id, b.id, {requestKey: randomUUID(), turnNo: 1, action: 'ATTACK'});
             const results = await Promise.all([command(users[0], b1), command(users[1], b2)]);
             assert.equal(results.flatMap(x => x.rewards).filter(x => x.recipeId).length, 1);

@@ -1,3 +1,5 @@
+import RequestLoading from '../api/RequestLoading';
+import ShopPanel from '../dev/ShopPanel';
 import GachaStockEditor from '../admin/GachaStockEditor';
 import ClueAdminPanel from '../admin/ClueAdminPanel';
 import {displayLabel} from '../features/displayLabels';
@@ -20,8 +22,8 @@ import GuidePage,{kst} from './GuidePage';
 import CharacterDirectory from './CharacterDirectory';
 import AnemiaNotice,{anemiaText,AnemiaPolicyContext} from './AnemiaNotice';
 import ContentAdminPanel from '../admin/ContentAdminPanel';
-import {api} from '../api/client';
-jest.mock('../api/client',()=>({api:jest.fn()}));
+import {api,subscribeApiPending} from '../api/client';
+jest.mock('../api/client',()=>({api:jest.fn(),subscribeApiPending:jest.fn()}));
 let div,root;beforeEach(()=>{global.IS_REACT_ACT_ENVIRONMENT=true;api.mockReset();window.confirm=jest.fn(()=>true);Object.defineProperty(global,'crypto',{configurable:true,value:{randomUUID:()=> '12345678-1234-4234-8234-123456789012'}});div=document.createElement('div');root=createRoot(div);});afterEach(async()=>{await act(async()=>root.unmount());});
 const button=t=>[...div.querySelectorAll('button')].find(b=>b.textContent===t);
 test('unregistered content, retry and plain text safety',async()=>{
@@ -337,4 +339,27 @@ test('character detail tabs retain draft values and show the profile',async()=>{
  await act(async()=>tab('인벤토리').click());expect(div.querySelector('.admin-character-resources').closest('[hidden]')).not.toBeNull();
  await act(async()=>tab('기본 정보').click());expect(hp.value).toBe('90');
  expect(api.mock.calls.every(([,options])=>!options)).toBe(true);
+});
+
+
+test('shop recipe preview shows ingredients and output without purchasing',async()=>{
+ await act(async()=>root.render(<ShopPanel products={[{id:'1',recipe_id:'2',name:'조리법',price:2,recipe_detail:{ingredients:[{itemId:'3',name:'재료 A',quantity:2}],resultName:'완성 음식',resultQuantity:3}}]} character={{status:'ALIVE'}}/>));
+ expect(div.textContent).toContain('재료 A ×2');expect(div.textContent).toContain('완성 음식 ×3');expect(api).not.toHaveBeenCalled();
+});
+test('archive displays discovered monsters and labels clue related area',async()=>{
+ api.mockResolvedValue({records:[],nextBefore:null});await act(async()=>root.render(<RecordsPanel/>));
+ api.mockResolvedValue({records:[{id:'3',title:'발견 마물',result_text:'발견 마물 최초 발견',character_name:'발견자'}],nextBefore:null});
+ await act(async()=>[...div.querySelectorAll('button')].find(b=>b.textContent.includes('마물 최초 발견')).click());
+ expect(api).toHaveBeenLastCalledWith('/records/monster-discoveries');expect(div.textContent).toContain('발견 마물');
+ api.mockResolvedValue({records:[{id:'4',title:'단서',content:'내용',area_name:'관련 구역 A',is_discovered:true}],nextBefore:null});
+ await act(async()=>[...div.querySelectorAll('button')].find(b=>b.textContent.includes('공개된 단서')).click());
+ expect(div.textContent).toContain('관련 구역');expect(div.textContent).not.toContain('조사 지역');
+});
+test('temporary loading indicator delays display and clears after requests complete',async()=>{
+ jest.useFakeTimers();let notify;const stop=jest.fn();subscribeApiPending.mockImplementation(fn=>{notify=fn;fn(0);return stop;});
+ try{await act(async()=>root.render(<RequestLoading/>));
+ await act(async()=>notify(1));expect(div.textContent).toBe('');
+ await act(async()=>jest.advanceTimersByTime(400));expect(div.textContent).toContain('서버 응답');
+ await act(async()=>notify(0));expect(div.textContent).toBe('');
+ }finally{jest.useRealTimers();}
 });

@@ -269,6 +269,12 @@ export default function ShopPanel({products = [], character, error, busy, run, r
                   {selectedProduct.blood_pack_kind === 'STANDARD' && <p className="shop-checkout-info">일반 혈액팩 · 혈량 +30 · 무료팩 일일 제한과 별개</p>}
                   {selectedProduct.recipe_id != null && <p className="shop-checkout-info">레시피 · {selectedProduct.learned ? '습득 완료' : '구매 즉시 습득'}</p>}
 
+                  {selectedProduct.recipe_id != null && <section className="shop-recipe-detail" aria-label="레시피 상세">
+                    <h4>필요 재료</h4>
+                    {selectedProduct.recipe_detail?.ingredients?.length ? <ul>{selectedProduct.recipe_detail.ingredients.map(item => <li key={item.itemId}>{item.name} ×{item.quantity}</li>)}</ul> : <p>등록된 재료 정보가 없습니다.</p>}
+                    <h4>완성 아이템</h4>
+                    <p>{selectedProduct.recipe_detail?.resultName ? <>{selectedProduct.recipe_detail.resultName} ×{selectedProduct.recipe_detail.resultQuantity}</> : '등록된 완성 아이템 정보가 없습니다.'}</p>
+                  </section>}
                   <div className="shop-stock-list">
                     <div><span>개인 구매 가능</span><strong>{remainingText(selectedProduct.personalRemaining)}</strong></div>
                     <div><span>전체 잔여 재고</span><strong>{remainingText(selectedProduct.globalRemaining)}</strong></div>

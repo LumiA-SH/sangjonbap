@@ -1,0 +1,1 @@
+.request-loading{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:10000;max-width:calc(100vw - 32px);box-sizing:border-box;padding:12px 20px;border:1px solid #79121c;border-radius:8px;background:#fff;color:#79121c;box-shadow:0 3px 15px #0002;pointer-events:none;text-align:center;font-size:14px;}

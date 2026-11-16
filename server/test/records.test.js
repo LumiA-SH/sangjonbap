@@ -18,10 +18,14 @@ test('records queries are read-only, scoped, bounded and do not expose undiscove
     await repo.getAdminActionRecords('7', '19');
     await repo.getDiscoveryRecords('7');
     await repo.getClueRecords('7', '4');
+    await repo.getMonsterDiscoveryRecords('7','9');
     for (const {sql} of calls) {
         assert.match(sql, /^select /); assert.match(sql, /limit 31/);
         assert.doesNotMatch(sql, /token|mastodon_account_id|password|for update|insert|delete/);
     }
+    assert.match(calls[5].sql,/m.first_discoverer_id is not null/);
+    assert.match(calls[5].sql,/u.id=\$1 and u.is_active and own.is_active/);
+    assert.deepEqual(calls[5].params,['7','9']);
     assert.match(calls[0].sql, /u.id=\$1 and u.is_active and c.is_active/);
     assert.match(calls[0].sql, /order by l.created_at desc,l.id desc/);
     assert.deepEqual(calls[1].params, ['7', null, true]);
@@ -51,7 +55,7 @@ test('production cookie auth permits own records, blocks unlinked users and non-
         getSystemFeed: async(kind,before)=>({enabled:true,records:[],nextBefore:null,kind}),
         listAdminRecords: async () => [], getAdminRecord: async () => ({}), saveAdminRecord: async () => ({})
     };
-    for (const name of ['getActionRecords', 'getClueRecords', 'getDiscoveryRecords', 'getAdminActionRecords']) {
+    for (const name of ['getMonsterDiscoveryRecords', 'getActionRecords', 'getClueRecords', 'getDiscoveryRecords', 'getAdminActionRecords']) {
         repo[name] = async (...args) => {calls.push({name, args}); return [{id: '5'}];};
     }
     const config = {provider: 'mastodon', nodeEnv: 'production', origin: 'https://survivalbob.site'};
@@ -73,7 +77,11 @@ test('production cookie auth permits own records, blocks unlinked users and non-
     assert.equal((await get('/dev/action-logs')).status, 404);
     assert.equal((await get('/records/action-logs?requestKey=12345678-1234-4234-8234-123456789012&userId=8')).status, 400);
     assert.equal((await get('/records/action-logs?requestKey=12345678-1234-4234-8234-123456789012')).status, 200); assert.deepEqual(calls.at(-1).args, ['7', null, false, '12345678-1234-4234-8234-123456789012']);
+    assert.equal((await get('/records/monster-discoveries',false)).status,401);
+    assert.equal((await get('/records/monster-discoveries')).status,200);
+    assert.equal((await get('/records/monster-discoveries?userId=8')).status,400);
     user = {...user, character_id: null};
+    assert.equal((await get('/records/monster-discoveries')).status,403);
     assert.equal((await get('/records/clues')).status, 403);
     user = {...user, role: 'ADMIN'};
     assert.equal((await get('/admin/action-logs?before=9')).status, 200);

@@ -1,4 +1,4 @@
-import {api,apiUrl,setToken} from './client';
+import {api,apiUrl,setToken,subscribeApiPending} from './client';
 
 const originalBase=process.env.REACT_APP_API_BASE;
 const originalFetch=global.fetch;
@@ -45,4 +45,15 @@ test('Edge requests include cookies while preserving DEV token and error handlin
         headers:{Authorization:'Bearer fixture'}}));
     global.fetch.mockResolvedValue({ok:false,status:401,json:async()=>({ok:false,error:{code:'UNAUTHORIZED',message:'로그인 필요'}})});
     await expect(api('/characters/me')).rejects.toMatchObject({code:'UNAUTHORIZED',status:401});
+});
+
+
+test('pending requests count concurrent calls and clear on network failure without retry',async()=>{
+ const counts=[],stop=subscribeApiPending(n=>counts.push(n)),pending=[];
+ global.fetch=jest.fn(()=>new Promise((resolve,reject)=>pending.push({resolve,reject})));
+ const first=api('/one'),second=api('/two');
+ const failure=expect(second).rejects.toMatchObject({code:'API_CONNECTION_FAILED'});
+ pending[0].resolve({ok:true,json:async()=>({ok:true,data:{}})});await first;
+ pending[1].reject(new Error('offline'));await failure;stop();
+ expect(counts).toEqual([0,1,2,1,0]);expect(global.fetch).toHaveBeenCalledTimes(2);
 });

@@ -59,6 +59,17 @@ export function createRecordsRepository(pool) {
                 where ${account} and ($2::bigint is null or d.id<$2) order by d.id desc limit 31`, [userId, before]);
             return result.rows;
         },
+        async getMonsterDiscoveryRecords(userId, before = null) {
+            return (await pool.query(`select m.id,m.name as title,m.name || ' 최초 발견' as result_text,
+                m.discovered_at,m.first_discoverer_id as character_id,c.name as character_name,a.name as area_name
+                from public.monster m left join public.game_character c on c.id=m.first_discoverer_id
+                left join lateral (select b.area_id from public.battle b where b.monster_id=m.id
+                    and b.character_id=m.first_discoverer_id and b.started_at<=m.discovered_at
+                    order by b.started_at,b.id limit 1) first_battle on true
+                left join public.area a on a.id=first_battle.area_id
+                where ${account} and m.first_discoverer_id is not null
+                and ($2::bigint is null or m.id<$2) order by m.id desc limit 31`,[userId,before])).rows;
+        },
         async getClueRecords(userId, before = null) {
             const result = await pool.query(`select cl.id,cl.title,cl.content,cl.related_target,cl.discovered_at,cl.is_discovered,cl.manually_published,
                 cl.first_discoverer_id as character_id,c.name as character_name,a.id as area_id,a.name as area_name

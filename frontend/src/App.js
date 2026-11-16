@@ -1,3 +1,4 @@
+import RequestLoading from './api/RequestLoading';
 import SystemFeed,{feedTitles} from './public/SystemFeed';
 import GuidePage from './public/GuidePage';
 import PublicHome from './public/PublicHome';
@@ -501,6 +502,7 @@ export default function App() {
 
   return (
       <AnemiaPolicyContext.Provider value={anemiaPolicy}>
+        <RequestLoading/>
         {adminOpen && <main className="admin-workspace">
           {canAdmin ? <AdminPanel route={route} onNavigate={next => go({...route, ...next})} onBack={back} onExit={() => go({admin: false, tab: view})} onLogout={() => run(logout)} onAccessLost={() => setUser(current => current ? {...current, role: null} : null)}/> :
               <section className="admin-gate">
