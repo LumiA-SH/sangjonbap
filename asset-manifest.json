@@ -1,16 +1,15 @@
 {
   "files": {
-    "main.css": "/static/css/main.a2dc7808.css",
-    "main.js": "/static/js/main.d3854ea0.js",
+    "main.css": "/static/css/main.48f1e3f1.css",
+    "main.js": "/static/js/main.69c1c82e.js",
+    "static/media/피1.png": "/static/media/피1.3201e6274b0c521ffec5.png",
     "static/media/background-pattern.svg": "/static/media/background-pattern.39a5ebd1b3ce594076c9.svg",
-    "static/media/blood-splatter-logo.svg": "/static/media/blood-splatter-logo.77817a91d051d402cb0a.svg",
     "index.html": "/index.html",
-    "static/media/warning-stripe.svg": "/static/media/warning-stripe.dd1a6cb4eb855c6e8eca.svg",
-    "main.a2dc7808.css.map": "/static/css/main.a2dc7808.css.map",
-    "main.d3854ea0.js.map": "/static/js/main.d3854ea0.js.map"
+    "main.48f1e3f1.css.map": "/static/css/main.48f1e3f1.css.map",
+    "main.69c1c82e.js.map": "/static/js/main.69c1c82e.js.map"
   },
   "entrypoints": [
-    "static/css/main.a2dc7808.css",
-    "static/js/main.d3854ea0.js"
+    "static/css/main.48f1e3f1.css",
+    "static/js/main.69c1c82e.js"
   ]
 }
