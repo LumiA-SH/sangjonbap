@@ -1,3 +1,4 @@
+import {statName, trainingSummary} from '../dev/actionPresentation';
 import BattlePanel from '../dev/BattlePanel';
 import EventFeed from './EventFeed';
 import EventAdminPanel from '../admin/EventAdminPanel';
@@ -35,8 +36,8 @@ const button=t=>[...div.querySelectorAll('button')].find(b=>b.textContent===t);
 test('unregistered content, retry and plain text safety',async()=>{
  api.mockResolvedValue({content:null});await act(async()=>root.render(<GuidePage kind="world"/>));expect(div.textContent).toContain('현재 공개된 안내가 없습니다');api.mockRejectedValueOnce(Error('연결 실패'));await act(async()=>root.render(<GuidePage key="system" kind="system"/>));expect(div.textContent).toContain('연결 실패');api.mockResolvedValue({content:{items:[{id:'1',title:'규칙',body:'<script>alert(1)</script>\n문단'}]}});await act(async()=>button('다시 불러오기').click());expect(div.querySelector('script')).toBeNull();expect(div.querySelector('.public-prose').textContent).toContain('\n문단');
 });
-test('schedule displays server state and KST rather than client clock',async()=>{
- const start='2026-12-23T15:00:00Z',end='2027-01-10T15:00:00Z';expect(kst(start)).toContain('24');expect(kst(start)).toContain('00:00');api.mockResolvedValue({serverNow:start,content:{title:'일정',body:'',startAt:start,endAt:end,state:'ENDED',items:[]}});await act(async()=>root.render(<GuidePage kind="schedule"/>));expect(div.textContent).toContain('종료');expect(div.textContent).toContain('KST');
+test('schedule keeps Korea time and server state without timezone or server timestamp labels',async()=>{
+ const start='2026-12-23T15:00:00Z',end='2027-01-10T15:00:00Z';expect(kst(start)).toContain('24');expect(kst(start)).toContain('00:00');api.mockResolvedValue({serverNow:start,content:{title:'일정',body:'',startAt:start,endAt:end,state:'ENDED',items:[]}});await act(async()=>root.render(<GuidePage kind="schedule"/>));expect(div.textContent).toContain('종료');expect(div.textContent).not.toContain('KST');expect(div.textContent).not.toContain('서버 확인 시각');
 });
 test('guest profile never requests runner inventory; authenticated detail reuses existing API',async()=>{
  const character={id:'2',name:'러너',hunter_grade:'A',has_ability:true,ability_grade:'B',status:'DEAD'};api.mockImplementation(async p=>p==='/public/characters/2'?{character}:p==='/characters/2/public'?{character:{...character,hp:0,blood:0},inventory:[]}:{records:[character]});const open=jest.fn(),back=jest.fn();await act(async()=>root.render(<CharacterDirectory onOpen={open} onBack={back}/>));await act(async()=>button('러너').click());expect(open).toHaveBeenCalledWith('2');await act(async()=>root.render(<CharacterDirectory recordId="2" onOpen={open} onBack={back} canReadDetails={false}/>));expect(div.textContent).toContain('헌터등급 A');expect(api.mock.calls.some(([p])=>p==='/characters/2/public')).toBe(false);await act(async()=>root.render(<CharacterDirectory recordId="2" onOpen={open} onBack={back} canReadDetails/>));expect(api).toHaveBeenCalledWith('/characters/2/public');expect(div.textContent).toContain('소지품');await act(async()=>button('목록으로 돌아가기').click());expect(back).toHaveBeenCalled();
@@ -573,4 +574,12 @@ test('notice UUID route opens existing detail and returns to list without anothe
   window.location.hash='#game/roster?record='+id;
   expect(readLocation().record).toBeNull();
  } finally {window.location.hash=oldHash;}
+});
+
+test('training presentation translates stats and reports actual capped growth and reward', () => {
+  expect(statName('ATK')).toBe('공격력');
+  expect(statName('def')).toBe('방어력');
+  expect(statName('agi')).toBe('민첩');
+  expect(trainingSummary({growth: {stat: 'atk', before: 39, after: 40}, reward: 1})).toBe('일일훈련 완료 · 공격력 +1 · 코인 +1');
+  expect(trainingSummary({growth: null, reward: 1})).toBe('일일훈련 완료 · 능력치 상승 없음 · 코인 +1');
 });

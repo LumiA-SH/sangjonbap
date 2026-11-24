@@ -877,3 +877,7 @@
         transition: none;
     }
 }
+#battle-panel .battle-result.is-victory { border-left: 4px solid #555555; }
+#battle-panel .battle-result.is-defeat { border-left: 4px solid #650c13; }
+#battle-panel .battle-result.is-fled,
+#battle-panel .battle-result.is-interrupted { border-left: 4px dashed #555555; }

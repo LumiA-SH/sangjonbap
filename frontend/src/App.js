@@ -1,3 +1,4 @@
+import {trainingSummary} from './dev/actionPresentation';
 import EventFeed from './public/EventFeed';
 import RequestLoading from './api/RequestLoading';
 import NoticeFeed from './public/NoticeFeed';
@@ -20,7 +21,7 @@ import InventoryPanel from './dev/InventoryPanel';
 import InvestigationPanel from './dev/InvestigationPanel';
 import RecordsPanel from './dev/RecordsPanel';
 import BattlePanel from './dev/BattlePanel';
-import {HomeHeaderDecor} from './HomeDecor';
+import {PageHeader, HomeCardDecor} from './HomeDecor';
 import DicePanel from './dev/DicePanel';
 import './AccountMenu.css';
 
@@ -28,7 +29,25 @@ const FALLBACK_IMAGE = publicAsset('test.png');
 const publicTabs = ['feed-activity','feed-notice','feed-event','home', 'world', 'system', 'schedule', 'roster'];
 
 function NavIcon({name, className = ''}) {
-  return <img src={publicAsset(`assets/decor/icon-${name}.svg`)} alt="" aria-hidden="true" className={className}/>;
+  const shapes = {
+    gift: <><path d="M3 11h18v11H3ZM2 7h20v4H2ZM12 7v15"/><path d="M12 7H8a3 3 0 1 1 3-3Zm0 0h4a3 3 0 1 0-3-3Z"/></>,
+    menu: <path d="M4 6h16M4 13h16M4 20h16"/>,
+    home: <><path d="M3 10 12 3l9 7v11h-6v-7H9v7H3Z"/></>,
+    book: <><path d="M12 5v16M12 5C9 3 5 3 2 5v15c3-2 7-2 10 1 3-3 7-3 10-1V5c-3-2-7-2-10 0Z"/></>,
+    user: <><circle cx="12" cy="7" r="4"/><path d="M3 21v-2a9 9 0 0 1 18 0v2Z"/></>,
+    compass: <><circle cx="12" cy="12" r="10"/><path d="m16 8-3 5-5 3 3-5Z"/></>,
+    swords: <><path d="m3 3 5 2 12 14-1 1L5 8ZM21 3l-5 2L4 19l1 1L19 8ZM3 15l6 6M15 21l6-6"/></>,
+    cooking: <><path d="M2 11h20M4 11v4a7 7 0 0 0 7 7h2a7 7 0 0 0 7-7v-4M8 8c3-3-3-3 0-6M15 8c3-3-3-3 0-6"/></>,
+    box: <><path d="m12 2 10 6v10l-10 5-10-5V8ZM2 8l10 5 10-5M12 13v10"/></>,
+    shop: <><path d="m2 8 10-6 10 6-10 6ZM2 13l10 6 10-6M2 18l10 5 10-5"/></>,
+    sparkle: <><path d="m12 2 10 6v10l-10 5-10-5V8ZM2 8l10 5 10-5M12 13v10"/><g fill="currentColor" stroke="none"><circle cx="9" cy="7" r="1"/><circle cx="15" cy="7" r="1"/><circle cx="6" cy="13" r="1"/><circle cx="8" cy="18" r="1"/><circle cx="17" cy="16" r="1"/></g></>
+  };
+
+  return (
+      <svg className={className} viewBox="0 0 24 26" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+        {shapes[name] || shapes.book}
+      </svg>
+  );
 }
 
 function GameImage({src, alt, className}) {
@@ -50,6 +69,7 @@ function GameImage({src, alt, className}) {
 function DashboardCard({title, subtitle, action, children, className = ''}) {
   return (
       <section className={`survival-card ${className}`}>
+        <HomeCardDecor type={className.replace('survival-', '')}/>
         <div className="survival-card-title">
           <div>
             <strong>{title}</strong>
@@ -164,9 +184,9 @@ function HomeDailyTraining({character, busy, run, refresh, today}) {
 
         try {
           const synced = await refresh();
-          setMessage(synced ? '훈련 완료!' : '훈련 완료 · 일부 상태 갱신 실패');
+          setMessage(trainingSummary(result) + (synced ? '' : ' · 일부 상태 갱신 실패'));
         } catch {
-          setMessage('훈련 완료 · 상태를 다시 불러와 주세요.');
+          setMessage(trainingSummary(result) + ' · 상태를 다시 불러와 주세요.');
         }
       });
     } finally {
@@ -194,6 +214,17 @@ export default function App() {
   const view = route.tab;
   const setView = tab => go({admin: false, tab});
   const [menuOpen, setMenuOpen] = useState(false);
+  useEffect(() => {
+    if (!menuOpen) return;
+    const closeOutsideMenu = event => {
+      if (!window.matchMedia('(max-width: 900px)').matches) return;
+      if (event.target instanceof Element && event.target.closest('.survival-sidebar, [data-sidebar-toggle]')) return;
+      setMenuOpen(false);
+    };
+    document.addEventListener('pointerdown', closeOutsideMenu, true);
+    return () => document.removeEventListener('pointerdown', closeOutsideMenu, true);
+  }, [menuOpen]);
+
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [loggedIn, setLoggedIn] = useState(false);
   const [provider, setProvider] = useState(null);
@@ -479,12 +510,13 @@ export default function App() {
     ['schedule', '러닝 일정', 'book'],
     ['roster', '공개 캐릭터', 'user'],
     ['character', '캐릭터', 'user'],
+    ['dice', '주사위', 'sparkle'],
     ['investigation', '조사', 'compass'],
     ['battle', '전투', 'swords'],
     ['cooking', '요리', 'cooking'],
     ['inventory', '인벤토리', 'box'],
     ['shop', '상점', 'shop'],
-    ['gacha', '가챠', 'sparkle'],
+    ['gacha', '뽑기', 'gift'],
     ['records', '기록', 'book']
   ];
 
@@ -494,7 +526,7 @@ export default function App() {
     ['cooking', '요리', 'cooking', '재료를 조리해 식량을 만듭니다.'],
     ['inventory', '인벤토리', 'box', '보유한 아이템을 확인하고 관리합니다.'],
     ['shop', '상점', 'shop', '필요한 물자를 구매합니다.'],
-    ['gacha', '가챠', 'sparkle', '가챠를 통해 다양한 보상을 획득합니다.']
+    ['gacha', '뽑기', 'gift', '뽑기를 통해 다양한 보상을 획득합니다.']
   ];
 
   const pageDescriptions = {
@@ -504,13 +536,14 @@ export default function App() {
     roster: '공개된 캐릭터를 살펴봅니다.',
     home: '식량을 확보하고, 조리하고, 버텨내세요.',
     character: '생존자 정보와 상태를 확인합니다.',
+    dice: '1D100 주사위를 굴리고 결과를 확인합니다.',
     investigation: '탐사 지역과 조사 결과를 확인합니다.',
     battle: '진행 중인 전투를 확인합니다.',
     cooking: '재료를 조리하고 식사합니다.',
     inventory: '보유 물자와 공용 창고를 관리합니다.',
     shop: '보급 물자를 확인합니다.',
     records: '기록과 단서를 확인합니다.',
-    gacha: '가챠 목록을 확인합니다.'
+    gacha: '뽑기 목록을 확인합니다.'
   };
 
   const navigate = next => {
@@ -565,7 +598,7 @@ export default function App() {
             </nav>
 
             <div className="survival-sidebar-foot">
-              <img className="survival-sidebar-cutlery" src={publicAsset('assets/decor/side-cutlery.svg')} alt="" aria-hidden="true"/>
+              <img className="survival-sidebar-cutlery" src={publicAsset('assets/decor/crossed-cutlery-approved.png')} alt="" aria-hidden="true"/>
               REVIVAL COMPLETE
               <br/>
               OF THE CORPSE
@@ -575,7 +608,7 @@ export default function App() {
 
           <div className="survival-main">
             <header className="survival-topbar">
-              <button className="survival-menu-toggle" type="button" onClick={() => setMenuOpen(!menuOpen)} aria-label="전체 메뉴" aria-expanded={menuOpen}>☰</button>
+              <button className="survival-menu-toggle" data-sidebar-toggle type="button" onClick={() => setMenuOpen(!menuOpen)} aria-label="전체 메뉴" aria-expanded={menuOpen}>☰</button>
 
               <button type="button" className="survival-mobile-logo survival-logo-link" onClick={() => navigate('home')} aria-label="생존밥 홈으로 이동">
                 <img src={publicAsset('saengjonbap_logo.png')} alt="생존밥"/>
@@ -604,22 +637,14 @@ export default function App() {
             </header>
 
             <div className="survival-warning" aria-hidden="true">
-              <span>WARNING!</span>
-              <span>WARNING!</span>
-              <span>WARNING!</span>
-              <span>WARNING!</span>
-              <span>WARNING!</span>
+              {Array.from({length: 24}, (_, index) => <span key={index}>WARNING!</span>)}
             </div>
 
             <main className="survival-content">
-              {(loggedIn || view !== 'home') && (
-                  <div className="survival-heading">
-                    {view === 'home' && <HomeHeaderDecor/>}
-                    <small>SURVIVOR TERMINAL</small>
-                    <h1>{view === 'home' ? `${character?.name ? `${character.name}, ` : ''}오늘도 생존을 이어가세요.` : navigation.find(([id]) => id === view)?.[1]}</h1>
-                    <p>{pageDescriptions[view]}</p>
-                  </div>
-              )}
+              <PageHeader
+                  title={view === 'home' ? `${character?.name ? `${character.name}, ` : ''}오늘도 생존을 이어가세요.` : navigation.find(([id]) => id === view)?.[1] || {'feed-activity': '최근 기록', 'feed-notice': '공지사항', 'feed-event': '이벤트'}[view]}
+                  description={pageDescriptions[view]}
+              />
 
               {!loggedIn && view === 'home' && (
                   <PublicHome
@@ -638,6 +663,15 @@ export default function App() {
                 <h2>캐릭터 연결 완료</h2>
                 <p>{character.name}의 게임 초기 능력치가 아직 설정되지 않았습니다. 운영진이 캐릭터 관리에서 헌터 등급·이능·능력치를 설정하면 이용할 수 있습니다.</p>
               </section>}
+
+              {loggedIn && character && ['investigation', 'cooking', 'battle'].includes(view) && (
+                  <details className="survival-resource-indicator" open>
+                    <summary>현재 캐릭터 상태</summary>
+                    <span>HP <strong>{character.hp}</strong></span>
+                    <span>혈량 <strong>{character.blood}</strong>/100</span>
+                    <span>AP <strong>{character.ap}</strong></span>
+                  </details>
+              )}
 
               {loggedIn && user?.character_id && (
                   <div className="survival-home" style={{display: view === 'home' ? 'grid' : 'none'}}>
@@ -681,7 +715,7 @@ export default function App() {
                         </div>
                       </div>
 
-                      <DicePanel/>
+                      {view === 'home' && <DicePanel/>}
                     </DashboardCard>
 
                     <DashboardCard title="주요 행동" subtitle="QUICK ACCESS" className="survival-actions-card">
@@ -754,6 +788,12 @@ export default function App() {
               {view === 'roster' && <CharacterDirectory recordId={route.record} onOpen={record => go({admin: false, tab: 'roster', record})} onBack={() => go({admin: false, tab: 'roster'})} canReadDetails={loggedIn && !!user?.character_id}/>}
               {loggedIn && !user?.character_id && <CharacterCreationPanel/>}
 
+              {loggedIn && user?.character_id && view === 'dice' && (
+                  <section className="survival-card" aria-label="주사위">
+                    <DicePanel/>
+                  </section>
+              )}
+
               {loggedIn && user?.character_id && (
                   <>
                     <div className="survival-page" style={display('character')}>
@@ -813,8 +853,8 @@ export default function App() {
                       </button>
                   ))}
 
-              <button type="button" onClick={() => setMenuOpen(!menuOpen)}>
-                <span>☰</span>
+              <button type="button" data-sidebar-toggle aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}>
+                <NavIcon name="menu" className="survival-nav-icon"/>
                 더보기
               </button>
             </nav>

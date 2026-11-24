@@ -1,3 +1,4 @@
+import {trainingSummary} from './actionPresentation';
 import {useRef, useState} from 'react';
 import {api} from '../api/client';
 import CharacterSearch from './CharacterSearch';
@@ -42,7 +43,7 @@ export default function TrainingBloodPanel({character, inventory, busy, run, ref
           return;
         }
 
-        setMessage(`성공: ${JSON.stringify(result)}`);
+        setMessage(path === '/training' ? trainingSummary(result) : `성공: ${JSON.stringify(result)}`);
 
         try {
           if (!await refresh()) {
@@ -83,6 +84,8 @@ export default function TrainingBloodPanel({character, inventory, busy, run, ref
         <button type="button" disabled={blocked || character?.status !== 'ALIVE'} onClick={() => perform('/training')}>
           일일훈련
         </button>
+
+        {message && <p role="status">{message}</p>}
 
         <div className="survival-blood-pack-controls">
           <label className="survival-blood-pack-picker">
@@ -133,7 +136,6 @@ export default function TrainingBloodPanel({character, inventory, busy, run, ref
           )}
         </div>
 
-        {message && <p role="status">{message}</p>}
       </section>
   );
 }

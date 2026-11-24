@@ -1,4 +1,4 @@
-import {useRef, useState} from 'react';
+import {useEffect, useRef, useState} from 'react';
 import {api} from '../api/client';
 import './InvestigationPanel.css';
 
@@ -122,7 +122,11 @@ export default function InvestigationPanel({
                                   : pendingOtherArea ? '이전 지역의 미확인 조사부터 확인해야 합니다.'
                                       : '';
 
+  const resultRef = useRef(null);
   const result = latest?.data;
+  useEffect(() => {
+    if (result) resultRef.current?.focus({preventScroll: true});
+  }, [result]);
   const rewards = result?.rewards || [];
 
   return (
@@ -227,7 +231,6 @@ export default function InvestigationPanel({
                     </div>
 
                     <div className="expedition-mission-stats">
-                      <div><small>마물 조우 확률</small><strong>{rateText(selectedArea.encounter_rate)}</strong></div>
                       <div><small>조사 AP 비용</small><strong>{costReady ? investigationApCost : '—'}</strong></div>
                       <div><small>탐사 후 남은 AP</small><strong>{costReady && character ? Math.max(0, Number(character.ap) - investigationApCost) : '—'}</strong></div>
                     </div>
@@ -244,6 +247,16 @@ export default function InvestigationPanel({
                     </div>
 
                     {restriction && <p className="expedition-restriction" role="status">{restriction}</p>}
+
+                    {result?.battle && activeBattle && (
+                        <div className="expedition-encounter" role="alert">
+                          <div>
+                            <strong>마물 조우 발생!</strong>
+                            <p>탐사 중 마물과 조우했습니다. 전투가 시작되었습니다.</p>
+                          </div>
+                          <a href="#game/battle">전투 화면으로 이동 →</a>
+                        </div>
+                    )}
                   </div>
                 </>
             ) : (
@@ -256,18 +269,10 @@ export default function InvestigationPanel({
           </div>
         </div>
 
-        {result?.battle && (
-            <div className="expedition-encounter" role="alert">
-              <div>
-                <strong>마물 조우 발생!</strong>
-                <p>탐사 중 마물과 조우했습니다. 전투가 시작되었습니다.</p>
-              </div>
-              <a href="#game/battle">전투 화면으로 이동 →</a>
-            </div>
-        )}
+
 
         {result && (
-            <section className="expedition-report" aria-label="최근 조사 결과" aria-live="polite">
+            <section ref={resultRef} tabIndex={-1} className="expedition-report" aria-label="최근 조사 결과" aria-live="polite">
               <header className="expedition-report-heading">
                 <div>
                   <span>EXPLORATION REPORT</span>

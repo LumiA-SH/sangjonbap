@@ -1,3 +1,4 @@
+import {PageHeader} from '../HomeDecor';
 import EventAdminPanel from './EventAdminPanel';
 import {displayLabel} from '../features/displayLabels';
 import {itemCategoryLabel} from '../features/itemCategory';
@@ -794,7 +795,7 @@ export default function AdminPanel({onBack,onExit=onBack,onLogout,onAccessLost,r
 
     return (
         <section className={"admin-panel"+((recordId||route?.area)?" admin-detail-active":"")} onSubmitCapture={handleSubmitCapture}>
-            <header className="admin-heading">
+            <PageHeader className="admin-heading">
                 <div>
                     <small>생존밥 · 운영 관리</small>
                     <h1>관리자</h1>
@@ -807,7 +808,7 @@ export default function AdminPanel({onBack,onExit=onBack,onLogout,onAccessLost,r
                     <button onClick={onExit}>게임으로 돌아가기</button>
                     {onLogout&&<button onClick={onLogout}>로그아웃</button>}
                 </div>
-            </header>
+            </PageHeader>
 
             <p>서버 관리자 권한 검증 영역입니다. 인증 방식: {authentication?displayLabel(authentication):'확인 중'}</p>
             <p role="alert">{message}</p>

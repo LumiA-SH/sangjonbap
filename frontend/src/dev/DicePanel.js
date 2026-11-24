@@ -73,7 +73,7 @@ export default function DicePanel() {
                     <strong>{roll?.result ?? '—'}</strong>
                 </div>
 
-                <button type="button" disabled={loading || rolling} onClick={throwDice}>
+                <button type="button" aria-label="1D100 주사위 굴리기" disabled={loading || rolling} onClick={throwDice}>
                     {rolling ? '굴리는 중…' : '굴리기'}
                 </button>
             </div>

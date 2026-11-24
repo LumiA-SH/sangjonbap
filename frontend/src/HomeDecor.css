@@ -16,18 +16,33 @@
     background-repeat: repeat;
 }
 
-.survival-heading:has(.home-decor-header) {
+.page-header {
     position: relative;
     isolation: isolate;
-    min-height: 104px;
+    clip-path: inset(-100vmax -100vmax -22px);
+    z-index: 0;
+    min-height: 0;
+}
+
+/* Keep content above decorations; clip their lower edge at the shared header. */
+.survival-content > .page-header ~ :not(.survival-resource-indicator) {
+    position: relative;
+    z-index: 1;
 }
 
 .home-decor-header {
     position: absolute;
-    inset: -22px -28px -38px;
+    top: -18px;
+    right: 0;
+    width: 600px;
+    height: 230px;
     z-index: -1;
     pointer-events: none;
-    overflow: visible;
+    mask-image: linear-gradient(to right, transparent, #000 8%);
+}
+
+.page-header.admin-heading .home-decor-header {
+    opacity: .12;
 }
 
 .home-decor-header img {
@@ -37,44 +52,40 @@
 }
 
 .home-decor-cutlery {
-    width: 195px;
-    height: 165px;
-    top: -18px;
-    right: 30%;
-    filter: drop-shadow(2px 5px 3px #0003);
-}
-
-.home-decor-stamp {
-    width: 120px;
-    height: 120px;
-    top: 0;
-    right: 20%;
-    opacity: .94;
+    width: 220px;
+    height: 330px;
+    top: -45px;
+    left: -5px;
+    z-index: 2;
+    transform: rotate(-34deg);
 }
 
 .home-decor-tray {
-    width: 230px;
-    height: 190px;
-    top: -28px;
-    right: -30px;
-    filter: drop-shadow(3px 7px 4px #0004);
+    width: 350px;
+    height: 278.90625px;
+    top: -35px;
+    left: 300px;
+    z-index: 1;
+}
+
+.home-decor-stamp {
+    width: 116px;
+    height: 116px;
+    top: 15px;
+    right: 250px;
+    z-index: 3;
+    transform: rotate(-12deg);
+    opacity: .9;
 }
 
 .home-decor-splatter {
-    width: 220px;
-    height: 145px;
-    opacity: .93;
+    height: 56px;
+    bottom: 2px;
+    opacity: .85;
 }
 
-.home-decor-splatter-left {
-    bottom: -42px;
-    right: 24%;
-}
-
-.home-decor-splatter-right {
-    bottom: -48px;
-    right: 1%;
-}
+.home-decor-splatter-left { width: 320px; height: 255px; left: -120px; top: 20px; bottom: auto; }
+.home-decor-splatter-right { width: 260px; height: 207.1875px; left: 240px; top: 25px; bottom: auto; }
 
 .survival-sidebar {
     overflow: hidden;
@@ -86,7 +97,7 @@
     left: 0;
     width: 110px;
     height: 105px;
-    background: url('../public/assets/decor/blood-splatter-logo.svg') center/contain no-repeat;
+    background: url('../public/assets/decor/피1.png') -65px -15px / 220px auto no-repeat;
     content: '';
     pointer-events: none;
     z-index: 1;
@@ -110,7 +121,8 @@
 .survival-sidebar nav button .survival-nav-icon {
     width: 21px;
     height: 21px;
-    filter: grayscale(1) brightness(0) invert(1);
+    color: inherit;
+    flex-shrink: 0;
 }
 
 .survival-sidebar nav button span {
@@ -127,36 +139,6 @@
     opacity: 1;
 }
 
-.survival-warning {
-    position: relative;
-    height: 27px;
-    border: 0;
-    background: #4b4b4b;
-}
-
-.survival-warning::before,
-.survival-warning::after {
-    position: absolute;
-    top: 0;
-    height: 100%;
-    width: 140px;
-    background: url('../public/assets/decor/warning-stripe.svg') left center/auto 100% repeat-x;
-    content: '';
-}
-
-.survival-warning::before {
-    left: 0;
-}
-
-.survival-warning::after {
-    right: 0;
-    transform: scaleX(-1);
-}
-
-.survival-warning span {
-    background: transparent;
-}
-
 /* ========================================
    HOME CARDS
 ======================================== */
@@ -170,6 +152,7 @@
 
 .survival-home .survival-card {
     position: relative;
+    z-index: 1;
     width: 100%;
     min-width: 0;
     padding: 15px 17px;
@@ -198,15 +181,49 @@
     content: '';
 }
 
-.home-card-decor {
+.home-card-print {
     position: absolute;
-    top: 0;
-    right: 0;
-    width: 0;
-    height: 0;
-    border-top: 22px solid #650c13;
-    border-left: 22px solid transparent;
+    right: 14px;
+    bottom: 10px;
+    width: 140px;
+    height: 48px;
+    opacity: .14;
     pointer-events: none;
+    transform: rotate(-5deg);
+}
+
+.survival-profile .home-card-print {
+    top: 14px;
+    bottom: auto;
+    width: 100px;
+    height: 25px;
+}
+
+.home-card-print img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.home-card-print .home-card-stamp { inset: 4px; width: calc(100% - 8px); height: calc(100% - 8px); }
+
+.home-decor-tape {
+    width: 110px;
+    height: 25px;
+    left: 22px;
+    bottom: 5px;
+    transform: rotate(-9deg);
+    opacity: .7;
+}
+
+.home-decor-drip {
+    width: 220px;
+    height: 175.3125px;
+    left: 220px;
+    top: 65px;
+    opacity: .8;
 }
 
 .home-profile-barcode {
@@ -393,20 +410,7 @@
 }
 
 @media (max-width: 1100px) {
-    .home-decor-tray {
-        width: 175px;
-        right: -30px;
-    }
-
-    .home-decor-stamp {
-        right: 19%;
-        width: 100px;
-    }
-
-    .home-decor-cutlery {
-        right: 29%;
-        width: 150px;
-    }
+    .home-decor-header { right: 0; transform: scale(.76); transform-origin: right top; opacity: .65; }
 
     .survival-home .survival-profile-body {
         grid-template-columns: minmax(0, 1.15fr) minmax(115px, 0.43fr) minmax(190px, 0.85fr);
@@ -439,30 +443,33 @@
         grid-template-columns: minmax(0, 1fr);
     }
 
-    .home-decor-cutlery,
-    .home-decor-stamp,
-    .home-decor-tray {
-        display: none !important;
-    }
-
-    .home-decor-splatter-left {
-        right: -35px;
-        bottom: -38px;
-        width: 150px;
-    }
-
-    .home-decor-splatter-right {
-        display: none !important;
-    }
-
-    .survival-warning::before,
-    .survival-warning::after {
-        width: 55px;
-    }
+    .page-header { min-height: 0; }
 
     .home-decor-header {
-        overflow: hidden;
+        width: 660px;
+        top: -12px;
+        right: 0;
+        transform: scale(.32);
+        transform-origin: right top;
+        opacity: .55;
+        mask-image: linear-gradient(to bottom, #000 35%, transparent 95%);
     }
+
+    .home-decor-header .home-decor-cutlery { left: 55px; }
+    .home-decor-header .home-decor-tray { left: 360px; }
+
+    .home-decor-header .home-decor-drip,
+    .home-decor-header .home-decor-tape,
+    .home-decor-header .home-decor-splatter-left { display: none; }
+
+    .home-decor-header .home-decor-splatter-right {
+        left: 300px;
+        display: block;
+        opacity: .55;
+    }
+
+
+    .home-card-print { width: 108px; height: 38px; opacity: .1; }
 
     .survival-bottom-nav {
         width: 100%;
@@ -501,8 +508,8 @@
         background-size: 500px auto;
     }
 
-    .survival-heading:has(.home-decor-header) {
-        min-height: 88px;
+    .page-header {
+        min-height: 0;
     }
 
     .survival-home .survival-card {
@@ -566,9 +573,6 @@
         width: calc(50% - 5px);
     }
 
-    .survival-warning span:nth-child(n + 4) {
-        display: none;
-    }
 
     .survival-event-banner {
         height: 135px;

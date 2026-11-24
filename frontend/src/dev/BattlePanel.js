@@ -364,7 +364,7 @@ export default function BattlePanel({inventory = [], busy, run, refresh, revisio
               )}
 
               {!active && (
-                  <section className="battle-result" aria-label="전투 결과">
+                  <section className={`battle-result is-${battle.end_reason === 'MIDNIGHT_INTERRUPTED' ? 'interrupted' : battle.battle_status.toLowerCase()}`} aria-label="전투 결과" role="status">
                     <div className="battle-result-heading">
                       <span>전투 종료</span>
                       <h3>{battle.end_reason==='MIDNIGHT_INTERRUPTED'?'자정 중단':battle.battle_status==='FLED'?(battle.fled_actor_type==='MONSTER'?'마물 도주':'캐릭터 도주'):(battleStatusLabels[battle.battle_status] || battle.battle_status)}</h3>

@@ -289,6 +289,7 @@ async query(sql, params) {
 const dailyGateResult = dailyGateFixture(sql); if (dailyGateResult) return dailyGateResult;
             assert.match(sql, /u.is_active and c.is_active/); assert.match(sql, /a.is_open/);
             assert.match(sql, /a.unlock_at<=statement_timestamp\(\)/); assert.match(sql, /a.id::text/);
+            assert.equal(sql.includes("'encounter_rate'"), false);
             assert.deepEqual(params, ['7']); return rows([{character_id: '10', status: 'ALIVE', global_rate:15, areas}]);
         }    
 });
@@ -328,4 +329,10 @@ test('HTTP routes require auth, preserve envelope and accept only server-owned u
     assert.deepEqual(calls, ['1', ['1', '1', key]]);
     delete repository.investigate;
     assert.equal((await fetch(base + '/investigation/areas', {headers})).status, 501);
+});
+
+test('investigation result does not disclose encounter probability', async () => {
+    const f = fixture();
+    const result = await f.repository.investigate('7', '1', key);
+    assert.equal(Object.hasOwn(result.area, 'encounter_rate'), false);
 });

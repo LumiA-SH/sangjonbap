@@ -79,18 +79,19 @@
 
 .records-tabs {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 9px;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px;
 }
 
 .survival-records .records-tabs button {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 10px;
+    gap: 6px;
     min-width: 0;
-    min-height: 58px;
-    padding: 12px;
+    min-height: 44px;
+    padding: 8px 10px;
+    white-space: nowrap;
     border: 1px solid #c9c9c9;
     border-radius: 8px;
     background: #fffefa;
@@ -573,8 +574,23 @@
 }
 
 @media (max-width: 850px) {
+    .survival-records .records-tabs button {
+        padding: 8px 2px;
+        gap: 0;
+    }
+
+    .records-tabs button > span {
+        display: none;
+    }
+
+    .records-tabs button > strong {
+        font-size: clamp(8px, 2.2vw, 12px);
+        letter-spacing: -.04em;
+    }
+
     .records-tabs {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 3px;
     }
 }
 
@@ -591,11 +607,6 @@
 
     .records-header button {
         width: 100%;
-    }
-
-    .records-tabs button {
-        min-height: 52px;
-        padding: 9px;
     }
 
     .records-summary {
@@ -620,14 +631,6 @@
 }
 
 @media (max-width: 430px) {
-    .records-tabs button > span {
-        display: none;
-    }
-
-    .records-tabs button > strong {
-        font-size: 12px;
-    }
-
     .records-detail-information > div {
         flex-direction: column;
         gap: 5px;

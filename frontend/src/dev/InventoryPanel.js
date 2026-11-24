@@ -1,3 +1,4 @@
+import {statName} from './actionPresentation';
 import {itemCategoryLabel} from '../features/itemCategory';
 import {useRef, useState} from 'react';
 import {api} from '../api/client';
@@ -135,8 +136,9 @@ export default function InventoryPanel({inventory = [], storage = [], cookingCat
 
     try {
       await run(async () => {
+        let result;
         try {
-          await api(path, {method: 'POST', body: {requestKey: crypto.randomUUID()}});
+          result = await api(path, {method: 'POST', body: {requestKey: crypto.randomUUID()}});
         } catch (error) {
           setUseFailure(`${error.code || 'ITEM_USE_FAILED'}: ${error.message}`);
           return;
@@ -150,7 +152,10 @@ export default function InventoryPanel({inventory = [], storage = [], cookingCat
           // 사용 처리는 성공했으므로 결과를 유지한다.
         }
 
-        notify(`${name} ${useType === 'FOOD' ? '식사' : '사용'} 완료${synced ? '' : ' · 일부 상태 갱신 실패, 새로고침 필요'}`);
+        const effect = useType === 'FOOD'
+            ? ` · 혈량 회복 +${result.blood - result.bloodBefore} · ${result.growth ? statName(result.growth.stat) + ' +' + (result.growth.after - result.growth.before) : '능력치 성장 없음'}`
+            : '';
+        notify(`${name} ${useType === 'FOOD' ? '식사' : '사용'} 완료${effect}${synced ? '' : ' · 일부 상태 갱신 실패, 새로고침 필요'}`);
       });
     } finally {
       sending.current = false;
@@ -159,7 +164,7 @@ export default function InventoryPanel({inventory = [], storage = [], cookingCat
   }
 
   return (
-      <section className="survival-inventory" aria-labelledby="inventory-title">
+      <section className="survival-inventory" aria-labelledby="inventory-title" aria-busy={busy || pending}>
         <header className="inventory-header">
           <div>
             <h2 id="inventory-title">인벤토리</h2>
@@ -167,6 +172,8 @@ export default function InventoryPanel({inventory = [], storage = [], cookingCat
           </div>
           <button type="button" disabled={busy || pending} onClick={() => run(refresh)}>인벤토리 새로고침</button>
         </header>
+
+        {(busy || pending) && <p className="inventory-notice" role="status">인벤토리 처리 및 최신 상태 확인 중…</p>}
 
         <div className="inventory-summary">
           <div><small>보유 아이템 종류</small><strong>{inventory.length}</strong></div>

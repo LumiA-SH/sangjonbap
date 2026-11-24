@@ -11,7 +11,7 @@ export const kst = value => value
  hour: '2-digit',
  minute: '2-digit',
  hourCycle: 'h23'
-}).format(new Date(value)) + ' KST'
+}).format(new Date(value))
     : '미정';
 
 const states = {
@@ -89,7 +89,6 @@ export default function GuidePage({kind}) {
 
            {kind === 'schedule' && (
                <p>
-                서버 확인 시각: {kst(data.serverNow)} · 화면을 열거나 일정 새로고침을 누르면 상태를 확인합니다.
                 <button onClick={() => setAttempt(n => n + 1)}>일정 새로고침</button>
                </p>
            )}

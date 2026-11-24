@@ -484,14 +484,11 @@ body > #root > main:not(.admin-workspace) > section {
 
 .survival-warning {
   display: flex;
-  align-items: center;
-  justify-content: space-around;
-  gap: 12px;
-  height: 30px;
-  padding: 0 24px;
-  border-left: 14px solid var(--survival-red);
-  border-right: 14px solid var(--survival-red);
-  background: repeating-linear-gradient(115deg, #650c13 0 8px, #ffffff 8px 12px, #666666 12px 70px);
+  align-items: stretch;
+  height: 27px;
+  padding: 0;
+  border: 0;
+  background: #303034;
   color: var(--survival-white);
   font-size: 12px;
   font-weight: 800;
@@ -500,8 +497,21 @@ body > #root > main:not(.admin-workspace) > section {
 }
 
 .survival-warning span {
-  padding: 3px 12px;
-  background: #666666;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 220px;
+  box-sizing: border-box;
+  padding: 0 0 0 65px;
+  background: linear-gradient(55deg,
+    #303034 0 12px,
+    #650c13 12px 27px,
+    #f7f5f0 27px 34px,
+    #303034 34px 48px,
+    #f7f5f0 48px 55px,
+    #650c13 55px 72px,
+    #303034 72px);
+  letter-spacing: .2px;
 }
 
 /* =========================================================
@@ -929,6 +939,16 @@ body > #root > main:not(.admin-workspace) > section {
     box-shadow: 4px 0 15px #00000033;
   }
 
+  .survival-app .survival-sidebar {
+    height: 100vh;
+    height: 100dvh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+    padding-bottom: max(24px, env(safe-area-inset-bottom));
+    box-sizing: border-box;
+  }
+
   .survival-sidebar.is-open {
     transform: translateX(0);
   }
@@ -1175,3 +1195,15 @@ body > #root > main:not(.admin-workspace) > section {
     grid-column: 1;
   }
 }
+.survival-resource-indicator {
+  position: sticky;
+  top: 8px;
+  z-index: 5;
+  background: var(--survival-paper, #fffefa);
+  border: 1px solid var(--survival-line, #ccc);
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  font-size: 13px;
+}
+.survival-resource-indicator summary { cursor: pointer; }
+.survival-resource-indicator span { display: inline-block; margin: 6px 16px 0 0; }

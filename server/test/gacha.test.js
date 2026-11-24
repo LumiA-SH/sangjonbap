@@ -41,3 +41,17 @@ test('HTTP routes authenticate and use session ownership', async t => {
     const key = randomUUID(); const response = await fetch(base + '/gacha/2/draw', {method: 'POST', headers, body: JSON.stringify({requestKey: key.toUpperCase()})});
     assert.equal(response.status, 200); assert.equal((await response.json()).data.currency, 5); assert.deepEqual(calls, ['1', ['1', '2', key]]);
 });
+
+test('runner catalog query excludes rewards and internal boundary settings', async () => {
+    const {createGachaRepository} = await import('../src/modules/gacha/repository.js');
+    let query;
+    const pool = {query: async sql => {
+        if (sql.includes('select c.id')) return {rowCount: 1, rows: [{id: '1'}]};
+        query = sql;
+        return {rows: [{id: '1', name: '보급품', price: 1}]};
+    }};
+    const result = await createGachaRepository(pool).getGachaCatalog('1');
+    assert.equal(Object.hasOwn(result.gachas[0], 'rewards'), false);
+    assert.equal(query.includes('jsonb_agg'), false);
+    assert.equal(query.includes('g.period_enabled, g.start_inclusive'), false);
+});

@@ -2,7 +2,7 @@ import {useEffect, useState} from 'react';
 
 export const gameTabs = [
  'feed-activity', 'feed-notice', 'feed-event', 'home', 'world', 'system', 'schedule', 'roster', 'character',
- 'investigation', 'battle', 'cooking', 'inventory', 'shop', 'records', 'gacha'
+ 'investigation', 'battle', 'cooking', 'inventory', 'shop', 'records', 'gacha', 'dice'
 ];
 
 export const adminMenus = [

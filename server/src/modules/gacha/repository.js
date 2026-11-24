@@ -27,7 +27,7 @@ export function createGachaRepository(pool, {random} = {}) {
             const result = await pool.query(`
                 select
                     g.id, g.name, 1 as price, g.start_at, g.end_at,
-                    g.period_enabled, g.start_inclusive, g.end_inclusive,
+                    g.period_enabled,
                     exists(
                         select 1 from public.gacha_reward r
                         where r.gacha_id=g.id and r.is_active and r.max_stock is null
@@ -51,26 +51,7 @@ export function createGachaRepository(pool, {random} = {}) {
                                 )
                             )
                         )
-                    ) as outside,
-                    coalesce(
-                        (
-                            select jsonb_agg(
-                                jsonb_build_object(
-                                    'id', r.id::text,
-                                    'itemId', r.item_id::text,
-                                    'name', i.name,
-                                    'description', i.description,
-                                    'image_url', i.image_url,
-                                    'quantity', r.quantity,
-                                    'remainingStock', r.remaining_stock
-                                ) order by r.id
-                            )
-                            from public.gacha_reward r
-                            join public.item i on i.id=r.item_id
-                            where r.gacha_id=g.id and r.is_active and i.is_active
-                        ),
-                        '[]'::jsonb
-                    ) as rewards
+                    ) as outside
                 from public.gacha g
                 where g.is_active
                 order by g.id
@@ -185,6 +166,7 @@ export function createGachaRepository(pool, {random} = {}) {
                         itemId: selected.item_id,
                         name: item.name,
                         description: item.description,
+                        image_url: item.image_url,
                         quantity: selected.quantity
                     },
                     inventoryBefore: inventory.before,

@@ -190,7 +190,7 @@ export default function SystemFeed({kind = 'activity', preview = false, active =
            {visibleRecords.map(record => (
                <li className="system-feed-item" key={record.id}>
                 <div className="system-feed-meta">
-                 <time dateTime={record.createdAt}>{formatDate(record.createdAt)}</time>
+                 <time dateTime={record.createdAt}>{formatDate(record.createdAt)} KST</time>
                  {record.boosted && <span className="system-feed-boost">BOOST</span>}
                 </div>
 

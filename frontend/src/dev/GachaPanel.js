@@ -49,12 +49,6 @@ function gachaStatus(gacha) {
   return {text: '추첨 가능', type: 'available'};
 }
 
-function rewardStatus(reward) {
-  if (reward.remainingStock == null) return {text: '재고 준비 중', type: 'hold'};
-  if (Number(reward.remainingStock) <= 0) return {text: '품절', type: 'closed'};
-  return {text: '추첨 대상', type: 'available'};
-}
-
 function RewardImage({url, name = '아이템', large = false}) {
   const [failed, setFailed] = useState(false);
   const valid = typeof url === 'string' && /^(https?:\/\/|\/(?!\/))/.test(url);
@@ -180,18 +174,17 @@ export default function GachaPanel({gachas = [], character, error, busy, run, re
 
   const sending = useRef(false);
   const selectedGacha = gachas.find(item => String(item.id) === selectedId) || gachas[0] || null;
-  const rewardList = Array.isArray(selectedGacha?.rewards) ? selectedGacha.rewards : null;
   const currency = Number(character?.currency);
   const insufficientCoins = !Number.isFinite(currency) || currency < 1;
 
   function drawReason(gacha) {
-    if (!gacha) return '추첨할 가챠를 선택해 주세요.';
+    if (!gacha) return '추첨할 뽑기를 선택해 주세요.';
     if (busy || pending) return '추첨 처리 중입니다.';
-    if (error) return '가챠 정보를 다시 불러와 주세요.';
+    if (error) return '뽑기 정보를 다시 불러와 주세요.';
     if (!character) return '캐릭터 정보를 확인할 수 없습니다.';
-    if (character.status === 'DEAD') return '사망 상태에서는 가챠를 사용할 수 없습니다.';
-    if (character.status === 'NEAR_DEATH') return '빈사 상태에서는 가챠를 사용할 수 없습니다.';
-    if (character.in_active_battle) return '전투 중에는 가챠를 사용할 수 없습니다.';
+    if (character.status === 'DEAD') return '사망 상태에서는 뽑기를 사용할 수 없습니다.';
+    if (character.status === 'NEAR_DEATH') return '빈사 상태에서는 뽑기를 사용할 수 없습니다.';
+    if (character.in_active_battle) return '전투 중에는 뽑기를 사용할 수 없습니다.';
     if (gacha.boundary) return '운영 기간 경계 정책 확인이 필요합니다.';
     if (gacha.outside) return '현재 운영 기간이 아닙니다.';
     if (gacha.stock_hold) return '보상 재고 설정이 완료되지 않았습니다.';
@@ -234,7 +227,7 @@ export default function GachaPanel({gachas = [], character, error, busy, run, re
         }
 
         const rewardInfo = gacha.rewards?.find(item => String(item.itemId) === String(data.reward?.itemId));
-        const imageUrl = rewardInfo?.image_url || null;
+        const imageUrl = data.reward?.image_url || rewardInfo?.image_url || null;
         let synced = false;
 
         try {
@@ -285,17 +278,17 @@ export default function GachaPanel({gachas = [], character, error, busy, run, re
           </div>
         </header>
 
-        {error && <p className="gacha-notice" role="alert">가챠 조회 실패: {error} · 이전 값일 수 있습니다.</p>}
-        {character?.status === 'DEAD' && <p className="gacha-notice">사망 상태에서는 가챠를 사용할 수 없습니다.</p>}
-        {character?.status === 'NEAR_DEATH' && <p className="gacha-notice">빈사 상태에서는 가챠를 사용할 수 없습니다.</p>}
-        {character?.in_active_battle && <p className="gacha-notice">전투 중에는 가챠를 사용할 수 없습니다.</p>}
+        {error && <p className="gacha-notice" role="alert">뽑기 조회 실패: {error} · 이전 값일 수 있습니다.</p>}
+        {character?.status === 'DEAD' && <p className="gacha-notice">사망 상태에서는 뽑기를 사용할 수 없습니다.</p>}
+        {character?.status === 'NEAR_DEATH' && <p className="gacha-notice">빈사 상태에서는 뽑기를 사용할 수 없습니다.</p>}
+        {character?.in_active_battle && <p className="gacha-notice">전투 중에는 뽑기를 사용할 수 없습니다.</p>}
 
         <div className="gacha-layout">
-          <aside className="gacha-selector" aria-label="가챠 선택">
+          <aside className="gacha-selector" aria-label="뽑기 선택">
             <div className="gacha-section-heading">
               <div>
-                <h3>가챠 선택</h3>
-                <p>진행할 가챠를 선택하세요.</p>
+                <h3>뽑기 선택</h3>
+                <p>진행할 뽑기를 선택하세요.</p>
               </div>
               <span>{gachas.length}종</span>
             </div>
@@ -319,7 +312,7 @@ export default function GachaPanel({gachas = [], character, error, busy, run, re
                   })}
                 </div>
             ) : (
-                <div className="gacha-selector-empty">현재 활성 가챠가 없습니다.</div>
+                <div className="gacha-selector-empty">현재 활성 뽑기가 없습니다.</div>
             )}
           </aside>
 
@@ -356,7 +349,7 @@ export default function GachaPanel({gachas = [], character, error, busy, run, re
                       {reason && <p className="gacha-draw-reason">{reason}</p>}
                     </>
                 ) : (
-                    <p className="gacha-control-empty">왼쪽에서 가챠를 선택하면 추첨할 수 있습니다.</p>
+                    <p className="gacha-control-empty">왼쪽에서 뽑기를 선택하면 추첨할 수 있습니다.</p>
                 )}
 
                 {failure && <p className="gacha-failure" role="alert">{failure}</p>}
@@ -365,37 +358,8 @@ export default function GachaPanel({gachas = [], character, error, busy, run, re
             </div>
 
             <div className="gacha-reward-section">
-              <div className="gacha-section-heading">
-                <div>
-                  <h3>보상 목록</h3>
-                  <p>선택한 가챠에서 나올 수 있는 아이템입니다.</p>
-                </div>
-                <span>{rewardList?.length ?? 0}종</span>
-              </div>
-
-              {!selectedGacha ? (
-                  <div className="gacha-reward-empty">가챠를 선택하면 보상 목록을 확인할 수 있습니다.</div>
-              ) : !rewardList ? (
-                  <div className="gacha-reward-empty">보상 목록 API가 아직 반영되지 않았습니다. 서버 반영 후 새로고침해 주세요.</div>
-              ) : rewardList.length === 0 ? (
-                  <div className="gacha-reward-empty">현재 등록된 보상이 없습니다.</div>
-              ) : (
-                  <div className="gacha-reward-grid">
-                    {rewardList.map(reward => {
-                      const status = rewardStatus(reward);
-
-                      return (
-                          <div className="gacha-reward-card" key={reward.id}>
-                            <RewardImage key={`${reward.id}:${reward.image_url || ''}`} url={reward.image_url} name={reward.name}/>
-                            <strong title={reward.name}>{reward.name}</strong>
-                            <span className={`gacha-reward-stock is-${status.type}`}>{status.text}</span>
-                            {reward.description && <small title={reward.description}>{reward.description}</small>}
-                          </div>
-                      );
-                    })}
-                  </div>
-              )}
-              <p className="gacha-reward-guide">품절된 보상은 추첨에서 제외되며, 실제 재고는 추첨 시 서버에서 다시 확인합니다.</p>
+              <h3>보상 안내</h3>
+              <p>획득 가능한 보상 목록은 공개되지 않습니다. 추첨 후 획득한 아이템을 확인할 수 있습니다.</p>
             </div>
 
             {recentRewards.length > 0 && (
@@ -422,7 +386,7 @@ export default function GachaPanel({gachas = [], character, error, busy, run, re
           </div>
         </div>
 
-        <p className="gacha-footer-note">가챠는 1회당 코인 1개를 소비합니다. 설정된 보상 가중치에 따라 무작위 추첨되며 품절된 보상은 제외됩니다.</p>
+        <p className="gacha-footer-note">뽑기는 1회당 코인 1개를 소비합니다. 설정된 보상 가중치에 따라 무작위 추첨되며 품절된 보상은 제외됩니다.</p>
       </section>
   );
 }

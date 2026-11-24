@@ -1,4 +1,5 @@
-import {useRef, useState} from 'react';
+import {statName} from './actionPresentation';
+import {useEffect, useRef, useState} from 'react';
 import {api} from '../api/client';
 import './CookingPanel.css';
 
@@ -9,6 +10,11 @@ export default function CookingPanel({catalog, inventory = [], activeBattle, bat
   const [quantity, setQuantity] = useState(1);
   const [failure, setFailure] = useState('');
   const sending = useRef(false);
+  const resultRef = useRef(null);
+
+  useEffect(() => {
+    if (result) resultRef.current?.focus({preventScroll: true});
+  }, [result]);
 
   const recipes = catalog?.recipes || [];
   const foods = catalog?.foods || [];
@@ -208,11 +214,11 @@ export default function CookingPanel({catalog, inventory = [], activeBattle, bat
                       <div className="cooking-food-effects">
                         <span>혈량 회복 <strong>+{food.blood_recovery}</strong></span>
                         {food.stat_growth_enabled ? (
-                            <span>{food.stat_growth_target} <strong>+{food.stat_growth_value}</strong> · 성장 확률 {food.stat_growth_rate}%</span>
+                            <span>{statName(food.stat_growth_target)} <strong>+{food.stat_growth_value}</strong> · 성장 확률 {food.stat_growth_rate}%</span>
                         ) : <span>{food.effective_failure ? '실패 음식' : '능력치 성장 없음'}</span>}
                       </div>
 
-                      <button type="button" disabled={blocked || mealBlocked} onClick={() => perform(`/cooking/foods/${food.item_id}/eat`, false, '식사')}>
+                      <button type="button" disabled={blocked || mealBlocked} onClick={() => perform(`/cooking/foods/${food.item_id}/eat`, false, `${food.name} 섭취`)}>
                         식사하기
                       </button>
                     </article>
@@ -224,7 +230,7 @@ export default function CookingPanel({catalog, inventory = [], activeBattle, bat
         {failure && <p className="cooking-notice" role="alert">{failure}</p>}
 
         {result && (
-            <section className="cooking-result" aria-label="요리 및 식사 처리 결과" aria-live="polite">
+            <section ref={resultRef} tabIndex={-1} className="cooking-result" aria-label="요리 및 식사 처리 결과" aria-live="polite">
               <div className="cooking-result-heading">
                 <div>
                   <span>처리 완료</span>
@@ -247,8 +253,9 @@ export default function CookingPanel({catalog, inventory = [], activeBattle, bat
                   </div>
               )}
 
-              {result.bloodBefore != null && <p className="cooking-result-summary">혈량 {result.bloodBefore} → {result.blood}</p>}
-              {result.growth && <p className="cooking-result-summary">능력치 성장 · {result.growth.stat} {result.growth.before} → {result.growth.after}</p>}
+              {result.bloodBefore != null && <p className="cooking-result-summary">혈량 회복 +{result.blood - result.bloodBefore} · {result.bloodBefore} → {result.blood}</p>}
+              {result.growth && <p className="cooking-result-summary">능력치 성장 성공 · {statName(result.growth.stat)} +{result.growth.after - result.growth.before} ({result.growth.before} → {result.growth.after})</p>}
+              {result.bloodBefore != null && !result.growth && <p className="cooking-result-summary">능력치 성장 없음</p>}
               {result.rpEffectText && <p className="cooking-result-story">{result.rpEffectText}</p>}
 
               <details className="cooking-result-technical">

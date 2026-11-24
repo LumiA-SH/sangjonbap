@@ -19,7 +19,6 @@ function areaView(area, progress) {
     name: area.name,
     description: area.description,
     image_url: area.image_url,
-    encounter_rate: Number(area.encounter_rate),
     is_open: true, // Returned only after the server has accepted area access.
     unlock_at: area.unlock_at,
     investigation_rate: progress.rate
@@ -46,7 +45,6 @@ export function createInvestigationRepository(pool, {random = randomUnit, battle
                                                  'name',a.name,
                                                  'description',a.description,
                                                  'image_url',a.image_url,
-                                                 'encounter_rate',a.encounter_rate,
                                                  'is_open',true,
                                                  'unlock_at',a.unlock_at,
                                                  'investigation_rate',p.investigation_rate
