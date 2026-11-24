@@ -790,7 +790,7 @@ export default function App() {
 
               {loggedIn && user?.character_id && view === 'dice' && (
                   <section className="survival-card" aria-label="주사위">
-                    <DicePanel/>
+                    <DicePanel expanded/>
                   </section>
               )}
 
