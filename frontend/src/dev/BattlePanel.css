@@ -887,3 +887,32 @@
 #battle-panel .battle-result-heading span { font-weight: 800; color: #303034; }
 #battle-panel .battle-command-feedback { margin-top: 12px; padding: 12px; border: 1px solid #c9c9c9; background: #fffefa; color: #303034; border-radius: 6px; }
 #battle-panel .battle-command-feedback p { margin: 5px 0 0; line-height: 1.6; }
+
+/* Keep the encounter, controls and turn log together within the battle page. */
+#battle-panel .battle-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 15px; align-items: start; }
+#battle-panel .battle-layout > * { min-width: 0; }
+#battle-panel .battle-layout .battle-enemy { grid-column: 1; grid-row: 1; grid-template-columns: 110px minmax(0, 1fr); padding: 16px; gap: 16px; height: 100%; }
+#battle-panel .battle-layout .battle-character { grid-column: 2; grid-row: 1; padding: 16px; height: 100%; }
+#battle-panel .battle-layout .battle-command-panel { grid-column: 2; grid-row: 2; padding: 16px; }
+#battle-panel .battle-layout .battle-log-panel { grid-column: 1; grid-row: 2; padding: 16px; }
+#battle-panel .battle-layout .battle-monster-image { min-height: 160px; }
+#battle-panel .battle-layout .battle-enemy-heading h3 { font-size: 24px; }
+#battle-panel .battle-layout .battle-character-profile { padding: 10px; gap: 12px; }
+#battle-panel .battle-layout .battle-character-portrait { width: 64px; height: 80px; }
+#battle-panel .battle-layout .battle-character-resources { gap: 8px; }
+#battle-panel .battle-layout .battle-character-resources > .battle-resource { padding: 10px; }
+#battle-panel .battle-layout .battle-command-actions { gap: 8px; }
+#battle-panel .battle-layout .battle-command-actions button { min-height: 40px; padding: 8px 10px; font-size: 13px; }
+#battle-panel .battle-layout .battle-log-list { max-height: 320px; overflow-y: auto; }
+@media (max-width: 1100px) {
+    #battle-panel .battle-layout { grid-template-columns: minmax(0, 1fr); }
+    #battle-panel .battle-layout .battle-enemy,
+    #battle-panel .battle-layout .battle-character,
+    #battle-panel .battle-layout .battle-command-panel,
+    #battle-panel .battle-layout .battle-log-panel { grid-column: 1; grid-row: auto; }
+}
+@media (max-width: 480px) {
+    #battle-panel .battle-layout .battle-enemy { grid-template-columns: 80px minmax(0, 1fr); gap: 10px; }
+    #battle-panel .battle-layout .battle-enemy-heading h3 { font-size: 20px; }
+    #battle-panel .battle-layout .battle-command-actions button { min-height: 44px; }
+}

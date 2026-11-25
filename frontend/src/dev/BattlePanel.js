@@ -276,6 +276,7 @@ export default function BattlePanel({inventory = [], busy, run, refresh, revisio
                   </section>
               )}
 
+              <div className="battle-layout">
               <div className="battle-enemy">
                 <div className="battle-monster-image">
                   {safeImage && !imageFailed
@@ -421,6 +422,7 @@ export default function BattlePanel({inventory = [], busy, run, refresh, revisio
                     </ol>
                 ) : <p className="battle-log-empty">표시할 전투 기록이 없습니다.</p>}
               </section>
+              </div>
             </>
         )}
       </section>
