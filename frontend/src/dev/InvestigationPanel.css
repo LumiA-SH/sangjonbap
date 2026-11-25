@@ -651,7 +651,7 @@
    07. INVESTIGATION REPORT
 ======================================== */
 
-.expedition-board + .expedition-encounter {
+.survival-expedition .expedition-encounter {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -1005,3 +1005,8 @@
         transition: none !important;
     }
 }
+.survival-expedition .expedition-encounter strong,
+.survival-expedition .expedition-encounter p,
+.survival-expedition .expedition-encounter a { color: #fff; }
+.expedition-action-result { margin: 12px 0 0; padding: 12px; border: 1px solid #c9c9c9; border-radius: 6px; background: #fffefa; color: #303034; line-height: 1.6; }
+.expedition-action-result p { margin: 4px 0; color: #303034; }
