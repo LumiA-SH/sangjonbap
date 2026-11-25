@@ -1,15 +1,15 @@
 {
   "files": {
-    "main.css": "/static/css/main.bfa7d312.css",
-    "main.js": "/static/js/main.dc0c2bbe.js",
+    "main.css": "/static/css/main.1b24ed4e.css",
+    "main.js": "/static/js/main.a77a46d8.js",
     "static/media/피1.png": "/static/media/피1.3201e6274b0c521ffec5.png",
     "static/media/background-pattern.svg": "/static/media/background-pattern.39a5ebd1b3ce594076c9.svg",
     "index.html": "/index.html",
-    "main.bfa7d312.css.map": "/static/css/main.bfa7d312.css.map",
-    "main.dc0c2bbe.js.map": "/static/js/main.dc0c2bbe.js.map"
+    "main.1b24ed4e.css.map": "/static/css/main.1b24ed4e.css.map",
+    "main.a77a46d8.js.map": "/static/js/main.a77a46d8.js.map"
   },
   "entrypoints": [
-    "static/css/main.bfa7d312.css",
-    "static/js/main.dc0c2bbe.js"
+    "static/css/main.1b24ed4e.css",
+    "static/js/main.a77a46d8.js"
   ]
 }
