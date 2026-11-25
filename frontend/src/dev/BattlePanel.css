@@ -881,3 +881,9 @@
 #battle-panel .battle-result.is-defeat { border-left: 4px solid #650c13; }
 #battle-panel .battle-result.is-fled,
 #battle-panel .battle-result.is-interrupted { border-left: 4px dashed #555555; }
+
+#battle-panel .battle-result { border-top: 5px solid #650c13; background: #f7f5f0; }
+#battle-panel .battle-result-heading h3 { font-size: 28px; color: #650c13; }
+#battle-panel .battle-result-heading span { font-weight: 800; color: #303034; }
+#battle-panel .battle-command-feedback { margin-top: 12px; padding: 12px; border: 1px solid #c9c9c9; background: #fffefa; color: #303034; border-radius: 6px; }
+#battle-panel .battle-command-feedback p { margin: 5px 0 0; line-height: 1.6; }

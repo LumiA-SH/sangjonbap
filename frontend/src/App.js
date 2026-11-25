@@ -546,6 +546,8 @@ export default function App() {
     gacha: '뽑기 목록을 확인합니다.'
   };
 
+  useEffect(() => {setMessage('');}, [view]);
+
   const navigate = next => {
     setAccountMenuOpen(false);
     setView(next);
@@ -637,7 +639,7 @@ export default function App() {
             </header>
 
             <div className="survival-warning" aria-hidden="true">
-              {Array.from({length: 24}, (_, index) => <span key={index}>WARNING!</span>)}
+              {Array.from({length: 24}, (_, index) => <span key={index}><b>WARNING!</b></span>)}
             </div>
 
             <main className="survival-content">
@@ -752,7 +754,7 @@ export default function App() {
                   </section>
               )}
 
-              {(busy || message) && <p className="dev-message" role="status" aria-live="polite">{busy ? '처리 중…' : message}</p>}
+              {view !== 'home' && (busy || message) && <p className="dev-message" role="status" aria-live="polite">{busy ? '처리 중…' : message}</p>}
 
               {view.startsWith('feed-') && (
                   view === 'feed-notice' ? (

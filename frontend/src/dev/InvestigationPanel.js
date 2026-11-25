@@ -248,6 +248,13 @@ export default function InvestigationPanel({
 
                     {restriction && <p className="expedition-restriction" role="status">{restriction}</p>}
 
+                    {result && (
+                        <div className="expedition-action-result" role="status">
+                          <strong>조사 완료 · 남은 AP {result.ap}</strong>
+                          <p>{result.result.result_text}</p>
+                          <button type="button" onClick={() => resultRef.current?.scrollIntoView({block: 'nearest'})}>상세 결과 보기</button>
+                        </div>
+                    )}
                     {result?.battle && activeBattle && (
                         <div className="expedition-encounter" role="alert">
                           <div>

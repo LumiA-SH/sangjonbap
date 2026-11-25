@@ -243,6 +243,39 @@ export default function BattlePanel({inventory = [], busy, run, refresh, revisio
 
         {battle && (
             <>
+              {!active && (
+                  <section className={`battle-result is-${battle.end_reason === 'MIDNIGHT_INTERRUPTED' ? 'interrupted' : battle.battle_status.toLowerCase()}`} aria-label="전투 결과" role="status">
+                    <div className="battle-result-heading">
+                      <span>전투 종료</span>
+                      <h3>{battle.end_reason==='MIDNIGHT_INTERRUPTED'?'자정 중단':battle.battle_status==='FLED'?(battle.fled_actor_type==='MONSTER'?'마물 도주':'캐릭터 도주'):(battleStatusLabels[battle.battle_status] || battle.battle_status)}</h3>
+                    </div>
+
+                    {battle.battle_status === 'VICTORY' && Number(battle.character_hp ?? character.hp) === 0 && (
+                        <p className="battle-result-warning" role="status">동귀어진: 전투는 승리했지만 PC는 사망했습니다. 처치 보상은 정상 지급됩니다.</p>
+                    )}
+
+                    <div className="battle-result-summary">
+                      <div><small>캐릭터 상태</small><strong>{characterStatusLabels[character.status] || character.status || '-'}</strong></div>
+                      <div><small>마물 처치</small><strong>{battle.battle_status === 'VICTORY' ? '예' : '아니오'}</strong></div>
+                      <div><small>지급 재화</small><strong>{data.currencyReward || 0}</strong></div>
+                    </div>
+
+                    <div className="battle-result-rewards">
+                      <h4>획득 보상</h4>
+                      {(data.rewards || []).length > 0 ? (
+                          <ul>
+                            {data.rewards.map((reward, index) => (
+                                <li key={index}>
+                                  {reward.name || `아이템 ${reward.itemId}`} {reward.recipeId ? '· 레시피 무료 습득' : `× ${reward.quantity}`}
+                                  {reward.guaranteed ? ' · 식재료 보장' : ''}
+                                </li>
+                            ))}
+                          </ul>
+                      ) : <p>획득한 보상이 없습니다.</p>}
+                    </div>
+                  </section>
+              )}
+
               <div className="battle-enemy">
                 <div className="battle-monster-image">
                   {safeImage && !imageFailed
@@ -357,42 +390,13 @@ export default function BattlePanel({inventory = [], busy, run, refresh, revisio
                         </ul>
                     )}
 
+                    {logs.length > 0 && <div className="battle-command-feedback" role="status">
+                      <strong>최근 행동 결과</strong>
+                      {logs.slice(0, 2).reverse().map(log => <p key={log.id}>{log.message}</p>)}
+                    </div>}
                     <p className="battle-timing">
                       마지막 정상 행동: {battle.last_command_at || battle.started_at} · 진행 중인 일반 PVE 전투는 매일 00:00(한국 시간)에 중단됩니다.
                     </p>
-                  </section>
-              )}
-
-              {!active && (
-                  <section className={`battle-result is-${battle.end_reason === 'MIDNIGHT_INTERRUPTED' ? 'interrupted' : battle.battle_status.toLowerCase()}`} aria-label="전투 결과" role="status">
-                    <div className="battle-result-heading">
-                      <span>전투 종료</span>
-                      <h3>{battle.end_reason==='MIDNIGHT_INTERRUPTED'?'자정 중단':battle.battle_status==='FLED'?(battle.fled_actor_type==='MONSTER'?'마물 도주':'캐릭터 도주'):(battleStatusLabels[battle.battle_status] || battle.battle_status)}</h3>
-                    </div>
-
-                    {battle.battle_status === 'VICTORY' && Number(battle.character_hp ?? character.hp) === 0 && (
-                        <p className="battle-result-warning" role="status">동귀어진: 전투는 승리했지만 PC는 사망했습니다. 처치 보상은 정상 지급됩니다.</p>
-                    )}
-
-                    <div className="battle-result-summary">
-                      <div><small>캐릭터 상태</small><strong>{characterStatusLabels[character.status] || character.status || '-'}</strong></div>
-                      <div><small>마물 처치</small><strong>{battle.battle_status === 'VICTORY' ? '예' : '아니오'}</strong></div>
-                      <div><small>지급 재화</small><strong>{data.currencyReward || 0}</strong></div>
-                    </div>
-
-                    <div className="battle-result-rewards">
-                      <h4>획득 보상</h4>
-                      {(data.rewards || []).length > 0 ? (
-                          <ul>
-                            {data.rewards.map((reward, index) => (
-                                <li key={index}>
-                                  {reward.name || `아이템 ${reward.itemId}`} {reward.recipeId ? '· 레시피 무료 습득' : `× ${reward.quantity}`}
-                                  {reward.guaranteed ? ' · 식재료 보장' : ''}
-                                </li>
-                            ))}
-                          </ul>
-                      ) : <p>획득한 보상이 없습니다.</p>}
-                    </div>
                   </section>
               )}
 

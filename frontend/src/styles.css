@@ -500,7 +500,7 @@ body > #root > main:not(.admin-workspace) > section {
   display: flex;
   align-items: center;
   justify-content: center;
-  flex: 0 0 220px;
+  flex: 1 0 220px;
   box-sizing: border-box;
   padding: 0 0 0 65px;
   background: linear-gradient(55deg,
@@ -1207,3 +1207,9 @@ body > #root > main:not(.admin-workspace) > section {
 }
 .survival-resource-indicator summary { cursor: pointer; }
 .survival-resource-indicator span { display: inline-block; margin: 6px 16px 0 0; }
+
+.survival-warning { container-type: inline-size; }
+.survival-warning span b { font: inherit; line-height: 1; }
+@container (max-width: 600px) {
+  .survival-warning span { flex: 0 0 50cqw; padding-left: 45px; font-size: 11px; }
+}
